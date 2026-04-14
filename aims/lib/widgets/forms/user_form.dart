@@ -102,8 +102,8 @@ class _AddUserState extends State<AddUser> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 2,
+                                SizedBox(
+                                  width: 80, //fixed width for MI
                                   child: CustomTextField(
                                     hint: "M.I",
                                     validator: Validators.middleInitial,

@@ -1,0 +1,837 @@
+import 'package:aims/widgets/admin_dashboard/calendar_chart.dart';
+import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
+import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
+class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+enum _SalesRange { daily, monthly, weekly, yearly }
+
+class _SalesReportData {
+  const _SalesReportData({
+    required this.totalSales,
+    required this.totalCustomers,
+    required this.totalProfit,
+    required this.salesChange,
+    required this.customerChange,
+    required this.profitChange,
+    required this.areaSpots,
+    required this.lineSpots,
+    required this.labels,
+    required this.tooltipTitle,
+    required this.tooltipValue,
+    required this.highlightX,
+    required this.maxY,
+  });
+
+  final String totalSales;
+  final String totalCustomers;
+  final String totalProfit;
+  final String salesChange;
+  final String customerChange;
+  final String profitChange;
+  final List<FlSpot> areaSpots;
+  final List<FlSpot> lineSpots;
+  final List<String> labels;
+  final String tooltipTitle;
+  final String tooltipValue;
+  final double highlightX;
+  final double maxY;
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  static const Color _pageBackground = Color(0xFFDDECEF);
+  static const Color _surfaceBlue = Color(0xFFC6E8EE);
+  static const Color _sidebarBlue = Color(0xFF9AA9BD);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _buttonTan = Color(0xFFD7B59E);
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6C7B84);
+
+  static const Map<_SalesRange, _SalesReportData> _salesData = {
+    _SalesRange.daily: _SalesReportData(
+      totalSales: '\$12,480',
+      totalCustomers: '46',
+      totalProfit: '\$4,910',
+      salesChange: '+8%',
+      customerChange: '+5%',
+      profitChange: '+11%',
+      labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM'],
+      areaSpots: [
+        FlSpot(0, 9),
+        FlSpot(1, 13),
+        FlSpot(2, 18),
+        FlSpot(3, 22),
+        FlSpot(4, 26),
+        FlSpot(5, 24),
+        FlSpot(6, 30),
+      ],
+      lineSpots: [
+        FlSpot(0, 8),
+        FlSpot(0.5, 10),
+        FlSpot(1, 11),
+        FlSpot(1.5, 14),
+        FlSpot(2, 15),
+        FlSpot(2.5, 16),
+        FlSpot(3, 18),
+        FlSpot(3.5, 17),
+        FlSpot(4, 20),
+        FlSpot(4.5, 19),
+        FlSpot(5, 21),
+        FlSpot(5.5, 23),
+        FlSpot(6, 22),
+      ],
+      tooltipTitle: '2PM Today',
+      tooltipValue: '\$2,980',
+      highlightX: 4,
+      maxY: 35,
+    ),
+    _SalesRange.monthly: _SalesReportData(
+      totalSales: '\$2,38,485',
+      totalCustomers: '143',
+      totalProfit: '\$89,240',
+      salesChange: '+14%',
+      customerChange: '+36%',
+      profitChange: '+22%',
+      labels: [
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+        'Jan',
+      ],
+      areaSpots: [
+        FlSpot(0, 14),
+        FlSpot(1, 17),
+        FlSpot(2, 16),
+        FlSpot(3, 24),
+        FlSpot(4, 29),
+        FlSpot(5, 27),
+        FlSpot(6, 26),
+        FlSpot(7, 31),
+        FlSpot(8, 29),
+        FlSpot(9, 38),
+        FlSpot(10, 36),
+        FlSpot(11, 42),
+      ],
+      lineSpots: [
+        FlSpot(0, 12),
+        FlSpot(0.4, 11),
+        FlSpot(0.9, 15),
+        FlSpot(1.4, 13),
+        FlSpot(2.1, 11),
+        FlSpot(2.8, 16),
+        FlSpot(3.4, 15),
+        FlSpot(4, 14),
+        FlSpot(4.6, 19),
+        FlSpot(5.2, 17),
+        FlSpot(5.8, 18),
+        FlSpot(6.4, 16),
+        FlSpot(7, 17),
+        FlSpot(7.6, 14),
+        FlSpot(8.2, 13),
+        FlSpot(8.9, 16),
+        FlSpot(9.4, 15),
+        FlSpot(10, 21),
+        FlSpot(10.4, 18),
+        FlSpot(10.9, 19),
+        FlSpot(11, 18),
+      ],
+      tooltipTitle: 'June 2025',
+      tooltipValue: '\$45,591',
+      highlightX: 4,
+      maxY: 50,
+    ),
+    _SalesRange.weekly: _SalesReportData(
+      totalSales: '\$58,920',
+      totalCustomers: '87',
+      totalProfit: '\$21,770',
+      salesChange: '+9%',
+      customerChange: '+12%',
+      profitChange: '+7%',
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      areaSpots: [
+        FlSpot(0, 20),
+        FlSpot(1, 24),
+        FlSpot(2, 22),
+        FlSpot(3, 28),
+        FlSpot(4, 35),
+        FlSpot(5, 39),
+        FlSpot(6, 33),
+      ],
+      lineSpots: [
+        FlSpot(0, 17),
+        FlSpot(0.5, 16),
+        FlSpot(1, 20),
+        FlSpot(1.5, 18),
+        FlSpot(2, 19),
+        FlSpot(2.5, 23),
+        FlSpot(3, 21),
+        FlSpot(3.5, 25),
+        FlSpot(4, 27),
+        FlSpot(4.5, 30),
+        FlSpot(5, 28),
+        FlSpot(5.5, 31),
+        FlSpot(6, 26),
+      ],
+      tooltipTitle: 'Friday',
+      tooltipValue: '\$9,420',
+      highlightX: 4,
+      maxY: 45,
+    ),
+    _SalesRange.yearly: _SalesReportData(
+      totalSales: '\$1.42M',
+      totalCustomers: '1,284',
+      totalProfit: '\$534,900',
+      salesChange: '+31%',
+      customerChange: '+18%',
+      profitChange: '+27%',
+      labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+      areaSpots: [
+        FlSpot(0, 28),
+        FlSpot(1, 35),
+        FlSpot(2, 43),
+        FlSpot(3, 51),
+        FlSpot(4, 64),
+        FlSpot(5, 72),
+      ],
+      lineSpots: [
+        FlSpot(0, 20),
+        FlSpot(0.4, 23),
+        FlSpot(0.9, 25),
+        FlSpot(1.3, 27),
+        FlSpot(1.8, 30),
+        FlSpot(2.2, 34),
+        FlSpot(2.8, 39),
+        FlSpot(3.2, 42),
+        FlSpot(3.8, 47),
+        FlSpot(4.2, 53),
+        FlSpot(4.8, 58),
+        FlSpot(5, 61),
+      ],
+      tooltipTitle: 'Year 2024',
+      tooltipValue: '\$286,000',
+      highlightX: 4,
+      maxY: 80,
+    ),
+  };
+
+  bool isSidebarOpen = true;
+  String selectedMenu = 'Dashboard';
+  _SalesRange _selectedSalesRange = _SalesRange.monthly;
+
+  _SalesReportData get _selectedSalesData => _salesData[_selectedSalesRange]!;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _pageBackground,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopBar(),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isSidebarOpen) _buildSidebar(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                      child: selectedMenu == 'Dashboard'
+                          ? _buildDashboardContent()
+                          : _buildManageStaffPlaceholder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Container(
+      height: 72,
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: _headerBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                isSidebarOpen = !isSidebarOpen;
+              });
+            },
+            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'afterspace',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'Admin',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 10),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.white.withOpacity(0.95),
+            child: const Icon(Icons.person, size: 20, color: _headerBlue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 146,
+      margin: const EdgeInsets.only(top: 2),
+      decoration: const BoxDecoration(
+        color: _sidebarBlue,
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          _buildSidebarItem(icon: Icons.home_outlined, title: 'Dashboard'),
+          _buildSidebarItem(icon: Icons.person_outline, title: 'Manage Staff'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem({
+    required IconData icon,
+    required String title,
+  }) {
+    final isSelected = selectedMenu == title;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            selectedMenu = title;
+          });
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 19,
+                color: isSelected ? _textPrimary : Colors.black87,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? _textPrimary : Colors.black87,
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent() {
+    final salesData = _selectedSalesData;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 980;
+
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                isCompact
+                    ? Column(
+                        children: [
+                          _buildStatCard(
+                            title: 'TOTAL SALES',
+                            value: salesData.totalSales,
+                            change: salesData.salesChange,
+                            changeColor: _getChangeColor(salesData.salesChange),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildStatCard(
+                            title: 'TOTAL CUSTOMERS',
+                            value: salesData.totalCustomers,
+                            change: salesData.customerChange,
+                            changeColor:
+                                _getChangeColor(salesData.customerChange),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildStatCard(
+                            title: 'TOTAL PROFIT',
+                            value: salesData.totalProfit,
+                            change: salesData.profitChange,
+                            changeColor: _getChangeColor(salesData.profitChange),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              title: 'TOTAL SALES',
+                              value: salesData.totalSales,
+                              change: salesData.salesChange,
+                              changeColor:
+                                  _getChangeColor(salesData.salesChange),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              title: 'TOTAL CUSTOMERS',
+                              value: salesData.totalCustomers,
+                              change: salesData.customerChange,
+                              changeColor:
+                                  _getChangeColor(salesData.customerChange),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              title: 'TOTAL PROFIT',
+                              value: salesData.totalProfit,
+                              change: salesData.profitChange,
+                              changeColor:
+                                  _getChangeColor(salesData.profitChange),
+                            ),
+                          ),
+                        ],
+                      ),
+                const SizedBox(height: 14),
+                isCompact
+                    ? Column(
+                        children: [
+                          SizedBox(height: 278, child: _buildCustomerReportPanel()),
+                          const SizedBox(height: 14),
+                          SizedBox(height: 278, child: _buildCalendarPanel()),
+                        ],
+                      )
+                    : SizedBox(
+                        height: 278,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(flex: 3, child: _buildCustomerReportPanel()),
+                            const SizedBox(width: 12),
+                            Expanded(flex: 2, child: _buildCalendarPanel()),
+                          ],
+                        ),
+                      ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: isCompact ? 380 : 300,
+                  child: _buildSalesReportPanel(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCustomerReportPanel() {
+    return _buildPanel(
+      title: 'Customer Report',
+      action: _buildSoftPill(
+        '7 days',
+        icon: Icons.keyboard_arrow_down_rounded,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Column(
+          children: [
+            const Expanded(child: CustomerReportBarChart()),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 6,
+              children: const [
+                _LegendItem(
+                  color: Color(0xFF45BFDA),
+                  label: 'Monthly Membership',
+                ),
+                _LegendItem(color: Color(0xFFFAA61A), label: 'Walk- in'),
+                _LegendItem(
+                  color: Color(0xFFFF4545),
+                  label: 'Monthly Subscription',
+                ),
+                _LegendItem(color: Color(0xFF94CF1A), label: 'Loyal Customers'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalendarPanel() {
+    return _buildPanel(
+      title: '',
+      child: const CalendarChart(),
+    );
+  }
+
+  Widget _buildSalesReportPanel() {
+    final salesData = _selectedSalesData;
+
+    return _buildPanel(
+      title: 'Sales Report',
+      action: Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildRangeButton(_SalesRange.daily, 'Daily'),
+          _buildRangeButton(_SalesRange.monthly, 'Monthly'),
+          _buildRangeButton(_SalesRange.weekly, 'Weekly'),
+          _buildRangeButton(_SalesRange.yearly, 'Yearly'),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _buttonTan,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.picture_as_pdf_outlined,
+                  size: 16,
+                  color: _textPrimary,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Export PDF',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: SalesReportLineChart(
+            key: ValueKey(_selectedSalesRange),
+            areaSpots: salesData.areaSpots,
+            lineSpots: salesData.lineSpots,
+            labels: salesData.labels,
+            tooltipTitle: salesData.tooltipTitle,
+            tooltipValue: salesData.tooltipValue,
+            highlightX: salesData.highlightX,
+            maxY: salesData.maxY,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRangeButton(_SalesRange range, String label) {
+    final selected = _selectedSalesRange == range;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedSalesRange = range;
+        });
+      },
+      borderRadius: BorderRadius.circular(4),
+      child: _buildToggleButton(label, selected),
+    );
+  }
+
+  Widget _buildSoftPill(String label, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: _textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (icon != null) ...[
+            const SizedBox(width: 2),
+            Icon(icon, size: 16, color: _textMuted),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManageStaffPlaceholder() {
+    return _buildPanel(
+      title: 'Manage Staff',
+      child: const Center(
+        child: Text(
+          'Manage Staff screen placeholder',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required String change,
+    required Color changeColor,
+  }) {
+    return Container(
+      height: 80,
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+      decoration: BoxDecoration(
+        color: _surfaceBlue,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 9,
+              color: _textMuted,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const Spacer(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: _textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      change,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: changeColor,
+                      ),
+                    ),
+                    Icon(
+                      change.startsWith('-')
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
+                      size: 12,
+                      color: changeColor,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(String label, bool selected) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      decoration: BoxDecoration(
+        color: selected ? _buttonTan : _buttonTan.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? _textPrimary : Colors.white.withOpacity(0.75),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPanel({
+    required String title,
+    required Widget child,
+    Widget? action,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      decoration: BoxDecoration(
+        color: _surfaceBlue,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title.isNotEmpty || action != null)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (title.isNotEmpty)
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
+                  ),
+                const Spacer(),
+                if (action != null) action,
+              ],
+            ),
+          if (title.isNotEmpty || action != null) const SizedBox(height: 10),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  Color _getChangeColor(String change) {
+    return change.startsWith('-')
+        ? const Color(0xFFEA5B64)
+        : const Color(0xFF34B86B);
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: _AdminDashboardScreenState._textMuted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}

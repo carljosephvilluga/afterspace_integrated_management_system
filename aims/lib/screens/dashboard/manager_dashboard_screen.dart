@@ -1,4 +1,6 @@
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
+import 'package:aims/widgets/common/header.dart';
+import 'package:aims/widgets/common/sidebar.dart';
 import 'package:aims/widgets/manager_dashboard/dashboard_panel.dart';
 import 'package:aims/widgets/manager_dashboard/metric_card.dart';
 import 'package:aims/widgets/manager_dashboard/reservation_list_item.dart';
@@ -24,8 +26,8 @@ class _ManagerReportData {
     required this.areaSpots,
     required this.lineSpots,
     required this.labels,
-    required this.tooltipTitle,
-    required this.tooltipValue,
+    required this.tooltipTitles,
+    required this.tooltipValues,
     required this.highlightX,
     required this.maxY,
   });
@@ -37,8 +39,8 @@ class _ManagerReportData {
   final List<FlSpot> areaSpots;
   final List<FlSpot> lineSpots;
   final List<String> labels;
-  final String tooltipTitle;
-  final String tooltipValue;
+  final List<String> tooltipTitles;
+  final List<String> tooltipValues;
   final double highlightX;
   final double maxY;
 }
@@ -78,10 +80,9 @@ class _Transaction {
 }
 
 class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
+  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
   static const Color _surfaceBlue = Color(0xFFC7E8EE);
-  static const Color _sidebarBlue = Color(0xFF9AA9BD);
-  static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _buttonTan = Color(0xFFD6B39A);
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
@@ -93,6 +94,24 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       revenueChange: '+9%',
       customersChange: '+4%',
       labels: ['6a', '8a', '10a', '12p', '2p', '4p', '6p'],
+      tooltipTitles: [
+        '6AM Today',
+        '8AM Today',
+        '10AM Today',
+        '12PM Today',
+        '2PM Today',
+        '4PM Today',
+        '6PM Today',
+      ],
+      tooltipValues: [
+        '\$2,880',
+        '\$3,540',
+        '\$4,180',
+        '\$4,960',
+        '\$6,120',
+        '\$5,480',
+        '\$6,940',
+      ],
       areaSpots: [
         FlSpot(0, 10),
         FlSpot(1, 14),
@@ -117,8 +136,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         FlSpot(5.5, 19),
         FlSpot(6, 18),
       ],
-      tooltipTitle: '2PM Today',
-      tooltipValue: '\$6,120',
       highlightX: 4,
       maxY: 32,
     ),
@@ -140,6 +157,34 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         'Nov',
         'Dec',
         'Jan',
+      ],
+      tooltipTitles: [
+        'February 2021',
+        'March 2021',
+        'April 2021',
+        'May 2021',
+        'June 2021',
+        'July 2021',
+        'August 2021',
+        'September 2021',
+        'October 2021',
+        'November 2021',
+        'December 2021',
+        'January 2022',
+      ],
+      tooltipValues: [
+        '\$24,180',
+        '\$28,420',
+        '\$27,350',
+        '\$38,910',
+        '\$45,591',
+        '\$43,280',
+        '\$41,960',
+        '\$48,740',
+        '\$46,180',
+        '\$58,440',
+        '\$55,930',
+        '\$63,110',
       ],
       areaSpots: [
         FlSpot(0, 14),
@@ -178,8 +223,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         FlSpot(10.9, 19),
         FlSpot(11, 18),
       ],
-      tooltipTitle: 'June 2021',
-      tooltipValue: '\$45,591',
       highlightX: 4,
       maxY: 50,
     ),
@@ -189,6 +232,24 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       revenueChange: '+11%',
       customersChange: '+8%',
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      tooltipTitles: [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ],
+      tooltipValues: [
+        '\$9,420',
+        '\$10,860',
+        '\$10,120',
+        '\$12,310',
+        '\$14,320',
+        '\$16,440',
+        '\$13,780',
+      ],
       areaSpots: [
         FlSpot(0, 20),
         FlSpot(1, 25),
@@ -213,8 +274,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         FlSpot(5.5, 28),
         FlSpot(6, 25),
       ],
-      tooltipTitle: 'Friday',
-      tooltipValue: '\$14,320',
       highlightX: 4,
       maxY: 45,
     ),
@@ -224,6 +283,22 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       revenueChange: '+24%',
       customersChange: '+18%',
       labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+      tooltipTitles: [
+        'Year 2020',
+        'Year 2021',
+        'Year 2022',
+        'Year 2023',
+        'Year 2024',
+        'Year 2025',
+      ],
+      tooltipValues: [
+        '\$186,000',
+        '\$214,000',
+        '\$241,500',
+        '\$268,000',
+        '\$286,000',
+        '\$332,000',
+      ],
       areaSpots: [
         FlSpot(0, 24),
         FlSpot(1, 31),
@@ -245,8 +320,6 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         FlSpot(4.5, 54),
         FlSpot(5, 59),
       ],
-      tooltipTitle: 'Year 2024',
-      tooltipValue: '\$286,000',
       highlightX: 4,
       maxY: 80,
     ),
@@ -331,21 +404,34 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            Header(
+              role: UserRole.manager,
+              onMenuTap: () {
+                setState(() {
+                  isSidebarOpen = !isSidebarOpen;
+                });
+              },
+              maxWidth: _desktopFrameWidth,
+            ),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (isSidebarOpen) _buildSidebar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
-                      child: selectedMenu == 'Dashboard'
-                          ? _buildDashboardContent()
-                          : _buildPlaceholder(selectedMenu),
-                    ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (isSidebarOpen) _buildSidebar(),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          child: selectedMenu == 'Dashboard'
+                              ? _buildDashboardContent()
+                              : _buildPlaceholder(selectedMenu),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -354,141 +440,15 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     );
   }
 
-  Widget _buildTopBar() {
-    return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: _headerBlue,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                isSidebarOpen = !isSidebarOpen;
-              });
-            },
-            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'afterspace',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.8,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Manager',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(width: 10),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withOpacity(0.95),
-            child: const Icon(Icons.badge_outlined, size: 20, color: _headerBlue),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSidebar() {
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(top: 2),
-      decoration: const BoxDecoration(
-        color: _sidebarBlue,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 18),
-          _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
-          _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
-          _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
-          _buildSidebarItem(Icons.inventory_2_outlined, 'Inventory'),
-          _buildSidebarItem(Icons.person_outline, 'Manage Staff'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(IconData icon, String title) {
-    final isSelected = selectedMenu == title;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            selectedMenu = title;
-          });
-        },
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: isSelected ? _textPrimary : Colors.white,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected ? _textPrimary : Colors.white,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return Sidebar(
+      role: UserRole.manager,
+      selectedTitle: selectedMenu,
+      onItemSelected: (title) {
+        setState(() {
+          selectedMenu = title;
+        });
+      },
     );
   }
 
@@ -506,11 +466,11 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                 children: [
                   _buildMetricRow(),
                   const SizedBox(height: 12),
-                  SizedBox(height: 320, child: _buildReservationsPanel()),
+                  SizedBox(height: 340, child: _buildReservationsPanel()),
                   const SizedBox(height: 12),
-                  SizedBox(height: 300, child: _buildSalesPanel()),
+                  SizedBox(height: 360, child: _buildSalesPanel()),
                   const SizedBox(height: 12),
-                  SizedBox(height: 236, child: _buildTransactionsPanel()),
+                  SizedBox(height: 300, child: _buildTransactionsPanel()),
                 ],
               ),
             ),
@@ -521,12 +481,12 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
-              height: 380,
+              height: 430,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
-                    flex: 7,
+                    flex: 5,
                     child: Column(
                       children: [
                         _buildMetricRow(),
@@ -629,8 +589,8 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         areaSpots: data.areaSpots,
         lineSpots: data.lineSpots,
         labels: data.labels,
-        tooltipTitle: data.tooltipTitle,
-        tooltipValue: data.tooltipValue,
+        tooltipTitles: data.tooltipTitles,
+        tooltipValues: data.tooltipValues,
         highlightX: data.highlightX,
         maxY: data.maxY,
       ),

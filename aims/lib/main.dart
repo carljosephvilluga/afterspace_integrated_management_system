@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'screens/login/admin_login_screen.dart'; // or manager/staff depending on which you want first
+import 'package:aims/screens/dashboard/staff_dashboard_screen.dart';
+import 'package:aims/screens/login/staff_login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +14,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'AfterSpace',
       debugShowCheckedModeBanner: false,
-      home: const AdminLoginScreen(), // start directly at Admin login
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF80AEC1)),
+        useMaterial3: true,
+      ),
+      initialRoute: '/staff-login',
+      routes: {
+        '/staff-login': (context) => const StaffLoginScreen(),
+        '/staff-dashboard': (context) => const StaffDashboardScreen(),
+      },
     );
   }
 }

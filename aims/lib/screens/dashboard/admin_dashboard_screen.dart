@@ -1,6 +1,8 @@
 import 'package:aims/widgets/admin_dashboard/calendar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
+import 'package:aims/widgets/common/header.dart';
+import 'package:aims/widgets/common/sidebar.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -24,8 +26,8 @@ class _SalesReportData {
     required this.areaSpots,
     required this.lineSpots,
     required this.labels,
-    required this.tooltipTitle,
-    required this.tooltipValue,
+    required this.tooltipTitles,
+    required this.tooltipValues,
     required this.highlightX,
     required this.maxY,
   });
@@ -39,17 +41,16 @@ class _SalesReportData {
   final List<FlSpot> areaSpots;
   final List<FlSpot> lineSpots;
   final List<String> labels;
-  final String tooltipTitle;
-  final String tooltipValue;
+  final List<String> tooltipTitles;
+  final List<String> tooltipValues;
   final double highlightX;
   final double maxY;
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
   static const Color _surfaceBlue = Color(0xFFC6E8EE);
-  static const Color _sidebarBlue = Color(0xFF9AA9BD);
-  static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _buttonTan = Color(0xFFD7B59E);
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF6C7B84);
@@ -63,6 +64,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       customerChange: '+5%',
       profitChange: '+11%',
       labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM'],
+      tooltipTitles: [
+        '6AM Today',
+        '8AM Today',
+        '10AM Today',
+        '12PM Today',
+        '2PM Today',
+        '4PM Today',
+        '6PM Today',
+      ],
+      tooltipValues: [
+        '\$1,120',
+        '\$1,880',
+        '\$2,460',
+        '\$2,790',
+        '\$2,980',
+        '\$2,640',
+        '\$3,120',
+      ],
       areaSpots: [
         FlSpot(0, 9),
         FlSpot(1, 13),
@@ -87,8 +106,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         FlSpot(5.5, 23),
         FlSpot(6, 22),
       ],
-      tooltipTitle: '2PM Today',
-      tooltipValue: '\$2,980',
       highlightX: 4,
       maxY: 35,
     ),
@@ -112,6 +129,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'Nov',
         'Dec',
         'Jan',
+      ],
+      tooltipTitles: [
+        'February 2025',
+        'March 2025',
+        'April 2025',
+        'May 2025',
+        'June 2025',
+        'July 2025',
+        'August 2025',
+        'September 2025',
+        'October 2025',
+        'November 2025',
+        'December 2025',
+        'January 2026',
+      ],
+      tooltipValues: [
+        '\$24,180',
+        '\$28,420',
+        '\$27,350',
+        '\$38,910',
+        '\$45,591',
+        '\$43,280',
+        '\$41,960',
+        '\$48,740',
+        '\$46,180',
+        '\$58,440',
+        '\$55,930',
+        '\$63,110',
       ],
       areaSpots: [
         FlSpot(0, 14),
@@ -150,8 +195,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         FlSpot(10.9, 19),
         FlSpot(11, 18),
       ],
-      tooltipTitle: 'June 2025',
-      tooltipValue: '\$45,591',
       highlightX: 4,
       maxY: 50,
     ),
@@ -163,6 +206,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       customerChange: '+12%',
       profitChange: '+7%',
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      tooltipTitles: [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ],
+      tooltipValues: [
+        '\$5,180',
+        '\$6,240',
+        '\$5,920',
+        '\$7,430',
+        '\$9,420',
+        '\$10,880',
+        '\$8,760',
+      ],
       areaSpots: [
         FlSpot(0, 20),
         FlSpot(1, 24),
@@ -187,8 +248,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         FlSpot(5.5, 31),
         FlSpot(6, 26),
       ],
-      tooltipTitle: 'Friday',
-      tooltipValue: '\$9,420',
       highlightX: 4,
       maxY: 45,
     ),
@@ -200,6 +259,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       customerChange: '+18%',
       profitChange: '+27%',
       labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+      tooltipTitles: [
+        'Year 2020',
+        'Year 2021',
+        'Year 2022',
+        'Year 2023',
+        'Year 2024',
+        'Year 2025',
+      ],
+      tooltipValues: [
+        '\$128,000',
+        '\$164,000',
+        '\$198,500',
+        '\$241,000',
+        '\$286,000',
+        '\$332,000',
+      ],
       areaSpots: [
         FlSpot(0, 28),
         FlSpot(1, 35),
@@ -222,8 +297,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         FlSpot(4.8, 58),
         FlSpot(5, 61),
       ],
-      tooltipTitle: 'Year 2024',
-      tooltipValue: '\$286,000',
       highlightX: 4,
       maxY: 80,
     ),
@@ -242,21 +315,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            Header(
+              role: UserRole.admin,
+              onMenuTap: () {
+                setState(() {
+                  isSidebarOpen = !isSidebarOpen;
+                });
+              },
+              maxWidth: _desktopFrameWidth,
+            ),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (isSidebarOpen) _buildSidebar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-                      child: selectedMenu == 'Dashboard'
-                          ? _buildDashboardContent()
-                          : _buildManageStaffPlaceholder(),
-                    ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (isSidebarOpen) _buildSidebar(),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          child: selectedMenu == 'Dashboard'
+                              ? _buildDashboardContent()
+                              : _buildManageStaffPlaceholder(),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -265,142 +351,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildTopBar() {
-    return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: _headerBlue,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                isSidebarOpen = !isSidebarOpen;
-              });
-            },
-            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'afterspace',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.8,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Admin',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(width: 10),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withOpacity(0.95),
-            child: const Icon(Icons.person, size: 20, color: _headerBlue),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSidebar() {
-    return Container(
-      width: 146,
-      margin: const EdgeInsets.only(top: 2),
-      decoration: const BoxDecoration(
-        color: _sidebarBlue,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          _buildSidebarItem(icon: Icons.home_outlined, title: 'Dashboard'),
-          _buildSidebarItem(icon: Icons.person_outline, title: 'Manage Staff'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem({
-    required IconData icon,
-    required String title,
-  }) {
-    final isSelected = selectedMenu == title;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            selectedMenu = title;
-          });
-        },
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 19,
-                color: isSelected ? _textPrimary : Colors.black87,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: isSelected ? _textPrimary : Colors.black87,
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return Sidebar(
+      role: UserRole.admin,
+      selectedTitle: selectedMenu,
+      onItemSelected: (title) {
+        setState(() {
+          selectedMenu = title;
+        });
+      },
     );
   }
 
@@ -476,32 +435,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ],
                       ),
-                const SizedBox(height: 14),
-                isCompact
-                    ? Column(
-                        children: [
-                          SizedBox(height: 278, child: _buildCustomerReportPanel()),
-                          const SizedBox(height: 14),
-                          SizedBox(height: 278, child: _buildCalendarPanel()),
-                        ],
-                      )
-                    : SizedBox(
-                        height: 278,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                  const SizedBox(height: 14),
+                  isCompact
+                      ? Column(
                           children: [
-                            Expanded(flex: 3, child: _buildCustomerReportPanel()),
-                            const SizedBox(width: 12),
-                            Expanded(flex: 2, child: _buildCalendarPanel()),
+                            SizedBox(height: 320, child: _buildCustomerReportPanel()),
+                            const SizedBox(height: 14),
+                            SizedBox(height: 320, child: _buildCalendarPanel()),
                           ],
+                        )
+                      : SizedBox(
+                          height: 348,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: _buildCustomerReportPanel(),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 3,
+                                child: _buildCalendarPanel(),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: isCompact ? 380 : 300,
-                  child: _buildSalesReportPanel(),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: isCompact ? 420 : 380,
+                    child: _buildSalesReportPanel(),
+                  ),
+                ],
             ),
           ),
         );
@@ -517,11 +482,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         icon: Icons.keyboard_arrow_down_rounded,
       ),
       child: Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.only(top: 8),
         child: Column(
           children: [
             const Expanded(child: CustomerReportBarChart()),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 10,
@@ -548,7 +513,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildCalendarPanel() {
     return _buildPanel(
       title: '',
-      child: const CalendarChart(),
+      child: const CalendarChart(allowMeetingScheduling: true),
     );
   }
 
@@ -597,7 +562,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.only(top: 14),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: SalesReportLineChart(
@@ -605,8 +570,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             areaSpots: salesData.areaSpots,
             lineSpots: salesData.lineSpots,
             labels: salesData.labels,
-            tooltipTitle: salesData.tooltipTitle,
-            tooltipValue: salesData.tooltipValue,
+            tooltipTitles: salesData.tooltipTitles,
+            tooltipValues: salesData.tooltipValues,
             highlightX: salesData.highlightX,
             maxY: salesData.maxY,
           ),
@@ -675,8 +640,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required Color changeColor,
   }) {
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+      height: 96,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       decoration: BoxDecoration(
         color: _surfaceBlue,
         borderRadius: BorderRadius.circular(6),
@@ -700,7 +665,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 26,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: _textPrimary,
                 ),
@@ -783,7 +748,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 const Spacer(),
-                if (action != null) action,
+                ?action,
               ],
             ),
           if (title.isNotEmpty || action != null) const SizedBox(height: 10),

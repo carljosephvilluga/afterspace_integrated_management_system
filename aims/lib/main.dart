@@ -7,6 +7,7 @@ import 'screens/login/admin_login_screen.dart';
 import 'screens/login/manager_login_screen.dart';
 import 'screens/login/role_selection_screen.dart';
 import 'screens/login/staff_login_screen.dart';
+import '/screens/list_of_users/users_list.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/manager-dashboard': (context) => const ManagerDashboardScreen(),
         '/staff-dashboard': (context) => const StaffDashboardScreen(),
+        '/staff-users': (context) => const StaffUsersListScreen(),
       },
     );
   }

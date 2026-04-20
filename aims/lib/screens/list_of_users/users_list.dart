@@ -1,6 +1,7 @@
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/header.dart';
+import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 
 class StaffUsersListScreen extends StatefulWidget {
@@ -82,6 +83,7 @@ class _UserFormData {
 }
 
 class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
+  String selectedTitle = 'List of Users';
   static const Color _pageBackground = Color(0xFFF4F8FA);
   static const Color _panelColor = Colors.white;
   static const Color _accentColor = Color(0xFF76ACBD);
@@ -184,128 +186,115 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: _pageBackground,
-        drawer: _buildDrawer(context),
         body: SafeArea(
-          child: Column(
+          child: Row(
             children: [
-              Header(
+              Sidebar(
                 role: UserRole.staff,
-                onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+                selectedTitle: selectedTitle,
+                onItemSelected: (title) {
+                    setState(() => selectedTitle = title);
+
+                    switch (title) {
+                      case 'Dashboard':
+                        Navigator.pushNamed(context, '/staff-dashboard');
+                        break;
+                      case 'List of Users':
+                        break;
+                    }
+                }
               ),
+
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildPageHeader(context),
-                      const SizedBox(height: 16),
-                      _buildSearchSection(filteredUsers.length),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _panelColor,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x12000000),
-                                blurRadius: 20,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8F1F4),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: const TabBar(
-                                    indicator: BoxDecoration(
-                                      color: _accentColor,
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(16),
+                child: Column(
+                  children: [
+                    Header(
+                      role: UserRole.staff,
+                      onMenuTap: () {},
+                      maxWidth: MediaQuery.of(context).size.width,
+                    ),
+                    
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPageHeader(context),
+                            const SizedBox(height: 16),
+                            _buildSearchSection(filteredUsers.length),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: _panelColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x12000000),
+                                      blurRadius: 20,
+                                      offset: Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE8F1F4),
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const TabBar(
+                                          indicator: BoxDecoration(
+                                            color: _accentColor,
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(16),
+                                            ),
+                                          ),
+                                          labelColor: Colors.white,
+                                          unselectedLabelColor: _darkText,
+                                          dividerColor: Colors.transparent,
+                                          tabs: [
+                                            Tab(text: 'All Users'),
+                                            Tab(text: 'Active Users'),
+                                            Tab(text: 'Inactive Users'),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                    labelColor: Colors.white,
-                                    unselectedLabelColor: _darkText,
-                                    dividerColor: Colors.transparent,
-                                    tabs: [
-                                      Tab(text: 'All Users'),
-                                      Tab(text: 'Active Users'),
-                                      Tab(text: 'Inactive Users'),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: TabBarView(
-                                  children: [
-                                    _buildUserList(
-                                      filteredUsers,
-                                      'No users found.',
-                                    ),
-                                    _buildUserList(
-                                      activeUsers,
-                                      'No active users found.',
-                                    ),
-                                    _buildUserList(
-                                      inactiveUsers,
-                                      'No inactive users found.',
+                                    Expanded(
+                                      child: TabBarView(
+                                        children: [
+                                          _buildUserList(
+                                            filteredUsers,
+                                            'No users found.',
+                                          ),
+                                          _buildUserList(
+                                            activeUsers,
+                                            'No active users found.',
+                                          ),
+                                          _buildUserList(
+                                            inactiveUsers,
+                                            'No inactive users found.',
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            const DrawerHeader(
-              child: Center(
-                child: Text(
-                  'Staff Menu',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: _darkText,
-                  ),
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.dashboard_outlined),
-              title: const Text('Dashboard'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, '/staff-dashboard');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.people_alt_outlined),
-              title: const Text('List of Users'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:flutter/material.dart';
+import 'package:aims/widgets/forms/user_form.dart';
 
 class StaffUsersListScreen extends StatefulWidget {
   const StaffUsersListScreen({super.key});
@@ -61,8 +62,8 @@ class _StaffUser {
   }
 }
 
-class _UserFormData {
-  const _UserFormData({
+class UserFormData {
+  const UserFormData({
     required this.firstName,
     required this.lastName,
     required this.email,
@@ -177,7 +178,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   Widget build(BuildContext context) {
     final filteredUsers = _filteredUsers();
     final activeUsers = filteredUsers.where((user) => user.isActive).toList();
-    final inactiveUsers = filteredUsers.where((user) => !user.isActive).toList();
+    final inactiveUsers = filteredUsers
+        .where((user) => !user.isActive)
+        .toList();
 
     return DefaultTabController(
       length: 3,
@@ -191,6 +194,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
               Header(
                 role: UserRole.staff,
                 onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+                maxWidth: MediaQuery.of(context).size.width,
               ),
               Expanded(
                 child: Padding(
@@ -220,6 +224,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                               Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Container(
+                                  width: double.infinity,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFE8F1F4),
                                     borderRadius: BorderRadius.circular(16),
@@ -546,10 +551,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       ),
       items: items
           .map(
-            (item) => DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            ),
+            (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
           )
           .toList(),
     );
@@ -735,11 +737,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<void> _openAddUserForm(BuildContext context) async {
-    final result = await Navigator.of(context).push<_UserFormData>(
-      MaterialPageRoute(
-        builder: (_) => const _UserFormScreen(),
-      ),
-    );
+    final result = await Navigator.of(
+      context,
+    ).push<UserFormData>(MaterialPageRoute(builder: (_) => const AddUser()));
 
     if (result == null) return;
 
@@ -765,10 +765,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<void> _openEditUserForm(BuildContext context, _StaffUser user) async {
-    final result = await Navigator.of(context).push<_UserFormData>(
-      MaterialPageRoute(
-        builder: (_) => _UserFormScreen(user: user),
-      ),
+    final result = await Navigator.of(context).push<UserFormData>(
+      MaterialPageRoute(builder: (_) => _UserFormScreen(user: user)),
     );
 
     if (result == null) return;
@@ -789,7 +787,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<bool> _confirmDeleteUser(BuildContext context, _StaffUser user) async {
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete =
+        await showDialog<bool>(
           context: context,
           builder: (dialogContext) {
             return AlertDialog(
@@ -830,10 +829,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   void _openHistoryScreen(BuildContext context, _StaffUser user) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => _UserHistoryScreen(
-          userName: user.fullName,
-          history: user.history,
-        ),
+        builder: (_) =>
+            _UserHistoryScreen(userName: user.fullName, history: user.history),
       ),
     );
   }
@@ -848,9 +845,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -1036,18 +1033,21 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: CustomButton(
-                            label: widget.isEdit ? 'Save Changes' : 'Create User',
+                            label: widget.isEdit
+                                ? 'Save Changes'
+                                : 'Create User',
                             backgroundColor: const Color(0xFF76ACBD),
                             borderColor: const Color(0xFF76ACBD),
                             onPressed: () async {
                               if (!_formKey.currentState!.validate()) return;
                               Navigator.pop(
                                 context,
-                                _UserFormData(
+                                UserFormData(
                                   firstName: _firstNameController.text.trim(),
                                   lastName: _lastNameController.text.trim(),
                                   email: _emailController.text.trim(),
-                                  phoneNumber: _phoneNumberController.text.trim(),
+                                  phoneNumber: _phoneNumberController.text
+                                      .trim(),
                                   userType: _selectedUserType,
                                   membershipType: _selectedMembershipType,
                                   isActive: _isActive,
@@ -1100,10 +1100,7 @@ class _UserFormScreenState extends State<_UserFormScreen> {
 }
 
 class _UserHistoryScreen extends StatelessWidget {
-  const _UserHistoryScreen({
-    required this.userName,
-    required this.history,
-  });
+  const _UserHistoryScreen({required this.userName, required this.history});
 
   final String userName;
   final List<String> history;

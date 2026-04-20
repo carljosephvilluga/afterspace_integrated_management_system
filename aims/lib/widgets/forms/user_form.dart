@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/utils/validators.dart';
+import 'package:aims/screens/list_of_users/users_list.dart';
 
 class AddUser extends StatefulWidget {
   const AddUser({super.key});
@@ -84,7 +85,7 @@ class _AddUserState extends State<AddUser> {
                             Row(
                               children: [
                                 Expanded(
-                                  flex: 3,
+                                  flex: 4,
                                   child: CustomTextField(
                                     hint: "Last Name",
                                     validator:
@@ -268,16 +269,37 @@ class _AddUserState extends State<AddUser> {
                         width: 200,
                         height: 50,
                         onPressed: () async {
-                          // validate before saving and insert lang d ang save logic
                           if (_formKey.currentState!.validate()) {
-                            await Future.delayed(const Duration(seconds: 2));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "User information saved successfully!",
+                            if (selectedType.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please select a User Type"),
                                 ),
-                              ),
-                            );
+                              );
+                              return;
+                            }
+                            if (_formKey.currentState!.validate()) {
+                              if (selectedMembership.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please select a Membership Type",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final formData = UserFormData(
+                                firstName: firstNameController.text,
+                                lastName: lastNameController.text,
+                                email: emailController.text,
+                                phoneNumber: phoneController.text,
+                                userType: selectedType,
+                                membershipType: selectedMembership,
+                                isActive: true,
+                              );
+                              Navigator.pop(context, formData);
+                            }
                           }
                         },
                       ),

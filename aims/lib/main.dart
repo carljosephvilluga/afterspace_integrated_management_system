@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
         '/manager-dashboard': (context) => const ManagerDashboardScreen(),
         '/staff-dashboard': (context) => const StaffDashboardScreen(),
         '/staff-users': (context) => const StaffUsersListScreen(),
+        '/login': (context) => const RoleSelectionScreen(),
       },
     );
   }

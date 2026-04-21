@@ -41,10 +41,6 @@ class Sidebar extends StatelessWidget {
       icon: Icons.list_alt_outlined,
       title: 'List of Users',
     ),
-    _SidebarItemData(
-      icon: Icons.person_outline,
-      title: 'Manage Staff',
-    ),
   ];
 
   static const List<_SidebarItemData> _staffItems = [

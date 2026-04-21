@@ -588,7 +588,6 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
           _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
           _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
           _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
-          _buildSidebarItem(Icons.inventory_2_outlined, 'Inventory'),
         ],
       ),
     );

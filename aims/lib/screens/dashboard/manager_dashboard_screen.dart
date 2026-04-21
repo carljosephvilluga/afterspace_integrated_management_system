@@ -447,6 +447,18 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       onItemSelected: (title) {
         setState(() {
           selectedMenu = title;
+
+          switch (title) {
+            case 'Dashboard':
+              Navigator.pushReplacementNamed(context, '/manager-dashboard');
+              break;
+            case 'Calendar':
+              Navigator.pushReplacementNamed(context, '/calendar');
+              break;
+            case 'List of Users':
+              Navigator.pushReplacementNamed(context, '/staff-users');
+              break;
+          }
         });
       },
     );

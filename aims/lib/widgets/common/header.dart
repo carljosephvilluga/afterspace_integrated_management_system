@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aims/widgets/dialogs/confirm_logout_dialog.dart'; // import the reusable logout dialog
 
 enum UserRole { admin, manager, staff }
 
@@ -54,9 +55,7 @@ class Header extends StatelessWidget {
                   color: _sidebarBlue,
                   child: InkWell(
                     onTap: onMenuTap,
-                    child: const Center(
-                      child: _HeaderMenuIcon(),
-                    ),
+                    child: const Center(child: _HeaderMenuIcon()),
                   ),
                 ),
                 Expanded(
@@ -64,24 +63,34 @@ class Header extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Row(
                       children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.logout_rounded,
-                              size: 22,
-                              color: Colors.white,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Logout',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
+                        InkWell(
+                          onTap: () async {
+                            final shouldLogout = await showDialog<bool>(
+                              context: context,
+                              builder: (_) => const ConfirmLogoutDialog(),
+                            ) ?? false;
+
+                            if (shouldLogout) {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            }
+                          },
+                          child: Row(
+                            children: const [
+                              Icon(Icons.logout_rounded,
+                                  size: 22, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Logout',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+
                         const Spacer(),
                         const Text(
                           'afterspace',
@@ -134,11 +143,7 @@ class _HeaderMenuIcon extends StatelessWidget {
       height: 24,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          _MenuLine(),
-          _MenuLine(),
-          _MenuLine(),
-        ],
+        children: const [_MenuLine(), _MenuLine(), _MenuLine()],
       ),
     );
   }

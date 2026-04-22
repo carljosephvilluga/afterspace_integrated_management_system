@@ -31,11 +31,25 @@ class Validators {
     return emailValid ? null : "Invalid email format";
   }
 
-  //Phone Number (kulang pa)
+  //Phone Number
   static String? phoneNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Required';
     }
+
+    final trimmed = value.trim();
+
+    //Check if only digits
+    if (!RegExp(r'^[0-9]+$').hasMatch(trimmed)) {
+      return 'Numbers only';
+    }
+
+    //Check if exactly 11 digits
+    if (trimmed.length != 11) {
+      return 'Enter Exactly 11 digits';
+    }
+
+    return null;
   }
 
   //Type and Membership
@@ -76,7 +90,7 @@ class Validators {
     if (value.trim().length < 6) {
       return 'Password too short';
     }
-    
+
     final hasNumber = RegExp(r'\d').hasMatch(value);
     final hasUpper = RegExp(r'[A-Z]').hasMatch(value);
     if (!hasNumber || !hasUpper) {
@@ -84,5 +98,4 @@ class Validators {
     }
     return null;
   }
-
 }

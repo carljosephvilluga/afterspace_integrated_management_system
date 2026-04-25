@@ -4,6 +4,10 @@ import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/forms/user_form.dart';
+import 'package:aims/screens/list_of_users/checkIn.dart';
+import 'package:aims/screens/list_of_users/checkOut.dart';
+import 'package:aims/screens/list_of_users/payment.dart';
+import 'package:aims/screens/list_of_users/payment_success.dart';
 
 class StaffUsersListScreen extends StatefulWidget {
   const StaffUsersListScreen({super.key});
@@ -102,9 +106,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   static const List<String> _membershipOptions = [
     'All',
     'Annual',
-    'Monthly',
+    'Loyalty Rewards',
+    'Monthly Membership',
     'Open Time',
-    'Premium',
   ];
   static const List<String> _userTypeOptions = [
     'All',
@@ -138,7 +142,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       email: 'paolo.reyes@example.com',
       phoneNumber: '09987654321',
       userType: 'Professional',
-      membershipType: 'Monthly',
+      membershipType: 'Monthly Membership',
       isActive: true,
       history: [
         'User added on 2026-04-14 10:20 AM',
@@ -196,16 +200,16 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                 role: UserRole.staff,
                 selectedTitle: selectedTitle,
                 onItemSelected: (title) {
-                    setState(() => selectedTitle = title);
+                  setState(() => selectedTitle = title);
 
-                    switch (title) {
-                      case 'Dashboard':
-                        Navigator.pushNamed(context, '/staff-dashboard');
-                        break;
-                      case 'List of Users':
-                        break;
-                    }
-                }
+                  switch (title) {
+                    case 'Dashboard':
+                      Navigator.pushNamed(context, '/staff-dashboard');
+                      break;
+                    case 'List of Users':
+                      break;
+                  }
+                },
               ),
 
               Expanded(
@@ -213,10 +217,12 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                   children: [
                     Header(
                       role: UserRole.staff,
-                      onMenuTap: () {},
+                      onMenuTap: () {
+                        _scaffoldKey.currentState?.openDrawer();
+                      },
                       maxWidth: MediaQuery.of(context).size.width,
                     ),
-                    
+
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(20),
@@ -247,21 +253,34 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFE8F1F4),
-                                          borderRadius: BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                         ),
                                         child: const TabBar(
+                                          indicatorSize:
+                                              TabBarIndicatorSize.tab,
+
                                           indicator: BoxDecoration(
-                                            color: _accentColor,
+                                            color: Colors.white,
                                             borderRadius: BorderRadius.all(
                                               Radius.circular(16),
                                             ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Color(0x11000000),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
                                           ),
-                                          labelColor: Colors.white,
-                                          unselectedLabelColor: _darkText,
+                                          labelColor: _darkText,
+                                          unselectedLabelColor: _mutedText,
+
                                           dividerColor: Colors.transparent,
                                           tabs: [
                                             Tab(text: 'All Users'),
-                                            Tab(text: 'Active Users'),
+                                            Tab(text: 'Active User'),
                                             Tab(text: 'Inactive Users'),
                                           ],
                                         ),
@@ -612,6 +631,118 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                           ],
                         ),
                       ),
+                      //If user is active show red check
+                      user.isActive
+                          ? ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => CheckIn(
+                                    userId: user.id,
+                                    firstName: user.firstName,
+                                    lastName: user.lastName,
+                                    email: user.email,
+                                    phoneNumber: user.phoneNumber,
+                                    userType: user.userType,
+                                    membershipType: user.membershipType,
+                                    timeIn: DateTime.now(),
+
+                                    onConfirm: () {
+                                      //Mark active and add history
+                                      setState(() {
+                                        final index = _users.indexWhere(
+                                          (u) => u.id == user.id,
+                                        );
+                                        if (index != -1) {
+                                          _users[index] = user.copyWith(
+                                            isActive: true,
+                                            history: [
+                                              ...user.history,
+                                              _historyLabel("User checked in"),
+                                            ],
+                                          );
+                                        }
+                                      });
+                                      _showMessage(
+                                        "${user.fullName} checked in sucessfully",
+                                      );
+                                    },
+
+                                    onEditUser: () {
+                                      _openEditUserForm(context, user);
+                                    },
+                                  ),
+                                );
+                              },
+
+                              icon: const Icon(Icons.login),
+                              label: const Text("Check-In"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _successColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                              ),
+                            )
+                          //Checked out button
+                          : ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => CheckOut(
+                                    bookingId: 'BK-${user.id}',
+                                    customerName: user.fullName,
+                                    spaceUsed: 'Regular Seat',
+                                    timeIn: DateTime.now().subtract(
+                                      const Duration(hours: 3),
+                                    ),
+                                    onConfirm: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => PaymentDialog(
+                                          totalAmount: 235.00,
+                                          onConfirm: () {
+                                            setState(() {
+                                              final index = _users.indexWhere(
+                                                (u) => u.id == user.id,
+                                              );
+                                              if (index != -1) {
+                                                _users[index] = user.copyWith(
+                                                  isActive: false,
+                                                  history: [
+                                                    ...user.history,
+                                                    _historyLabel(
+                                                      "User checked out & paid",
+                                                    ),
+                                                  ],
+                                                );
+                                              }
+                                            });
+
+                                            showDialog(
+                                              context: context,
+                                              builder: (_) =>
+                                                  PaymentSuccessDialog(
+                                                    onGenerateReceipt: () {},
+                                                  ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.logout),
+                              label: const Text("Check-out"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _dangerColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                              ),
+                            ),
+
+                      const SizedBox(width: 100),
+
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -633,6 +764,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
@@ -765,6 +897,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
         firstName: result.firstName,
         lastName: result.lastName,
         email: result.email,
+        phoneNumber: result.phoneNumber,
+        userType: result.userType,
+        membershipType: result.membershipType,
         isActive: result.isActive,
         history: [...user.history, _historyLabel('User edited')],
       );
@@ -934,76 +1069,122 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                       validator: _requiredField,
                     ),
                     const SizedBox(height: 14),
-                    CustomTextField(
-                      hint: 'Email',
-                      controller: _emailController,
-                      validator: _emailValidator,
-                    ),
+
                     const SizedBox(height: 14),
-                    if (!widget.isEdit) ...[
-                      CustomTextField(
-                        hint: 'Phone Number',
-                        controller: _phoneNumberController,
-                        validator: _requiredField,
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        value: _selectedUserType,
-                        decoration: _inputDecoration('User Type'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Student',
-                            child: Text('Student'),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            hint: 'Email',
+                            controller: _emailController,
+                            validator: _emailValidator,
                           ),
-                          DropdownMenuItem(
-                            value: 'Professional',
-                            child: Text('Professional'),
+                        ),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedUserType,
+                            decoration: _inputDecoration('User Type'),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Student',
+                                child: Text('Student'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Professional',
+                                child: Text('Professional'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _selectedUserType = value);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    CustomTextField(
+                      hint: 'Phone Number',
+                      controller: _phoneNumberController,
+                      validator: _requiredField,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    Center(
+                      child: SizedBox(
+                        width: 300,
+
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedMembershipType,
+                          decoration: _inputDecoration('Membership Type'),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Annual',
+                              child: Text('Annual'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Loyalty Rewards',
+                              child: Text('Loyalty Rewards'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Monthly Membership',
+                              child: Text('Monthly Membership'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Open Time',
+                              child: Text('Open Time'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _selectedMembershipType = value);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE8F1F4)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'User is Active',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF22313A),
+                            ),
+                          ),
+                          Switch(
+                            value: _isActive,
+                            activeColor: const Color(0xFF2E8B57),
+                            onChanged: (bool value) {
+                              setState(() {
+                                _isActive = value;
+                              });
+                            },
                           ),
                         ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _selectedUserType = value);
-                        },
                       ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        value: _selectedMembershipType,
-                        decoration: _inputDecoration('Membership Type'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Annual',
-                            child: Text('Annual'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Monthly',
-                            child: Text('Monthly'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Open Time',
-                            child: Text('Open Time'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Premium',
-                            child: Text('Premium'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() => _selectedMembershipType = value);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                    ] else ...[
-                      SwitchListTile(
-                        value: _isActive,
-                        activeColor: const Color(0xFF76ACBD),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Status'),
-                        subtitle: Text(_isActive ? 'Active' : 'Inactive'),
-                        onChanged: (value) => setState(() => _isActive = value),
-                      ),
-                      const SizedBox(height: 6),
-                    ],
+                    ),
+
+                    SizedBox(height: 15),
+
                     Row(
                       children: [
                         Expanded(

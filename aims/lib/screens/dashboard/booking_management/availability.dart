@@ -2,8 +2,6 @@ import 'package:aims/screens/dashboard/booking_management/Booking.dart';
 import 'package:aims/screens/dashboard/booking_management/Calendar.dart';
 import 'package:aims/screens/dashboard/booking_management/booking_models.dart';
 import 'package:aims/screens/dashboard/booking_management/list_of_bookings.dart';
-import 'package:aims/widgets/common/header.dart';
-import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 
 class StaffBookingManagementScreen extends StatefulWidget {
@@ -16,9 +14,10 @@ class StaffBookingManagementScreen extends StatefulWidget {
 
 class _StaffBookingManagementScreenState
     extends State<StaffBookingManagementScreen> {
-  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
   static const Color _surfaceBlue = Color(0xFFCDECF3);
+  static const Color _sidebarBlue = Color(0xFF9AA9BD);
+  static const Color _headerBlue = Color(0xFF80AEC1);
 
   bool isSidebarOpen = true;
   String selectedMenu = 'Calendar';
@@ -43,169 +42,151 @@ class _StaffBookingManagementScreenState
       body: SafeArea(
         child: Column(
           children: [
-            Header(
-              role: UserRole.staff,
-              onMenuTap: () {
-                setState(() {
-                  isSidebarOpen = !isSidebarOpen;
-                });
-              },
-              maxWidth: _desktopFrameWidth,
-            ),
+            _buildTopBar(),
             Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (isSidebarOpen)
-                        Sidebar(
-                          role: UserRole.staff,
-                          selectedTitle: selectedMenu,
-                          onItemSelected: _handleSidebarTap,
-                        ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Calendar and Booking Management',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF111111),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: _surfaceBlue,
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                padding: const EdgeInsets.all(18),
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final stacked = constraints.maxWidth < 1100;
-                                    final bookingForm = AddReservationCard(
-                                      selectedDate: _selectedDay,
-                                      reservations: _reservations,
-                                      onDateChanged: (day) {
-                                        setState(() {
-                                          _selectedDay = day;
-                                          _focusedDay =
-                                              DateTime(day.year, day.month, 1);
-                                        });
-                                      },
-                                      onReservationSaved: _saveReservation,
-                                    );
-                                    final bookingCalendar = BookingCalendarCard(
-                                      focusedDay: _focusedDay,
-                                      selectedDay: _selectedDay,
-                                      hoveredDay: _hoveredDay,
-                                      reservations: _reservations,
-                                      onDaySelected: (day) {
-                                        setState(() {
-                                          _selectedDay = day;
-                                          _focusedDay =
-                                              DateTime(day.year, day.month, 1);
-                                        });
-                                      },
-                                      onMonthChanged: (month) {
-                                        setState(() {
-                                          _focusedDay = DateTime(
-                                            _focusedDay.year,
-                                            month,
-                                            1,
-                                          );
-                                        });
-                                      },
-                                      onYearChanged: (year) {
-                                        setState(() {
-                                          _focusedDay = DateTime(
-                                            year,
-                                            _focusedDay.month,
-                                            1,
-                                          );
-                                        });
-                                      },
-                                      onPrevMonth: () {
-                                        setState(() {
-                                          _focusedDay = DateTime(
-                                            _focusedDay.year,
-                                            _focusedDay.month - 1,
-                                            1,
-                                          );
-                                        });
-                                      },
-                                      onNextMonth: () {
-                                        setState(() {
-                                          _focusedDay = DateTime(
-                                            _focusedDay.year,
-                                            _focusedDay.month + 1,
-                                            1,
-                                          );
-                                        });
-                                      },
-                                      onDayHovered: (day) {
-                                        setState(() {
-                                          _hoveredDay = day;
-                                        });
-                                      },
-                                    );
-                                    final availabilityPanel =
-                                        RealTimeAvailabilityPanel(
-                                      selectedDay: _selectedDay,
-                                      reservations: _reservations,
-                                    );
-
-                                    return stacked
-                                        ? Column(
-                                            children: [
-                                              bookingForm,
-                                              const SizedBox(height: 16),
-                                              bookingCalendar,
-                                              const SizedBox(height: 16),
-                                              availabilityPanel,
-                                            ],
-                                          )
-                                        : Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(flex: 4, child: bookingForm),
-                                              const SizedBox(width: 16),
-                                              Expanded(
-                                                flex: 4,
-                                                child: bookingCalendar,
-                                              ),
-                                              const SizedBox(width: 16),
-                                              Expanded(
-                                                flex: 2,
-                                                child: availabilityPanel,
-                                              ),
-                                            ],
-                                          );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              TodaysBookingsSection(
-                                reservations: reservationsForToday(_reservations),
-                                onCheckIn: _checkInReservation,
-                                onCancel: _cancelReservation,
-                              ),
-                            ],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isSidebarOpen) _buildSidebar(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Calendar and Booking Management',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF111111),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 14),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: _surfaceBlue,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            padding: const EdgeInsets.all(18),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final stacked = constraints.maxWidth < 1100;
+                                final bookingForm = AddReservationCard(
+                                  selectedDate: _selectedDay,
+                                  reservations: _reservations,
+                                  onDateChanged: (day) {
+                                    setState(() {
+                                      _selectedDay = day;
+                                      _focusedDay =
+                                          DateTime(day.year, day.month, 1);
+                                    });
+                                  },
+                                  onReservationSaved: _saveReservation,
+                                );
+                                final bookingCalendar = BookingCalendarCard(
+                                  focusedDay: _focusedDay,
+                                  selectedDay: _selectedDay,
+                                  hoveredDay: _hoveredDay,
+                                  reservations: _reservations,
+                                  onDaySelected: (day) {
+                                    setState(() {
+                                      _selectedDay = day;
+                                      _focusedDay =
+                                          DateTime(day.year, day.month, 1);
+                                    });
+                                  },
+                                  onMonthChanged: (month) {
+                                    setState(() {
+                                      _focusedDay = DateTime(
+                                        _focusedDay.year,
+                                        month,
+                                        1,
+                                      );
+                                    });
+                                  },
+                                  onYearChanged: (year) {
+                                    setState(() {
+                                      _focusedDay = DateTime(
+                                        year,
+                                        _focusedDay.month,
+                                        1,
+                                      );
+                                    });
+                                  },
+                                  onPrevMonth: () {
+                                    setState(() {
+                                      _focusedDay = DateTime(
+                                        _focusedDay.year,
+                                        _focusedDay.month - 1,
+                                        1,
+                                      );
+                                    });
+                                  },
+                                  onNextMonth: () {
+                                    setState(() {
+                                      _focusedDay = DateTime(
+                                        _focusedDay.year,
+                                        _focusedDay.month + 1,
+                                        1,
+                                      );
+                                    });
+                                  },
+                                  onDayHovered: (day) {
+                                    setState(() {
+                                      _hoveredDay = day;
+                                    });
+                                  },
+                                );
+                                final availabilityPanel =
+                                    RealTimeAvailabilityPanel(
+                                  selectedDay: _selectedDay,
+                                  reservations: _reservations,
+                                );
+
+                                return stacked
+                                    ? Column(
+                                        children: [
+                                          bookingForm,
+                                          const SizedBox(height: 16),
+                                          bookingCalendar,
+                                          const SizedBox(height: 16),
+                                          availabilityPanel,
+                                        ],
+                                      )
+                                    : Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(flex: 4, child: bookingForm),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            flex: 4,
+                                            child: bookingCalendar,
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            flex: 2,
+                                            child: availabilityPanel,
+                                          ),
+                                        ],
+                                      );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          TodaysBookingsSection(
+                            reservations: reservationsForToday(_reservations),
+                            onCheckIn: _checkInReservation,
+                            onCancel: _cancelReservation,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -214,22 +195,150 @@ class _StaffBookingManagementScreenState
     );
   }
 
-  void _handleSidebarTap(String title) {
-    if (title == 'Calendar') {
-      setState(() {
-        selectedMenu = title;
-      });
-      return;
-    }
+  Widget _buildTopBar() {
+    return Container(
+      height: 72,
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: _headerBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                isSidebarOpen = !isSidebarOpen;
+              });
+            },
+            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'afterspace',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'Staff',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 10),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.white.withOpacity(0.95),
+            child: const Icon(Icons.badge_outlined, size: 20, color: _headerBlue),
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (title == 'Dashboard') {
-      Navigator.pushReplacementNamed(context, '/staff-dashboard');
-      return;
-    }
+  Widget _buildSidebar() {
+    return Container(
+      width: 146,
+      margin: const EdgeInsets.only(top: 2),
+      decoration: const BoxDecoration(
+        color: _sidebarBlue,
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 18),
+          _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
+          _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
+          _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
+        ],
+      ),
+    );
+  }
 
-    if (title == 'List of Users') {
-      Navigator.pushReplacementNamed(context, '/staff-users');
-    }
+  Widget _buildSidebarItem(IconData icon, String title) {
+    final isSelected = selectedMenu == title;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          if (title == 'Dashboard') {
+            Navigator.pushReplacementNamed(context, '/staff-dashboard');
+            return;
+          }
+
+          if (title == 'List of Users') {
+            Navigator.pushReplacementNamed(context, '/staff-users');
+            return;
+          }
+
+          setState(() {
+            selectedMenu = title;
+          });
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFF23323A) : Colors.white,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? const Color(0xFF23323A) : Colors.white,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _saveReservation(ReservationDraft draft) {

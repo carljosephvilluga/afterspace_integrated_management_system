@@ -1,7 +1,5 @@
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
-import 'package:aims/widgets/common/header.dart';
-import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/forms/user_form.dart';
 import 'package:aims/screens/list_of_users/checkIn.dart';
@@ -88,7 +86,6 @@ class UserFormData {
 }
 
 class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
-  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFF4F8FA);
   static const Color _panelColor = Colors.white;
   static const Color _accentColor = Color(0xFF76ACBD);
@@ -96,6 +93,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   static const Color _mutedText = Color(0xFF71808A);
   static const Color _successColor = Color(0xFF2E8B57);
   static const Color _dangerColor = Color(0xFFC95656);
+  static const Color _sidebarBlue = Color(0xFF9AA9BD);
+  static const Color _headerBlue = Color(0xFF80AEC1);
   static const List<String> _filterOptions = [
     'Last Name',
     'First Name',
@@ -196,138 +195,249 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              Header(
-                role: UserRole.staff,
-                onMenuTap: () {
-                  setState(() {
-                    isSidebarOpen = !isSidebarOpen;
-                  });
-                },
-                maxWidth: _desktopFrameWidth,
-              ),
+              _buildTopBar(),
               Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (isSidebarOpen)
-                          Sidebar(
-                            role: UserRole.staff,
-                            selectedTitle: selectedMenu,
-                            onItemSelected: (title) {
-                              if (title == 'Calendar') {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/calendar',
-                                );
-                                return;
-                              }
-
-                              if (title == 'List of Users') {
-                                setState(() {
-                                  selectedMenu = title;
-                                });
-                                return;
-                              }
-
-                              Navigator.pushNamed(context, '/staff-dashboard');
-                            },
-                          ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildPageHeader(context),
-                                const SizedBox(height: 16),
-                                _buildSearchSection(filteredUsers.length),
-                                const SizedBox(height: 16),
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: _panelColor,
-                                      borderRadius: BorderRadius.circular(20),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x12000000),
-                                          blurRadius: 20,
-                                          offset: Offset(0, 8),
-                                        ),
-                                      ],
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isSidebarOpen) _buildSidebar(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPageHeader(context),
+                            const SizedBox(height: 16),
+                            _buildSearchSection(filteredUsers.length),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: _panelColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x12000000),
+                                      blurRadius: 20,
+                                      offset: Offset(0, 8),
                                     ),
-                                    child: Column(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFE8F1F4),
-                                              borderRadius: BorderRadius.circular(
-                                                16,
-                                              ),
-                                            ),
-                                            child: const TabBar(
-                                              indicatorSize:
-                                                  TabBarIndicatorSize.tab,
-
-                                              indicator: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(16),
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Color(0x11000000),
-                                                    blurRadius: 4,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              labelColor: _darkText,
-                                              unselectedLabelColor: _mutedText,
-
-                                              dividerColor: Colors.transparent,
-                                              tabs: [
-                                                Tab(text: 'All Users'),
-                                                Tab(text: 'Active User'),
-                                                Tab(text: 'Inactive Users'),
-                                              ],
-                                            ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE8F1F4),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
                                           ),
                                         ),
-                                        Expanded(
-                                          child: TabBarView(
-                                            children: [
-                                              _buildUserList(
-                                                filteredUsers,
-                                                'No users found.',
-                                              ),
-                                              _buildUserList(
-                                                activeUsers,
-                                                'No active users found.',
-                                              ),
-                                              _buildUserList(
-                                                inactiveUsers,
-                                                'No inactive users found.',
+                                        child: const TabBar(
+                                          indicatorSize:
+                                              TabBarIndicatorSize.tab,
+
+                                          indicator: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(16),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Color(0x11000000),
+                                                blurRadius: 4,
+                                                offset: Offset(0, 2),
                                               ),
                                             ],
                                           ),
+                                          labelColor: _darkText,
+                                          unselectedLabelColor: _mutedText,
+
+                                          dividerColor: Colors.transparent,
+                                          tabs: [
+                                            Tab(text: 'All Users'),
+                                            Tab(text: 'Active User'),
+                                            Tab(text: 'Inactive Users'),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                    Expanded(
+                                      child: TabBarView(
+                                        children: [
+                                          _buildUserList(
+                                            filteredUsers,
+                                            'No users found.',
+                                          ),
+                                          _buildUserList(
+                                            activeUsers,
+                                            'No active users found.',
+                                          ),
+                                          _buildUserList(
+                                            inactiveUsers,
+                                            'No inactive users found.',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Container(
+      height: 72,
+      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: _headerBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                isSidebarOpen = !isSidebarOpen;
+              });
+            },
+            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
                 ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'afterspace',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+            ),
+          ),
+          const Spacer(),
+          const Text(
+            'Staff',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 10),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.white.withOpacity(0.95),
+            child: const Icon(Icons.badge_outlined, size: 20, color: _headerBlue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 146,
+      margin: const EdgeInsets.only(top: 2),
+      decoration: const BoxDecoration(
+        color: _sidebarBlue,
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 18),
+          _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
+          _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
+          _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(IconData icon, String title) {
+    final isSelected = selectedMenu == title;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        onTap: () {
+          if (title == 'Calendar') {
+            Navigator.pushReplacementNamed(context, '/calendar');
+            return;
+          }
+
+          if (title == 'List of Users') {
+            setState(() {
+              selectedMenu = title;
+            });
+            return;
+          }
+
+          Navigator.pushNamed(context, '/staff-dashboard');
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? _darkText : Colors.white,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? _darkText : Colors.white,
               ),
             ],
           ),

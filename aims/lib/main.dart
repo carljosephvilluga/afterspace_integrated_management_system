@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/dashboard/admin_dashboard_screen.dart';
 import 'screens/dashboard/booking_management/availability.dart';
 import 'screens/dashboard/manager_dashboard_screen.dart';
+import 'screens/membership_loyalty/membership_loyalty_program_screen.dart';
 import 'screens/dashboard/staff_dashboard_screen.dart';
 import 'screens/login/admin_login_screen.dart';
 import 'screens/login/manager_login_screen.dart';
@@ -30,6 +31,8 @@ class MyApp extends StatelessWidget {
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/manager-dashboard': (context) => const ManagerDashboardScreen(),
         '/staff-dashboard': (context) => const StaffDashboardScreen(),
+        '/membership-loyalty-program': (context) =>
+            const MembershipLoyaltyProgramScreen(),
         '/staff-users': (context) => const StaffUsersListScreen(),
         '/calendar': (context) => const StaffBookingManagementScreen(),
         '/login': (context) => const RoleSelectionScreen(),

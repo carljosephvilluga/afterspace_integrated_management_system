@@ -56,6 +56,10 @@ class Sidebar extends StatelessWidget {
       icon: Icons.list_alt_outlined,
       title: 'List of Users',
     ),
+    _SidebarItemData(
+      icon: Icons.card_membership_outlined,
+      title: 'Membership and Loyalty Program',
+    ),
   ];
 
   List<_SidebarItemData> get _items {
@@ -74,8 +78,9 @@ class Sidebar extends StatelessWidget {
       case UserRole.admin:
         return 188;
       case UserRole.manager:
-      case UserRole.staff:
         return 150;
+      case UserRole.staff:
+        return 220;
     }
   }
 
@@ -130,6 +135,8 @@ class Sidebar extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isSelected ? _textPrimary : _inactiveColor,
                     fontSize: role == UserRole.admin ? 17 : 13,

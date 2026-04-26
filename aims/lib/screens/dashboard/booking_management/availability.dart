@@ -284,6 +284,10 @@ class _StaffBookingManagementScreenState
           _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
           _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
           _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
+          _buildSidebarItem(
+            Icons.card_membership_outlined,
+            'Membership and Loyalty Program',
+          ),
         ],
       ),
     );
@@ -303,6 +307,11 @@ class _StaffBookingManagementScreenState
 
           if (title == 'List of Users') {
             Navigator.pushReplacementNamed(context, '/staff-users');
+            return;
+          }
+
+          if (title == 'Membership and Loyalty Program') {
+            Navigator.pushReplacementNamed(context, '/membership-loyalty-program');
             return;
           }
 

@@ -572,7 +572,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
 
   Widget _buildSidebar() {
     return Container(
-      width: 146,
+      width: 220,
       margin: const EdgeInsets.only(top: 2),
       decoration: const BoxDecoration(
         color: _sidebarBlue,
@@ -588,6 +588,10 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
           _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
           _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
           _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
+          _buildSidebarItem(
+            Icons.card_membership_outlined,
+            'Membership and Loyalty Program',
+          ),
         ],
       ),
     );
@@ -610,6 +614,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
             return;
           }
 
+          if (title == 'Membership and Loyalty Program') {
+            Navigator.pushNamed(context, '/membership-loyalty-program');
+            return;
+          }
+
           setState(() {
             selectedMenu = title;
           });
@@ -626,6 +635,8 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
               Expanded(
                 child: Text(
                   title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isSelected ? _textPrimary : Colors.white,
                     fontSize: 13,

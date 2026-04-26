@@ -10,6 +10,7 @@ import 'screens/login/manager_login_screen.dart';
 import 'screens/login/role_selection_screen.dart';
 import 'screens/login/staff_login_screen.dart';
 import '/screens/list_of_users/users_list.dart';
+import 'widgets/common/header.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,8 +34,14 @@ class MyApp extends StatelessWidget {
         '/staff-dashboard': (context) => const StaffDashboardScreen(),
         '/membership-loyalty-program': (context) =>
             const MembershipLoyaltyProgramScreen(),
+        '/manager-membership': (context) =>
+            MembershipLoyaltyProgramScreen(role: UserRole.manager),
         '/staff-users': (context) => const StaffUsersListScreen(),
+        '/manager-users': (context) =>
+            StaffUsersListScreen(role: UserRole.manager),
         '/calendar': (context) => const StaffBookingManagementScreen(),
+        '/manager-calendar': (context) =>
+            StaffBookingManagementScreen(role: UserRole.manager),
         '/login': (context) => const RoleSelectionScreen(),
       },
     );

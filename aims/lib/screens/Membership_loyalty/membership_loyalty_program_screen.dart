@@ -3,14 +3,21 @@ import 'package:aims/widgets/membership_loyalty_widgets/add_membership_dialog.da
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/create_promo_dialog.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/delete_membership_dialog.dart';
+import 'package:aims/widgets/membership_loyalty_widgets/edit_hourly_pricing_dialog.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/edit_membership_dialog.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_action_button.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_section.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_table.dart';
+import 'package:aims/widgets/utils/space_pricing.dart';
 import 'package:flutter/material.dart';
 
 class MembershipLoyaltyProgramScreen extends StatefulWidget {
-  const MembershipLoyaltyProgramScreen({super.key});
+  const MembershipLoyaltyProgramScreen({
+    super.key,
+    this.role = UserRole.staff,
+  });
+
+  final UserRole role;
 
   @override
   State<MembershipLoyaltyProgramScreen> createState() =>
@@ -139,7 +146,7 @@ class _MembershipLoyaltyProgramScreenState
         child: Column(
           children: [
             Header(
-              role: UserRole.staff,
+              role: widget.role,
               onMenuTap: () {
                 setState(() {
                   isSidebarOpen = !isSidebarOpen;
@@ -156,7 +163,7 @@ class _MembershipLoyaltyProgramScreenState
                     children: [
                       if (isSidebarOpen)
                         Sidebar(
-                          role: UserRole.staff,
+                          role: widget.role,
                           selectedTitle: selectedMenu,
                           onItemSelected: _handleSidebarTap,
                         ),
@@ -212,6 +219,17 @@ class _MembershipLoyaltyProgramScreenState
                                           icon: Icons.local_offer_outlined,
                                           onPressed: _openCreatePromoDialog,
                                         ),
+                                        if (widget.role == UserRole.manager) ...[
+                                          const SizedBox(height: 12),
+                                          MembershipProgramActionButton(
+                                            label: 'Update Hourly Rates',
+                                            backgroundColor: Colors.white,
+                                            textColor: _textPrimary,
+                                            icon: Icons.payments_outlined,
+                                            onPressed:
+                                                _openEditHourlyPricingDialog,
+                                          ),
+                                        ],
                                       ],
                                     )
                                   else
@@ -233,9 +251,22 @@ class _MembershipLoyaltyProgramScreenState
                                           icon: Icons.local_offer_outlined,
                                           onPressed: _openCreatePromoDialog,
                                         ),
+                                        if (widget.role == UserRole.manager) ...[
+                                          const SizedBox(width: 16),
+                                          MembershipProgramActionButton(
+                                            label: 'Update Hourly Rates',
+                                            backgroundColor: Colors.white,
+                                            textColor: _textPrimary,
+                                            icon: Icons.payments_outlined,
+                                            onPressed:
+                                                _openEditHourlyPricingDialog,
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   const SizedBox(height: 24),
+                                  _buildHourlyPricingSection(),
+                                  const SizedBox(height: 18),
                                   MembershipProgramSection(
                                     title: 'Membership Types',
                                     subtitle: 'Review available plans and their inclusions.',
@@ -347,17 +378,28 @@ class _MembershipLoyaltyProgramScreenState
     }
 
     if (title == 'Dashboard') {
-      Navigator.pushReplacementNamed(context, '/staff-dashboard');
+      Navigator.pushReplacementNamed(
+        context,
+        widget.role == UserRole.manager
+            ? '/manager-dashboard'
+            : '/staff-dashboard',
+      );
       return;
     }
 
     if (title == 'Calendar') {
-      Navigator.pushReplacementNamed(context, '/calendar');
+      Navigator.pushReplacementNamed(
+        context,
+        widget.role == UserRole.manager ? '/manager-calendar' : '/calendar',
+      );
       return;
     }
 
     if (title == 'List of Users') {
-      Navigator.pushReplacementNamed(context, '/staff-users');
+      Navigator.pushReplacementNamed(
+        context,
+        widget.role == UserRole.manager ? '/manager-users' : '/staff-users',
+      );
       return;
     }
   }
@@ -408,6 +450,31 @@ class _MembershipLoyaltyProgramScreenState
         ),
       );
     });
+  }
+
+  Future<void> _openEditHourlyPricingDialog() async {
+    if (widget.role != UserRole.manager) {
+      return;
+    }
+
+    final pricing = SpacePricingStore.current;
+    final result = await showDialog<HourlyPricingDialogResult>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.18),
+      builder: (_) => EditHourlyPricingDialog(
+        initialBoardRoomRate: pricing.boardRoomHourlyRate,
+        initialOrdinarySpaceRate: pricing.ordinarySpaceHourlyRate,
+      ),
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    SpacePricingStore.update(
+      boardRoomHourlyRate: result.boardRoomHourlyRate,
+      ordinarySpaceHourlyRate: result.ordinarySpaceHourlyRate,
+    );
   }
 
   Future<void> _editMembership(int index) async {
@@ -550,6 +617,125 @@ class _MembershipLoyaltyProgramScreenState
                 fontWeight: FontWeight.w700,
                 color: _textPrimary,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHourlyPricingSection() {
+    return MembershipProgramSection(
+      title: 'Hourly Space Charges',
+      subtitle: widget.role == UserRole.manager
+          ? 'Manager-controlled hourly pricing for checkout transactions.'
+          : 'Current hourly pricing applied during checkout transactions.',
+      backgroundColor: _panelBlue,
+      textColor: _textPrimary,
+      child: ValueListenableBuilder<SpacePricing>(
+        valueListenable: SpacePricingStore.pricingNotifier,
+        builder: (context, pricing, _) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  _buildRateCard(
+                    title: 'Board Room',
+                    value: SpacePricingStore.formatCurrency(
+                      pricing.boardRoomHourlyRate,
+                    ),
+                    description: 'Hourly charge for boardroom bookings.',
+                    icon: Icons.meeting_room_outlined,
+                  ),
+                  _buildRateCard(
+                    title: 'Ordinary Space',
+                    value: SpacePricingStore.formatCurrency(
+                      pricing.ordinarySpaceHourlyRate,
+                    ),
+                    description: 'Hourly charge for regular seats and open spaces.',
+                    icon: Icons.event_seat_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                widget.role == UserRole.manager
+                    ? 'These values can be updated by the manager using the button above.'
+                    : 'Only the manager can update these hourly charges.',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _textMuted,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRateCard({
+    required String title,
+    required String value,
+    required String description,
+    required IconData icon,
+  }) {
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.9)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _tanSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: _headerBlue),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: _textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: _headerBlue,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: _textMuted,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

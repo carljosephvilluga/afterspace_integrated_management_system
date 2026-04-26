@@ -1,3 +1,5 @@
+import 'package:aims/widgets/common/header.dart';
+import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
@@ -432,10 +434,9 @@ class _Reservation {
 }
 
 class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
+  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
   static const Color _surfaceBlue = Color(0xFFC7E8EE);
-  static const Color _sidebarBlue = Color(0xFF9AA9BD);
-  static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
 
@@ -476,21 +477,39 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(),
+            Header(
+              role: UserRole.staff,
+              onMenuTap: () {
+                setState(() {
+                  isSidebarOpen = !isSidebarOpen;
+                });
+              },
+              maxWidth: _desktopFrameWidth,
+            ),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (isSidebarOpen) _buildSidebar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                      child: selectedMenu == 'Dashboard'
-                          ? _buildDashboardContent()
-                          : _buildPlaceholder(selectedMenu),
-                    ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (isSidebarOpen)
+                        Sidebar(
+                          role: UserRole.staff,
+                          selectedTitle: selectedMenu,
+                          onItemSelected: _handleSidebarTap,
+                        ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                          child: selectedMenu == 'Dashboard'
+                              ? _buildDashboardContent()
+                              : _buildPlaceholder(selectedMenu),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -499,161 +518,25 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     );
   }
 
-  Widget _buildTopBar() {
-    return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: _headerBlue,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                isSidebarOpen = !isSidebarOpen;
-              });
-            },
-            icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'afterspace',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.8,
-            ),
-          ),
-          const Spacer(),
-          const Text(
-            'Staff',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(width: 10),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withOpacity(0.95),
-            child: const Icon(Icons.badge_outlined, size: 20, color: _headerBlue),
-          ),
-        ],
-      ),
-    );
-  }
+  void _handleSidebarTap(String title) {
+    if (title == 'Calendar') {
+      Navigator.pushNamed(context, '/calendar');
+      return;
+    }
 
-  Widget _buildSidebar() {
-    return Container(
-      width: 220,
-      margin: const EdgeInsets.only(top: 2),
-      decoration: const BoxDecoration(
-        color: _sidebarBlue,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 18),
-          _buildSidebarItem(Icons.home_outlined, 'Dashboard'),
-          _buildSidebarItem(Icons.calendar_today_outlined, 'Calendar'),
-          _buildSidebarItem(Icons.list_alt_outlined, 'List of Users'),
-          _buildSidebarItem(
-            Icons.card_membership_outlined,
-            'Membership and Loyalty Program',
-          ),
-        ],
-      ),
-    );
-  }
+    if (title == 'List of Users') {
+      Navigator.pushNamed(context, '/staff-users');
+      return;
+    }
 
-  Widget _buildSidebarItem(IconData icon, String title) {
-    final isSelected = selectedMenu == title;
+    if (title == 'Membership and Loyalty Program') {
+      Navigator.pushNamed(context, '/membership-loyalty-program');
+      return;
+    }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: InkWell(
-        onTap: () {
-          if (title == 'Calendar') {
-            Navigator.pushNamed(context, '/calendar');
-            return;
-          }
-
-          if (title == 'List of Users') {
-            Navigator.pushNamed(context, '/staff-users');
-            return;
-          }
-
-          if (title == 'Membership and Loyalty Program') {
-            Navigator.pushNamed(context, '/membership-loyalty-program');
-            return;
-          }
-
-          setState(() {
-            selectedMenu = title;
-          });
-        },
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isSelected ? _textPrimary : Colors.white,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected ? _textPrimary : Colors.white,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    setState(() {
+      selectedMenu = title;
+    });
   }
 
   Widget _buildDashboardContent() {

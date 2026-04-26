@@ -39,7 +39,7 @@ class CheckIn extends StatefulWidget {
 }
 
 class _CheckInState extends State<CheckIn> {
-  String _selectedSpace = 'Regular Seat';
+  String _selectedSpace = 'Ordinary Space';
 
   String _formatTime(DateTime dt) {
     final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
@@ -250,8 +250,8 @@ class _CheckInState extends State<CheckIn> {
                               ),
                               items: const [
                                 DropdownMenuItem(
-                                  value: 'Regular Seat',
-                                  child: Text('Regular Seat'),
+                                  value: 'Ordinary Space',
+                                  child: Text('Ordinary Space'),
                                 ),
                                 DropdownMenuItem(
                                   value: 'Board Room',

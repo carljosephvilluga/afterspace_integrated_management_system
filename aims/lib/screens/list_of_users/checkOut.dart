@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/utils/space_pricing.dart';
+import 'package:flutter/material.dart';
 
 class CheckOut extends StatelessWidget {
   final String bookingId;
   final String customerName;
   final String spaceUsed;
   final DateTime timeIn;
+  final double totalAmount;
   final VoidCallback onConfirm;
 
   const CheckOut({
@@ -14,10 +16,10 @@ class CheckOut extends StatelessWidget {
     required this.customerName,
     required this.spaceUsed,
     required this.timeIn,
+    required this.totalAmount,
     required this.onConfirm,
   });
 
-  // Helper to format DateTime into "8:00 AM" format
   String _formatTime(DateTime dt) {
     final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
     final minute = dt.minute.toString().padLeft(2, '0');
@@ -25,7 +27,6 @@ class CheckOut extends StatelessWidget {
     return '$hour:$minute $amPm';
   }
 
-  // Helper to calculate and format the duration
   String _calculateDuration(DateTime start, DateTime end) {
     final difference = end.difference(start);
     final hours = difference.inHours;
@@ -42,8 +43,7 @@ class CheckOut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Capture the exact time the checkout dialog is opened
-    final DateTime timeOut = DateTime.now();
+    final timeOut = DateTime.now();
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -54,10 +54,8 @@ class CheckOut extends StatelessWidget {
           padding: const EdgeInsets.all(40.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment:
-                CrossAxisAlignment.center, // Center children in Column
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // --- TITLE ---
               const Text(
                 'Confirm Check-out',
                 style: TextStyle(
@@ -68,8 +66,6 @@ class CheckOut extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-
-              // --- DETAILS SECTION 1 ---
               _buildCenteredDetailRow(Icons.book, 'Booking ID:', bookingId),
               const SizedBox(height: 12),
               _buildCenteredDetailRow(
@@ -83,10 +79,7 @@ class CheckOut extends StatelessWidget {
                 'Space used:',
                 spaceUsed,
               ),
-
               const SizedBox(height: 24),
-
-              // --- DETAILS SECTION 2 (TIME) ---
               _buildCenteredDetailRow(
                 Icons.access_time,
                 'Time in:',
@@ -104,30 +97,32 @@ class CheckOut extends StatelessWidget {
                 'Duration:',
                 _calculateDuration(timeIn, timeOut),
               ),
-
+              const SizedBox(height: 12),
+              _buildCenteredDetailRow(
+                Icons.payments_outlined,
+                'Hourly rate:',
+                SpacePricingStore.formatCurrency(
+                  SpacePricingStore.hourlyRateForSpace(spaceUsed),
+                ),
+              ),
               const SizedBox(height: 24),
-
-              // --- TOTAL SECTION (Now Centered) ---
               RichText(
                 textAlign: TextAlign.center,
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 14, color: Colors.black),
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
                   children: [
-                    TextSpan(
+                    const TextSpan(
                       text: 'TOTAL: ',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     TextSpan(
-                      text: '₱235.00', // Hardcoded placeholder
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      text: SpacePricingStore.formatCurrency(totalAmount),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 40),
-
-              // --- CHECKOUT BUTTON ---
               CustomButton(
                 width: 240,
                 height: 48,
@@ -136,7 +131,7 @@ class CheckOut extends StatelessWidget {
                 textColor: Colors.white,
                 borderColor: Colors.black,
                 onPressed: () async {
-                  Navigator.pop(context); // Close the dialog
+                  Navigator.pop(context);
                   onConfirm();
                 },
               ),
@@ -147,7 +142,6 @@ class CheckOut extends StatelessWidget {
     );
   }
 
-  // Helper widget to build centered rows using RichText
   Widget _buildCenteredDetailRow(IconData icon, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -155,7 +149,6 @@ class CheckOut extends StatelessWidget {
         Icon(icon, size: 18, color: Colors.black54),
         const SizedBox(width: 14),
         Flexible(
-          // Wrap RichText to allow for long customer names
           child: RichText(
             textAlign: TextAlign.center,
             text: TextSpan(

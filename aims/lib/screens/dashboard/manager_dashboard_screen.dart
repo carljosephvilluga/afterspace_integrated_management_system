@@ -453,10 +453,13 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
               Navigator.pushReplacementNamed(context, '/manager-dashboard');
               break;
             case 'Calendar':
-              Navigator.pushReplacementNamed(context, '/calendar');
+              Navigator.pushReplacementNamed(context, '/manager-calendar');
               break;
             case 'List of Users':
-              Navigator.pushReplacementNamed(context, '/staff-users');
+              Navigator.pushReplacementNamed(context, '/manager-users');
+              break;
+            case 'Membership and Loyalty Program':
+              Navigator.pushReplacementNamed(context, '/manager-membership');
               break;
           }
         });

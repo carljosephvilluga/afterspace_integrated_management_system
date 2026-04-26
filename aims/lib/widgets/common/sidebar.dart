@@ -41,6 +41,10 @@ class Sidebar extends StatelessWidget {
       icon: Icons.list_alt_outlined,
       title: 'List of Users',
     ),
+    _SidebarItemData(
+      icon: Icons.card_membership_outlined,
+      title: 'Membership and Loyalty Program',
+    ),
   ];
 
   static const List<_SidebarItemData> _staffItems = [
@@ -73,32 +77,10 @@ class Sidebar extends StatelessWidget {
     }
   }
 
-  double get _width {
-    switch (role) {
-      case UserRole.admin:
-        return 188;
-      case UserRole.manager:
-        return 150;
-      case UserRole.staff:
-        return 220;
-    }
-  }
-
-  Color get _inactiveColor {
-    switch (role) {
-      case UserRole.admin:
-        return _textPrimary;
-      case UserRole.manager:
-      case UserRole.staff:
-        return Colors.white;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _width,
-      margin: role == UserRole.admin ? null : const EdgeInsets.only(top: 2),
+      width: 188,
       decoration: const BoxDecoration(
         color: _sidebarBlue,
         borderRadius: BorderRadius.only(
@@ -109,7 +91,7 @@ class Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: role == UserRole.admin ? 26 : 20),
+          const SizedBox(height: 26),
           ..._items.map(_buildSidebarItem),
         ],
       ),
@@ -138,8 +120,8 @@ class Sidebar extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: isSelected ? _textPrimary : _inactiveColor,
-                    fontSize: role == UserRole.admin ? 17 : 13,
+                    color: _textPrimary,
+                    fontSize: 17,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
@@ -147,8 +129,8 @@ class Sidebar extends StatelessWidget {
               const SizedBox(width: 8),
               Icon(
                 item.icon,
-                size: role == UserRole.admin ? 20 : 18,
-                color: isSelected ? _textPrimary : _inactiveColor,
+                size: 20,
+                color: _textPrimary,
               ),
             ],
           ),

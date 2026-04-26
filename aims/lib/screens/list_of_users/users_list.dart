@@ -217,6 +217,14 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                             role: UserRole.staff,
                             selectedTitle: selectedMenu,
                             onItemSelected: (title) {
+                              if (title == 'Calendar') {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/calendar',
+                                );
+                                return;
+                              }
+
                               if (title == 'List of Users') {
                                 setState(() {
                                   selectedMenu = title;

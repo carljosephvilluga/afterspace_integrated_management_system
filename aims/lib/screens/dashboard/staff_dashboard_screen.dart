@@ -600,6 +600,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: InkWell(
         onTap: () {
+          if (title == 'Calendar') {
+            Navigator.pushNamed(context, '/calendar');
+            return;
+          }
+
           if (title == 'List of Users') {
             Navigator.pushNamed(context, '/staff-users');
             return;

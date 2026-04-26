@@ -88,7 +88,7 @@ class UserFormData {
 }
 
 class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
-  String selectedTitle = 'List of Users';
+  static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFF4F8FA);
   static const Color _panelColor = Colors.white;
   static const Color _accentColor = Color(0xFF76ACBD);
@@ -116,9 +116,10 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     'Professional',
   ];
 
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
 
+  bool isSidebarOpen = true;
+  String selectedMenu = 'List of Users';
   String _selectedFilter = 'Last Name';
   String _selectedDropdownValue = 'All';
   int _nextUserNumber = 4;
@@ -191,128 +192,133 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        key: _scaffoldKey,
         backgroundColor: _pageBackground,
         body: SafeArea(
-          child: Row(
+          child: Column(
             children: [
-              Sidebar(
+              Header(
                 role: UserRole.staff,
-                selectedTitle: selectedTitle,
-                onItemSelected: (title) {
-                  setState(() => selectedTitle = title);
-
-                  switch (title) {
-                    case 'Dashboard':
-                      Navigator.pushNamed(context, '/staff-dashboard');
-                      break;
-                    case 'List of Users':
-                      break;
-                  }
+                onMenuTap: () {
+                  setState(() {
+                    isSidebarOpen = !isSidebarOpen;
+                  });
                 },
+                maxWidth: _desktopFrameWidth,
               ),
-
               Expanded(
-                child: Column(
-                  children: [
-                    Header(
-                      role: UserRole.staff,
-                      onMenuTap: () {
-                        _scaffoldKey.currentState?.openDrawer();
-                      },
-                      maxWidth: MediaQuery.of(context).size.width,
-                    ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (isSidebarOpen)
+                          Sidebar(
+                            role: UserRole.staff,
+                            selectedTitle: selectedMenu,
+                            onItemSelected: (title) {
+                              if (title == 'List of Users') {
+                                setState(() {
+                                  selectedMenu = title;
+                                });
+                                return;
+                              }
 
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildPageHeader(context),
-                            const SizedBox(height: 16),
-                            _buildSearchSection(filteredUsers.length),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: _panelColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x12000000),
-                                      blurRadius: 20,
-                                      offset: Offset(0, 8),
+                              Navigator.pushNamed(context, '/staff-dashboard');
+                            },
+                          ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildPageHeader(context),
+                                const SizedBox(height: 16),
+                                _buildSearchSection(filteredUsers.length),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _panelColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x12000000),
+                                          blurRadius: 20,
+                                          offset: Offset(0, 8),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE8F1F4),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
+                                    child: Column(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE8F1F4),
+                                              borderRadius: BorderRadius.circular(
+                                                16,
+                                              ),
+                                            ),
+                                            child: const TabBar(
+                                              indicatorSize:
+                                                  TabBarIndicatorSize.tab,
+
+                                              indicator: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.all(
+                                                  Radius.circular(16),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Color(0x11000000),
+                                                    blurRadius: 4,
+                                                    offset: Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              labelColor: _darkText,
+                                              unselectedLabelColor: _mutedText,
+
+                                              dividerColor: Colors.transparent,
+                                              tabs: [
+                                                Tab(text: 'All Users'),
+                                                Tab(text: 'Active User'),
+                                                Tab(text: 'Inactive Users'),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                        child: const TabBar(
-                                          indicatorSize:
-                                              TabBarIndicatorSize.tab,
-
-                                          indicator: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.all(
-                                              Radius.circular(16),
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Color(0x11000000),
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2),
+                                        Expanded(
+                                          child: TabBarView(
+                                            children: [
+                                              _buildUserList(
+                                                filteredUsers,
+                                                'No users found.',
+                                              ),
+                                              _buildUserList(
+                                                activeUsers,
+                                                'No active users found.',
+                                              ),
+                                              _buildUserList(
+                                                inactiveUsers,
+                                                'No inactive users found.',
                                               ),
                                             ],
                                           ),
-                                          labelColor: _darkText,
-                                          unselectedLabelColor: _mutedText,
-
-                                          dividerColor: Colors.transparent,
-                                          tabs: [
-                                            Tab(text: 'All Users'),
-                                            Tab(text: 'Active User'),
-                                            Tab(text: 'Inactive Users'),
-                                          ],
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                    Expanded(
-                                      child: TabBarView(
-                                        children: [
-                                          _buildUserList(
-                                            filteredUsers,
-                                            'No users found.',
-                                          ),
-                                          _buildUserList(
-                                            activeUsers,
-                                            'No active users found.',
-                                          ),
-                                          _buildUserList(
-                                            inactiveUsers,
-                                            'No inactive users found.',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -631,60 +637,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                           ],
                         ),
                       ),
-                      //If user is active show red check
+                      // Active users can check out; inactive users can check in.
                       user.isActive
                           ? ElevatedButton.icon(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => CheckIn(
-                                    userId: user.id,
-                                    firstName: user.firstName,
-                                    lastName: user.lastName,
-                                    email: user.email,
-                                    phoneNumber: user.phoneNumber,
-                                    userType: user.userType,
-                                    membershipType: user.membershipType,
-                                    timeIn: DateTime.now(),
-
-                                    onConfirm: () {
-                                      //Mark active and add history
-                                      setState(() {
-                                        final index = _users.indexWhere(
-                                          (u) => u.id == user.id,
-                                        );
-                                        if (index != -1) {
-                                          _users[index] = user.copyWith(
-                                            isActive: true,
-                                            history: [
-                                              ...user.history,
-                                              _historyLabel("User checked in"),
-                                            ],
-                                          );
-                                        }
-                                      });
-                                      _showMessage(
-                                        "${user.fullName} checked in sucessfully",
-                                      );
-                                    },
-
-                                    onEditUser: () {
-                                      _openEditUserForm(context, user);
-                                    },
-                                  ),
-                                );
-                              },
-
-                              icon: const Icon(Icons.login),
-                              label: const Text("Check-In"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _successColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                              ),
-                            )
-                          //Checked out button
-                          : ElevatedButton.icon(
                               onPressed: () {
                                 showDialog(
                                   context: context,
@@ -736,6 +691,55 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                               label: const Text("Check-out"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _dangerColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                              ),
+                            )
+                          // Inactive users can check back in.
+                          : ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => CheckIn(
+                                    userId: user.id,
+                                    firstName: user.firstName,
+                                    lastName: user.lastName,
+                                    email: user.email,
+                                    phoneNumber: user.phoneNumber,
+                                    userType: user.userType,
+                                    membershipType: user.membershipType,
+                                    timeIn: DateTime.now(),
+
+                                    onConfirm: () {
+                                      setState(() {
+                                        final index = _users.indexWhere(
+                                          (u) => u.id == user.id,
+                                        );
+                                        if (index != -1) {
+                                          _users[index] = user.copyWith(
+                                            isActive: true,
+                                            history: [
+                                              ...user.history,
+                                              _historyLabel("User checked in"),
+                                            ],
+                                          );
+                                        }
+                                      });
+                                      _showMessage(
+                                        "${user.fullName} checked in sucessfully",
+                                      );
+                                    },
+
+                                    onEditUser: () {
+                                      _openEditUserForm(context, user);
+                                    },
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.login),
+                              label: const Text("Check-In"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _successColor,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                               ),

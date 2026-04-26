@@ -5,7 +5,9 @@ import 'package:aims/widgets/utils/validators.dart';
 import 'package:aims/screens/list_of_users/users_list.dart';
 
 class AddUser extends StatefulWidget {
-  const AddUser({super.key});
+  const AddUser({super.key, required this.userId});
+
+  final String userId;
 
   @override
   State<AddUser> createState() => _AddUserState();
@@ -104,7 +106,7 @@ class _AddUserState extends State<AddUser> {
                                 ),
                                 const SizedBox(width: 10),
                                 SizedBox(
-                                  width: 80, //fixed width for MI
+                                  width: 80,
                                   child: CustomTextField(
                                     hint: "M.I",
                                     validator: Validators.middleInitial,
@@ -155,10 +157,27 @@ class _AddUserState extends State<AddUser> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                SizedBox(
-                                  width: 80,
-                                  child: CustomTextField(hint: ""),
+                                Container(
+                                  width: 120,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 18,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      widget.userId,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
                                 ),
+
                                 const SizedBox(width: 10),
                                 const Expanded(
                                   child: Text(

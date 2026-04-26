@@ -9,12 +9,10 @@ import 'package:aims/screens/list_of_users/checkOut.dart';
 import 'package:aims/screens/list_of_users/payment.dart';
 import 'package:aims/screens/list_of_users/payment_success.dart';
 import 'package:aims/widgets/utils/space_pricing.dart';
+import 'package:aims/screens/list_of_users/receipt.dart';
 
 class StaffUsersListScreen extends StatefulWidget {
-  const StaffUsersListScreen({
-    super.key,
-    this.role = UserRole.staff,
-  });
+  const StaffUsersListScreen({super.key, this.role = UserRole.staff});
 
   final UserRole role;
 
@@ -94,10 +92,7 @@ class UserFormData {
 }
 
 class _ActiveVisit {
-  const _ActiveVisit({
-    required this.spaceUsed,
-    required this.timeIn,
-  });
+  const _ActiveVisit({required this.spaceUsed, required this.timeIn});
 
   final String spaceUsed;
   final DateTime timeIn;
@@ -203,8 +198,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
 
   _ActiveVisit _defaultActiveVisitFor(_StaffUser user) {
     return _ActiveVisit(
-      spaceUsed:
-          user.membershipType == 'Annual' ? 'Board Room' : 'Ordinary Space',
+      spaceUsed: user.membershipType == 'Annual'
+          ? 'Board Room'
+          : 'Ordinary Space',
       timeIn: DateTime.now().subtract(const Duration(hours: 3)),
     );
   }
@@ -240,7 +236,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
               Expanded(
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                    constraints: const BoxConstraints(
+                      maxWidth: _desktopFrameWidth,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -280,9 +278,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                           child: Container(
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFE8F1F4),
-                                              borderRadius: BorderRadius.circular(
-                                                16,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
                                             ),
                                             child: const TabBar(
                                               indicatorSize:
@@ -699,9 +696,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                 final visit = _activeVisitFor(user);
                                 final totalAmount =
                                     SpacePricingStore.totalForVisit(
-                                  spaceUsed: visit.spaceUsed,
-                                  timeIn: visit.timeIn,
-                                );
+                                      spaceUsed: visit.spaceUsed,
+                                      timeIn: visit.timeIn,
+                                    );
 
                                 showDialog(
                                   context: context,
@@ -739,7 +736,23 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                               context: context,
                                               builder: (_) =>
                                                   PaymentSuccessDialog(
-                                                    onGenerateReceipt: () {},
+                                                    onGenerateReceipt: () {
+                                                      showDialog(
+                                                        context: context,
+                                                        builder: (_) =>
+                                                            ReceiptDialog(
+                                                              bookingId:
+                                                                  'BK-${user.id}',
+                                                              customerName:
+                                                                  user.fullName,
+                                                              spaceUsed: visit
+                                                                  .spaceUsed,
+
+                                                              totalAmount:
+                                                                  totalAmount,
+                                                            ),
+                                                      );
+                                                    },
                                                   ),
                                             );
                                           },
@@ -775,6 +788,11 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
 
                                     onEditUser: () {
                                       _openEditUserForm(context, user);
+                                    },
+
+                                    onViewHistory: () {
+                                      Navigator.pop(context);
+                                      _openHistoryScreen(context, user);
                                     },
                                   ),
                                 );
@@ -929,9 +947,11 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<void> _openAddUserForm(BuildContext context) async {
-    final result = await Navigator.of(
-      context,
-    ).push<UserFormData>(MaterialPageRoute(builder: (_) => const AddUser()));
+    final generatedId = 'USR-${_nextUserNumber.toString().padLeft(4, '0')}';
+
+    final result = await Navigator.of(context).push<UserFormData>(
+      MaterialPageRoute(builder: (_) => AddUser(userId: generatedId)),
+    );
 
     if (result == null) return;
 
@@ -944,7 +964,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       phoneNumber: result.phoneNumber,
       userType: result.userType,
       membershipType: result.membershipType,
-      isActive: true,
+      isActive: false,
       history: [timestamp],
     );
 
@@ -953,7 +973,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       _users.insert(0, newUser);
     });
 
-    _showMessage('${newUser.fullName} added to Active Users.');
+    _showMessage('${newUser.fullName} added to All Users.');
   }
 
   Future<void> _openEditUserForm(BuildContext context, _StaffUser user) async {
@@ -1222,41 +1242,6 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                     ),
 
                     const SizedBox(height: 12),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE8F1F4)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'User is Active',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF22313A),
-                            ),
-                          ),
-                          Switch(
-                            value: _isActive,
-                            activeColor: const Color(0xFF2E8B57),
-                            onChanged: (bool value) {
-                              setState(() {
-                                _isActive = value;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 15),
 
                     Row(
                       children: [

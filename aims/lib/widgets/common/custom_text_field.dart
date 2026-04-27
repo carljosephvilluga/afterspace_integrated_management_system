@@ -11,6 +11,7 @@ class CustomTextField extends StatefulWidget {
   final TextAlign textAlign; // Control Alignment
   final bool showToggle; // Show eye icon for password
   final Color fillColor; // background color override
+  final Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -22,6 +23,7 @@ class CustomTextField extends StatefulWidget {
     this.textAlign = TextAlign.start, // default left align
     this.showToggle = false,          // default: no eye icon
     this.fillColor = Colors.white,    // default background
+    this.onChanged,
   });
 
   @override
@@ -47,6 +49,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         validator: widget.validator,
         textAlign: widget.textAlign,
         style: const TextStyle(fontSize: 18),
+        onChanged: widget.onChanged,
         decoration: InputDecoration(
           filled: true,
           fillColor: widget.fillColor,

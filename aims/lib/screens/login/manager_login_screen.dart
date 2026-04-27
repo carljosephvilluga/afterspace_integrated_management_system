@@ -14,6 +14,7 @@ class ManagerLoginScreen extends StatefulWidget {
 class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
   // Controllers for text fields
   final TextEditingController managerIdController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   // Form key for validation
   final _formKey = GlobalKey<FormState>();
@@ -21,6 +22,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
   @override
   void dispose() {
     managerIdController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
@@ -89,7 +91,37 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                             validator: Validators.requiredField,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 170),
+                          const SizedBox(height: 18),
+                          CustomTextField(
+                            hint: "Enter Password",
+                            controller: passwordController,
+                            validator: Validators.requiredField,
+                            textAlign: TextAlign.center,
+                            isPassword: true,
+                            showToggle: true,
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please contact your administrator to reset your password.",
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                "Forgot Password?",
+                                style: TextStyle(
+                                  color: Color(0xFF3E3E3E),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 76),
 
                           // Sign In button
                           CustomButton(

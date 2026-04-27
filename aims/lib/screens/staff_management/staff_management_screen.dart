@@ -23,32 +23,44 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final List<Map<String, dynamic>> staffList = [
     {
       'id': 'STF-001',
-      'name': 'Juan Dela Cruz',
-      'email': 'juan.delacruz@example.com',
-      'phone': '09171234567',
-      'userType': 'Staff',
-      'membership': 'N/A',
-      'activity': 'Checked in',
+      'firstName': 'Juan',
+      'middleInitial': 'A',
+      'lastName': 'Dela Cruz',
+      'userType': 'Manager',
       'status': 'On Duty',
+      'activity': 'Checked in',
       'hours': '8',
+      'email': 'juan@example.com',
+      'phone': '09123456789',
+      'schedule': '2026-04-27 08:00 - 17:00',
     },
     {
       'id': 'STF-002',
-      'name': 'Maria Santos',
-      'email': 'maria.santos@example.com',
-      'phone': '09987654321',
+      'firstName': 'Maria',
+      'middleInitial': 'B',
+      'lastName': 'Santos',
       'userType': 'Staff',
-      'membership': 'N/A',
-      'activity': 'Break',
       'status': 'Off Duty',
+      'activity': 'Break',
       'hours': '6',
+      'email': 'maria@example.com',
+      'phone': '09987654321',
+      'schedule': '2026-04-27 09:00 - 15:00',
     },
   ];
 
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _idController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _middleInitialController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _userTypeController = TextEditingController();
   final TextEditingController _statusController = TextEditingController();
+  final TextEditingController _activityController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _scheduleController = TextEditingController();
 
   String searchQuery = '';
   String selectedFilter = 'All';
@@ -56,7 +68,15 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _nameController.dispose();
+    _idController.dispose();
+    _firstNameController.dispose();
+    _middleInitialController.dispose();
+    _userTypeController.dispose();
+    _activityController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _scheduleController.dispose();
+    _lastNameController.dispose();
     _statusController.dispose();
     _hoursController.dispose();
     super.dispose();
@@ -203,14 +223,29 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     final normalizedSearch = searchQuery.trim().toLowerCase();
 
     return staffList.where((staff) {
-      final name = staff['name'].toString().toLowerCase();
+
+      final fullName =
+        "${staff['firstName'] ?? ''} ${staff['middleInitial'] ?? ''} ${staff['lastName'] ?? ''}".toLowerCase();
+
       final id = staff['id'].toString().toLowerCase();
       final email = staff['email'].toString().toLowerCase();
+      final userType = staff['userType'].toString().toLowerCase();
+      final status = staff['status'].toString().toLowerCase();
+      final activity = staff['activity'].toString().toLowerCase();
+      final hours = staff['hours'].toString().toLowerCase();
+      final phone = staff['phone'].toString().toLowerCase();
+      final schedule = staff['schedule'].toString().toLowerCase();
       final matchesSearch =
           normalizedSearch.isEmpty ||
-          name.contains(normalizedSearch) ||
+          fullName.contains(normalizedSearch) ||
           id.contains(normalizedSearch) ||
-          email.contains(normalizedSearch);
+          email.contains(normalizedSearch) ||
+          userType.contains(normalizedSearch) ||
+          status.contains(normalizedSearch) ||
+          activity.contains(normalizedSearch) ||
+          hours.contains(normalizedSearch) ||
+          phone.contains(normalizedSearch) ||
+          schedule.contains(normalizedSearch);
       final matchesFilter =
           selectedFilter == 'All' || staff['status'] == selectedFilter;
 
@@ -256,7 +291,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      staff['name'],
+                      "${staff['firstName'] ?? ''} ${staff['middleInitial'] ?? ''} ${staff['lastName'] ?? ''}",
                       style: const TextStyle(
                         color: _textPrimary,
                         fontSize: 18,
@@ -286,8 +321,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             children: [
               _buildInfoTag('Type: ${staff['userType']}'),
               _buildInfoTag('Phone: ${staff['phone']}'),
-              _buildInfoTag('Activity: ${staff['activity']}'),
-              _buildInfoTag('Hours: ${staff['hours']}'),
+              _buildInfoTag('Recent Activity: ${staff['activity']}'),
+              _buildInfoTag('Total Woking Hours: ${staff['hours']}'),
             ],
           ),
           const SizedBox(height: 14),
@@ -404,66 +439,204 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   }
 
   void _showAddForm() {
-    _nameController.clear();
-    _statusController.text = 'On Duty';
-    _hoursController.clear();
+    _idController.clear();
+    _lastNameController.clear();
+    _firstNameController.clear();
+    _middleInitialController.clear();
+    _userTypeController.clear();
+    _emailController.clear();
+    _phoneController.clear();
+    _scheduleController.clear();
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Add Staff'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        titlePadding: const EdgeInsets.only(top: 12, left: 16, right: 8),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Expanded(
+            child: Center(
+              child: Text(
+                'Staff Details',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          ],
+        ),
         content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CustomTextField(
-                hint: 'Enter full name',
-                controller: _nameController,
+          width: 600,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                 Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Staff ID"),
+                        const SizedBox(height: 4),
+                        CustomTextField(hint: '0001', controller: _idController),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Name"),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: CustomTextField(hint: 'First', controller: _firstNameController)),
+                            const SizedBox(width: 8),
+                            SizedBox(width: 60, child: CustomTextField(hint: 'M.I.', controller: _middleInitialController)),
+                            const SizedBox(width: 8),
+                            Expanded(child: CustomTextField(hint: 'Last', controller: _lastNameController)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                hint: 'On Duty / Off Duty',
-                controller: _statusController,
+
+              // Row 2: Email + Phone
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Email"),
+                        const SizedBox(height: 4),
+                        CustomTextField(hint: 'Enter email', controller: _emailController),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Phone Number"),
+                        const SizedBox(height: 4),
+                        CustomTextField(hint: 'Enter phone number', controller: _phoneController),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              CustomTextField(
-                hint: 'Enter working hours',
-                controller: _hoursController,
+
+              // Row 3: Role + Schedule + Time
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Role"),
+                        const SizedBox(height: 4),
+                        DropdownButtonFormField<String>(
+                          value: 'Staff',
+                          items: const [
+                            DropdownMenuItem(value: 'Staff', child: Text('Staff')),
+                            DropdownMenuItem(value: 'Manager', child: Text('Manager')),
+                            DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                          ],
+                          onChanged: (value) {
+                            _userTypeController.text = value ?? '';
+                          },
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Schedule Staff"),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _scheduleController,
+                          decoration: InputDecoration(
+                            hintText: 'Select date',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            suffixIcon: const Icon(Icons.calendar_today),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Time"),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: CustomTextField(hint: 'From', controller: _statusController)),
+                            const SizedBox(width: 8),
+                            Expanded(child: CustomTextField(hint: 'To', controller: _activityController)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+                
         actions: [
           CustomButton(
-            label: 'Cancel',
-            backgroundColor: Colors.white,
-            textColor: Colors.black,
-            borderColor: Colors.black,
-            width: 100,
-            height: 40,
-            onPressed: () async => Navigator.pop(context),
-          ),
-          CustomButton(
-            label: 'Save',
-            backgroundColor: Colors.black,
+            label: 'Add Staff',
+            backgroundColor: Colors.green,
             textColor: Colors.white,
-            borderColor: Colors.black,
-            width: 100,
-            height: 40,
+            borderColor: Colors.green,
+            width: 160,
+            height: 50,
             onPressed: () async {
               setState(() {
                 staffList.add({
                   'id':
                       'STF-${(staffList.length + 1).toString().padLeft(3, '0')}',
-                  'name': _nameController.text.trim(),
+                  'firstName': _firstNameController.text.trim(),
+                  'middleInitial': _middleInitialController.text.trim(),
+                  'lastName': _lastNameController.text.trim(),
                   'email': 'no-email@example.com',
                   'phone': 'N/A',
                   'userType': 'Staff',
-                  'membership': 'N/A',
-                  'activity': 'New',
-                  'status': _statusController.text.trim(),
-                  'hours': _hoursController.text.trim(),
+                  'schedule': _scheduleController.text.trim(),
                 });
               });
               if (mounted) Navigator.pop(context);
@@ -475,9 +648,17 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   }
 
   void _showEditForm(Map<String, dynamic> staff) {
-    _nameController.text = staff['name'];
+    _idController.text = staff['id'];
+    _lastNameController.text = staff['lastName'];
+    _firstNameController.text = staff['firstName'];
+    _middleInitialController.text = staff['middleInitial'];
+    _userTypeController.text = staff['role'];
     _statusController.text = staff['status'];
+    _activityController.text = staff['activity'];
     _hoursController.text = staff['hours'];
+    _emailController.text = staff['email'];
+    _phoneController.text = staff['phone'];
+    _scheduleController.text = staff['schedule'];
 
     showDialog(
       context: context,
@@ -488,20 +669,17 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomTextField(
-                hint: 'Enter full name',
-                controller: _nameController,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                hint: 'On Duty / Off Duty',
-                controller: _statusController,
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                hint: 'Enter working hours',
-                controller: _hoursController,
-              ),
+              CustomTextField(hint: 'Staff ID', controller: _idController),
+                CustomTextField(hint: 'Last Name', controller: _lastNameController),
+                CustomTextField(hint: 'First Name', controller: _firstNameController),
+                CustomTextField(hint: 'Middle Initial', controller: _middleInitialController),
+                CustomTextField(hint: 'Email', controller: _emailController),
+                CustomTextField(hint: 'Phone Number', controller: _phoneController),
+                CustomTextField(hint: 'Type', controller: _userTypeController),
+                CustomTextField(hint: 'Status', controller: _statusController),
+                CustomTextField(hint: 'Recent Activity', controller: _activityController),
+                CustomTextField(hint: 'Total Hours', controller: _hoursController),
+                CustomTextField(hint: 'Work Schedule', controller: _scheduleController),
             ],
           ),
         ),
@@ -524,9 +702,17 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             height: 40,
             onPressed: () async {
               setState(() {
-                staff['name'] = _nameController.text.trim();
-                staff['status'] = _statusController.text.trim();
-                staff['hours'] = _hoursController.text.trim();
+                staff['id'] = _idController.text;
+                staff['lastName'] = _lastNameController.text;
+                staff['firstName'] = _firstNameController.text;
+                staff['middleInitial'] = _middleInitialController.text;
+                staff['role'] = _userTypeController.text;
+                staff['status'] = _statusController.text;
+                staff['activity'] = _activityController.text;
+                staff['hours'] = _hoursController.text;
+                staff['email'] = _emailController.text;
+                staff['phone'] = _phoneController.text;
+                staff['schedule'] = _scheduleController.text;
               });
               if (mounted) Navigator.pop(context);
             },
@@ -540,17 +726,20 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Staff Details - ${staff['name']}'),
+        title: Text('Staff Details - ${staff['lastName']}, ${staff['firstName']} ${staff['middleInitial']}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('ID: ${staff['id']}'),
-            Text('Email: ${staff['email']}'),
-            Text('Phone: ${staff['phone']}'),
-            Text('Activity: ${staff['activity']}'),
-            Text('Status: ${staff['status']}'),
-            Text('Hours: ${staff['hours']}'),
+              Text('Name: ${staff['lastName']}, ${staff['firstName']} ${staff['middleInitial']}'),
+              Text('Email: ${staff['email']}'),
+              Text('Phone: ${staff['phone']}'),
+              Text('Role: ${staff['role']}'),
+              Text('Status: ${staff['status']}'),
+              Text('Recent Activity: ${staff['activity']}'),
+              Text('Total Hours: ${staff['hours']}'),
+              Text('Work Schedule: ${staff['schedule']}'),
           ],
         ),
         actions: [

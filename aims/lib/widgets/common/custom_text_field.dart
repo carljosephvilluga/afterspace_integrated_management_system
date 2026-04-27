@@ -12,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   final bool showToggle; // Show eye icon for password
   final Color fillColor; // background color override
   final Function(String)? onChanged;
+  final IconData? suffixIcon;
 
   const CustomTextField({
     super.key,
@@ -24,6 +25,7 @@ class CustomTextField extends StatefulWidget {
     this.showToggle = false,          // default: no eye icon
     this.fillColor = Colors.white,    // default background
     this.onChanged,
+    this.suffixIcon,
   });
 
   @override

@@ -12,15 +12,17 @@ class StaffLoginScreen extends StatefulWidget {
 }
 
 class _StaffLoginScreenState extends State<StaffLoginScreen> {
-  bool rememberMe = false;
-
   // Controllers for text fields
   final TextEditingController staffIdController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
 
   // Form key for validation
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    staffIdController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,19 +33,19 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-             Color(0xFFE4F4F7), // light background color
-             Color(0xFF639FAA), // darker accent color
+              Color(0xFFE4F4F7), // light background color
+              Color(0xFF639FAA), // darker accent color
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
 
-          image: const DecorationImage(
+          image: DecorationImage(
             image: AssetImage("assets/images/login_bg.png"),
             fit: BoxFit.contain, // keeps proportions
             alignment: Alignment.center,
             scale: 0.8, // makes image slightly bigger
-          )
+          ),
         ),
         child: Center(
           child: Column(
@@ -60,7 +62,6 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                 ),
               ),
               const SizedBox(height: 125), // spacing before the form card
-
               // Allows the avatar to overlap the form card
               Stack(
                 clipBehavior: Clip.none,
@@ -78,8 +79,9 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(height: 60), // space for the avatar to overlap
-                        
+                          const SizedBox(
+                            height: 60,
+                          ), // space for the avatar to overlap
                           // Staff ID field
                           CustomTextField(
                             hint: "Staff ID",
@@ -87,53 +89,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                             validator: Validators.requiredField,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 10),
-
-                          // Email field
-                          CustomTextField(
-                            hint: "Email Address",
-                            controller: emailController,
-                            validator: Validators.emailValidator,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Password field
-                          CustomTextField(
-                            hint: "Password",
-                            isPassword: true,
-                            controller: passwordController,
-                            validator: Validators.passwordValidator,
-                            textAlign: TextAlign.center,
-                            showToggle: true,
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Remember me and Forgot paswword row
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: rememberMe,
-                                onChanged: (bool? newValue) {
-                                  setState(() {
-                                    rememberMe = newValue ?? false;
-                                  });
-                                },
-                                activeColor: Colors.green, // fill color when checked
-                                checkColor: Colors.white, // tick color
-                              ),
-                              const Text("Remember me"),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () {}, // implement forgot password
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.black,
-                                ),
-                                child: const Text("Forgot password?"),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 170),
 
                           // Sign In button
                           CustomButton(
@@ -146,8 +102,14 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                             onPressed: () async {
                               if (_formKey.currentState!.validate()) {
                                 // Simulate async login
-                                await Future.delayed(const Duration(seconds: 1));
-                                Navigator.pushNamed(context, '/staff-dashboard');
+                                await Future.delayed(
+                                  const Duration(seconds: 1),
+                                );
+                                if (!context.mounted) return;
+                                Navigator.pushNamed(
+                                  context,
+                                  '/staff-dashboard',
+                                );
                               }
                             },
                           ),

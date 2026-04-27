@@ -16,11 +16,9 @@ class CheckIn extends StatefulWidget {
   final String phoneNumber;
   final String userType;
   final String membershipType;
-  final DateTime timeIn;
-  final String lastVisit;
+  final DateTime timeIn; // 1. Added timeIn back!
   final VoidCallback onConfirm;
   final VoidCallback? onEditUser;
-  final VoidCallback? onViewHistory;
 
   const CheckIn({
     super.key,
@@ -31,11 +29,9 @@ class CheckIn extends StatefulWidget {
     required this.phoneNumber,
     required this.userType,
     required this.membershipType,
-    required this.timeIn,
-    required this.lastVisit,
+    required this.timeIn, // 2. Added to constructor
     required this.onConfirm,
-    this.onEditUser,
-    this.onViewHistory,
+    this.onEditUser, required Null Function() onViewHistory, required String lastVisit,
   });
 
   @override
@@ -64,6 +60,7 @@ class _CheckInState extends State<CheckIn> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // --- HEADER & CLOSE BUTTON ---
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -135,6 +132,7 @@ class _CheckInState extends State<CheckIn> {
               ),
               const SizedBox(height: 16),
 
+              // --- ROW 2: EMAIL & PHONE ---
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -181,7 +179,7 @@ class _CheckInState extends State<CheckIn> {
                     flex: 3,
                     child: _buildReadonlyField(
                       title: 'Last Visit',
-                      value: widget.lastVisit,
+                      value: 'Mar. 1, 2026',
                       trailingWidget: Container(
                         height: 32,
                         margin: const EdgeInsets.only(left: 8),
@@ -194,7 +192,7 @@ class _CheckInState extends State<CheckIn> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                           ),
-                          onPressed: widget.onViewHistory ?? () {},
+                          onPressed: () {},
                           child: const Text('View'),
                         ),
                       ),
@@ -204,9 +202,11 @@ class _CheckInState extends State<CheckIn> {
               ),
               const SizedBox(height: 24),
 
+              // --- ROW 4: TIME IN & Space SELECTION ---
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // TIME IN
                   Expanded(
                     flex: 1,
                     child: _buildReadonlyField(
@@ -216,6 +216,7 @@ class _CheckInState extends State<CheckIn> {
                   ),
                   const SizedBox(width: 16),
 
+                  // Space DROPDOWN
                   Expanded(
                     flex: 1,
                     child: Column(
@@ -231,7 +232,7 @@ class _CheckInState extends State<CheckIn> {
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          height: 32,
+                          height: 32, // Matched height with read-only boxes
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFDDE3E6),
@@ -273,6 +274,7 @@ class _CheckInState extends State<CheckIn> {
 
               const SizedBox(height: 40),
 
+              // --- ACTION BUTTONS ---
               CustomButton(
                 width: 200,
                 height: 40,
@@ -314,6 +316,7 @@ class _CheckInState extends State<CheckIn> {
     );
   }
 
+  // Helper widget
   Widget _buildReadonlyField({
     String? title,
     String? subtitle,
@@ -367,7 +370,7 @@ class _CheckInState extends State<CheckIn> {
                 ),
               ),
             ),
-            if (trailingWidget != null) trailingWidget,
+            ?trailingWidget,
           ],
         ),
       ],

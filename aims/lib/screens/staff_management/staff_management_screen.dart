@@ -1,19 +1,33 @@
-import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
+import 'package:flutter/material.dart';
 
 class StaffManagementScreen extends StatefulWidget {
-  const StaffManagementScreen({super.key});
+  const StaffManagementScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<StaffManagementScreen> createState() => _StaffManagementScreenState();
 }
 
 class _StaffManagementScreenState extends State<StaffManagementScreen> {
+  static const Color _pageBackground = Color(0xFFF4F8FA);
+  static const Color _surfaceBlue = Color(0xFFC6E8EE);
+  static const Color _accent = Color(0xFF80AEC1);
+  static const Color _success = Color(0xFF2E8B57);
+  static const Color _danger = Color(0xFFC95656);
+  static const Color _textPrimary = Color(0xFF22313A);
+  static const Color _textMuted = Color(0xFF6C7B84);
+
   final List<Map<String, dynamic>> staffList = [
     {
       'id': 'STF-001',
       'name': 'Juan Dela Cruz',
+      'email': 'juan.delacruz@example.com',
+      'phone': '09171234567',
+      'userType': 'Staff',
+      'membership': 'N/A',
       'activity': 'Checked in',
       'status': 'On Duty',
       'hours': '8',
@@ -21,229 +35,311 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     {
       'id': 'STF-002',
       'name': 'Maria Santos',
+      'email': 'maria.santos@example.com',
+      'phone': '09987654321',
+      'userType': 'Staff',
+      'membership': 'N/A',
       'activity': 'Break',
       'status': 'Off Duty',
       'hours': '6',
     },
   ];
 
-  String searchQuery = '';
-  String? selectedFilter = 'All';
-  final _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
+  final TextEditingController _hoursController = TextEditingController();
 
-  final _nameController = TextEditingController();
-  final _statusController = TextEditingController();
-  final _hoursController = TextEditingController();
+  String searchQuery = '';
+  String selectedFilter = 'All';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _nameController.dispose();
+    _statusController.dispose();
+    _hoursController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final filteredStaff = staffList.where((staff) {
-      final matchesSearch =
-          staff['name'].toLowerCase().contains(searchQuery.toLowerCase());
+    final content = Padding(
+      padding: EdgeInsets.all(widget.embedded ? 0 : 16),
+      child: _buildContent(),
+    );
 
-      if (selectedFilter == null || selectedFilter == "All") {
-        return matchesSearch;
-      } else if (selectedFilter == "On Duty" || selectedFilter == "Off Duty") {
-        return matchesSearch && staff['status'] == selectedFilter;
-      } else if (selectedFilter == "Annual" || selectedFilter == "Monthly") {
-        return matchesSearch && staff['membership'] == selectedFilter;
-      }
-      return matchesSearch;
-    }).toList();
+    if (widget.embedded) {
+      return content;
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8FA),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "List of Staff",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Staff'),
-                    onPressed: _showAddForm,
-                  ),
-                ],
+      backgroundColor: _pageBackground,
+      body: SafeArea(child: content),
+    );
+  }
+
+  Widget _buildContent() {
+    final filteredStaff = _filteredStaff();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'List of Staff',
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
               ),
-              
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search staff by name',
-                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 0, horizontal: 16),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _success,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text(
+                'Add Staff',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              onPressed: _showAddForm,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search staff by name, ID, or email',
+                  prefixIcon: const Icon(Icons.search, color: _textMuted),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 16,
                   ),
-                  const SizedBox(width: 12),
-
-                  Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5E6CC), // beige background
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedFilter,
-                        isExpanded: false,
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-                        style: const TextStyle(color: Colors.black, fontSize: 16),
-              
-                        selectedItemBuilder: (context) {
-                          return [
-                            "All",
-                            "On Duty",
-                            "Off Duty",
-                            "Annual",
-                            "Monthly"
-                          ].map((_) {
-                            return Row(
-                              children: const [
-                                Icon(Icons.filter_alt, color: Colors.black),
-                                SizedBox(width: 4),
-                                Text("Filter by"),
-                              ],
-                            );
-                          }).toList();
-                        },
-
-                        items: [
-                          const DropdownMenuItem(
-                              value: "All", child: Text("All")),
-                          const DropdownMenuItem(
-                              value: "On Duty", child: Text("On Duty")),
-                          const DropdownMenuItem(
-                              value: "Off Duty", child: Text("Off Duty")),
-                          const DropdownMenuItem(
-                              value: "Annual",
-                              child: Text("Membership: Annual")),
-                          const DropdownMenuItem(
-                              value: "Monthly",
-                              child: Text("Membership: Monthly")),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            selectedFilter = value;
-                        });
-                      },
-                    ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
                   ),
                 ),
-              ],
+              ),
             ),
-
-            const SizedBox(height: 12),
-
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredStaff.length,
-                itemBuilder: (context, index) {
-                  final staff = filteredStaff[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 12),
+            Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5E6CC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2D4C4)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedFilter,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  style: const TextStyle(
+                    color: _textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'All', child: Text('All Staff')),
+                    DropdownMenuItem(value: 'On Duty', child: Text('On Duty')),
+                    DropdownMenuItem(
+                      value: 'Off Duty',
+                      child: Text('Off Duty'),
                     ),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            staff['name'],
-                            style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '${staff['id']} • ${staff['email'] ?? 'no-email@example.com'}',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          const SizedBox(height: 12),
-
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildInfoTag('User Type: ${staff['userType'] ?? 'N/A'}'),
-                              _buildInfoTag('Membership: ${staff['membership'] ?? 'N/A'}'),
-                              _buildInfoTag('Phone: ${staff['phone'] ?? 'N/A'}'),
-                              _buildInfoTag('Status: ${staff['status']}'),
-                              _buildInfoTag('Hours: ${staff['hours']}'),
-                            ],
-                          ),
-                            
-                          const SizedBox(height: 12),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              _buildActionButton(
-                                label: 'User History',
-                                icon: Icons.history,
-                                onPressed: () => _showStaffDetails(staff),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildActionButton(
-                                label: 'Edit User',
-                                icon: Icons.edit,
-                                onPressed: () => _showEditForm(staff),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildActionButton(
-                                label: 'Delete User',
-                                icon: Icons.delete,
-                                textColor: Colors.red, // only text/icon red
-                                onPressed: () =>
-                                    setState(() => staffList.remove(staff)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );      
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      selectedFilter = value;
+                    });
                   },
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: filteredStaff.isEmpty
+              ? _buildEmptyState()
+              : ListView.separated(
+                  itemCount: filteredStaff.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    return _buildStaffCard(filteredStaff[index]);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _filteredStaff() {
+    final normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return staffList.where((staff) {
+      final name = staff['name'].toString().toLowerCase();
+      final id = staff['id'].toString().toLowerCase();
+      final email = staff['email'].toString().toLowerCase();
+      final matchesSearch =
+          normalizedSearch.isEmpty ||
+          name.contains(normalizedSearch) ||
+          id.contains(normalizedSearch) ||
+          email.contains(normalizedSearch);
+      final matchesFilter =
+          selectedFilter == 'All' || staff['status'] == selectedFilter;
+
+      return matchesSearch && matchesFilter;
+    }).toList();
+  }
+
+  Widget _buildStaffCard(Map<String, dynamic> staff) {
+    final isOnDuty = staff['status'] == 'On Duty';
+    final statusColor = isOnDuty ? _success : _danger;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5EEF2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _surfaceBlue,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.badge_outlined, color: _textPrimary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      staff['name'],
+                      style: const TextStyle(
+                        color: _textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${staff['id']} - ${staff['email']}',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildStatusPill(staff['status'], statusColor),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoTag('Type: ${staff['userType']}'),
+              _buildInfoTag('Phone: ${staff['phone']}'),
+              _buildInfoTag('Activity: ${staff['activity']}'),
+              _buildInfoTag('Hours: ${staff['hours']}'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildActionButton(
+                label: 'History',
+                icon: Icons.history_rounded,
+                onPressed: () => _showStaffDetails(staff),
+              ),
+              _buildActionButton(
+                label: 'Edit',
+                icon: Icons.edit_outlined,
+                onPressed: () => _showEditForm(staff),
+              ),
+              _buildActionButton(
+                label: 'Delete',
+                icon: Icons.delete_outline,
+                textColor: _danger,
+                borderColor: const Color(0xFFF1C9C9),
+                onPressed: () => setState(() => staffList.remove(staff)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.search_off_rounded, size: 42, color: _textMuted),
+          SizedBox(height: 10),
+          Text(
+            'No staff found',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Try another search or filter.',
+            style: TextStyle(color: _textMuted),
+          ),
+        ],
       ),
     );
   }
@@ -251,25 +347,40 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   Widget _buildActionButton({
     required String label,
     required IconData icon,
-    Color? backgroundColor,
     Color? textColor,
     Color? borderColor,
     required VoidCallback onPressed,
   }) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        foregroundColor: textColor ?? Colors.purple,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-          color: borderColor ?? Colors.grey, // <-- border color
-          width: 1.5,                                // <-- border thickness
-          ),
+    final foreground = textColor ?? _accent;
+
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: foreground,
+        side: BorderSide(color: borderColor ?? const Color(0xFFC9DDE5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      onPressed: onPressed,
+    );
+  }
+
+  Widget _buildStatusPill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
         ),
       ),
-      icon: Icon(icon, size: 18, color: textColor ?? Colors.purple),
-      label: Text(label, style: TextStyle(color: textColor ?? Colors.purple)),
-      onPressed: onPressed,
     );
   }
 
@@ -277,20 +388,24 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0), // light gray background
-        borderRadius: BorderRadius.circular(20), // pill shape
-        border: Border.all(color: Colors.grey.shade300),
+        color: const Color(0xFFF4F8FA),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE2ECEF)),
       ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 14, color: Colors.black87),
+        style: const TextStyle(
+          fontSize: 13,
+          color: _textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
   void _showAddForm() {
     _nameController.clear();
-    _statusController.clear();
+    _statusController.text = 'On Duty';
     _hoursController.clear();
 
     showDialog(
@@ -302,11 +417,20 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomTextField(hint: 'Enter full name', controller: _nameController),
+              CustomTextField(
+                hint: 'Enter full name',
+                controller: _nameController,
+              ),
               const SizedBox(height: 12),
-              CustomTextField(hint: 'On Duty / Off Duty', controller: _statusController),
+              CustomTextField(
+                hint: 'On Duty / Off Duty',
+                controller: _statusController,
+              ),
               const SizedBox(height: 12),
-              CustomTextField(hint: 'Enter working hours', controller: _hoursController),
+              CustomTextField(
+                hint: 'Enter working hours',
+                controller: _hoursController,
+              ),
             ],
           ),
         ),
@@ -318,9 +442,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             borderColor: Colors.black,
             width: 100,
             height: 40,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: () async => Navigator.pop(context),
           ),
           CustomButton(
             label: 'Save',
@@ -332,14 +454,19 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             onPressed: () async {
               setState(() {
                 staffList.add({
-                  'id': 'STF-${staffList.length + 1}',
-                  'name': _nameController.text,
+                  'id':
+                      'STF-${(staffList.length + 1).toString().padLeft(3, '0')}',
+                  'name': _nameController.text.trim(),
+                  'email': 'no-email@example.com',
+                  'phone': 'N/A',
+                  'userType': 'Staff',
+                  'membership': 'N/A',
                   'activity': 'New',
-                  'status': _statusController.text,
-                  'hours': _hoursController.text,
+                  'status': _statusController.text.trim(),
+                  'hours': _hoursController.text.trim(),
                 });
               });
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
           ),
         ],
@@ -361,11 +488,20 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomTextField(hint: 'Enter full name', controller: _nameController),
+              CustomTextField(
+                hint: 'Enter full name',
+                controller: _nameController,
+              ),
               const SizedBox(height: 12),
-              CustomTextField(hint: 'On Duty / Off Duty', controller: _statusController),
+              CustomTextField(
+                hint: 'On Duty / Off Duty',
+                controller: _statusController,
+              ),
               const SizedBox(height: 12),
-              CustomTextField(hint: 'Enter working hours', controller: _hoursController),
+              CustomTextField(
+                hint: 'Enter working hours',
+                controller: _hoursController,
+              ),
             ],
           ),
         ),
@@ -377,9 +513,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             borderColor: Colors.black,
             width: 100,
             height: 40,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: () async => Navigator.pop(context),
           ),
           CustomButton(
             label: 'Update',
@@ -390,11 +524,11 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             height: 40,
             onPressed: () async {
               setState(() {
-                staff['name'] = _nameController.text;
-                staff['status'] = _statusController.text;
-                staff['hours'] = _hoursController.text;
+                staff['name'] = _nameController.text.trim();
+                staff['status'] = _statusController.text.trim();
+                staff['hours'] = _hoursController.text.trim();
               });
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
           ),
         ],
@@ -412,6 +546,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('ID: ${staff['id']}'),
+            Text('Email: ${staff['email']}'),
+            Text('Phone: ${staff['phone']}'),
             Text('Activity: ${staff['activity']}'),
             Text('Status: ${staff['status']}'),
             Text('Hours: ${staff['hours']}'),
@@ -425,13 +561,10 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             borderColor: Colors.black,
             width: 100,
             height: 40,
-            onPressed: () async {
-              Navigator.pop(context);
-            },
+            onPressed: () async => Navigator.pop(context),
           ),
         ],
       ),
     );
   }
 }
-

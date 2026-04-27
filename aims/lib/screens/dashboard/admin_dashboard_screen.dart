@@ -3,6 +3,7 @@ import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/screens/staff_management/staff_management_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -327,7 +328,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: _desktopFrameWidth,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -337,7 +340,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                           child: selectedMenu == 'Dashboard'
                               ? _buildDashboardContent()
-                              : _buildManageStaffPlaceholder(),
+                              : _buildManageStaffContent(),
                         ),
                       ),
                     ],
@@ -390,15 +393,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             title: 'TOTAL CUSTOMERS',
                             value: salesData.totalCustomers,
                             change: salesData.customerChange,
-                            changeColor:
-                                _getChangeColor(salesData.customerChange),
+                            changeColor: _getChangeColor(
+                              salesData.customerChange,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _buildStatCard(
                             title: 'TOTAL PROFIT',
                             value: salesData.totalProfit,
                             change: salesData.profitChange,
-                            changeColor: _getChangeColor(salesData.profitChange),
+                            changeColor: _getChangeColor(
+                              salesData.profitChange,
+                            ),
                           ),
                         ],
                       )
@@ -409,8 +415,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               title: 'TOTAL SALES',
                               value: salesData.totalSales,
                               change: salesData.salesChange,
-                              changeColor:
-                                  _getChangeColor(salesData.salesChange),
+                              changeColor: _getChangeColor(
+                                salesData.salesChange,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -419,8 +426,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               title: 'TOTAL CUSTOMERS',
                               value: salesData.totalCustomers,
                               change: salesData.customerChange,
-                              changeColor:
-                                  _getChangeColor(salesData.customerChange),
+                              changeColor: _getChangeColor(
+                                salesData.customerChange,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -429,44 +437,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               title: 'TOTAL PROFIT',
                               value: salesData.totalProfit,
                               change: salesData.profitChange,
-                              changeColor:
-                                  _getChangeColor(salesData.profitChange),
+                              changeColor: _getChangeColor(
+                                salesData.profitChange,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                  const SizedBox(height: 14),
-                  isCompact
-                      ? Column(
-                          children: [
-                            SizedBox(height: 320, child: _buildCustomerReportPanel()),
-                            const SizedBox(height: 14),
-                            SizedBox(height: 320, child: _buildCalendarPanel()),
-                          ],
-                        )
-                      : SizedBox(
-                          height: 348,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 5,
-                                child: _buildCustomerReportPanel(),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 3,
-                                child: _buildCalendarPanel(),
-                              ),
-                            ],
+                const SizedBox(height: 14),
+                isCompact
+                    ? Column(
+                        children: [
+                          SizedBox(
+                            height: 320,
+                            child: _buildCustomerReportPanel(),
                           ),
+                          const SizedBox(height: 14),
+                          SizedBox(height: 320, child: _buildCalendarPanel()),
+                        ],
+                      )
+                    : SizedBox(
+                        height: 348,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 5,
+                              child: _buildCustomerReportPanel(),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(flex: 3, child: _buildCalendarPanel()),
+                          ],
                         ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: isCompact ? 420 : 380,
-                    child: _buildSalesReportPanel(),
-                  ),
-                ],
+                      ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: isCompact ? 420 : 380,
+                  child: _buildSalesReportPanel(),
+                ),
+              ],
             ),
           ),
         );
@@ -477,10 +486,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildCustomerReportPanel() {
     return _buildPanel(
       title: 'Customer Report',
-      action: _buildSoftPill(
-        '7 days',
-        icon: Icons.keyboard_arrow_down_rounded,
-      ),
+      action: _buildSoftPill('7 days', icon: Icons.keyboard_arrow_down_rounded),
       child: Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Column(
@@ -598,7 +604,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.45),
+        color: Colors.white.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -621,16 +627,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildManageStaffPlaceholder() {
-    return _buildPanel(
-      title: 'Manage Staff',
-      child: const Center(
-        child: Text(
-          'Manage Staff screen placeholder',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
+  Widget _buildManageStaffContent() {
+    return const StaffManagementScreen(embedded: true);
   }
 
   Widget _buildStatCard({
@@ -705,13 +703,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       duration: const Duration(milliseconds: 180),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
       decoration: BoxDecoration(
-        color: selected ? _buttonTan : _buttonTan.withOpacity(0.72),
+        color: selected ? _buttonTan : _buttonTan.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: selected ? _textPrimary : Colors.white.withOpacity(0.75),
+          color: selected ? _textPrimary : Colors.white.withValues(alpha: 0.75),
           fontSize: 10,
           fontWeight: FontWeight.w700,
         ),
@@ -769,10 +767,7 @@ class _LegendItem extends StatelessWidget {
   final Color color;
   final String label;
 
-  const _LegendItem({
-    required this.color,
-    required this.label,
-  });
+  const _LegendItem({required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -782,10 +777,7 @@ class _LegendItem extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         Text(

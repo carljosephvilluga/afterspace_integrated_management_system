@@ -10,23 +10,15 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFF1F7F9),
-              Color(0xFFD5EDF3),
-              Color(0xFF78B3C0),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      body: SizedBox.expand(
         child: Stack(
           children: [
-            const Positioned.fill(child: _BackgroundPattern()),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/role-pick-bg.png',
+                fit: BoxFit.cover,
+              ),
+            ),
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -34,7 +26,9 @@ class RoleSelectionScreen extends StatelessWidget {
 
                   return SingleChildScrollView(
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
                       child: Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(
@@ -69,7 +63,8 @@ class RoleSelectionScreen extends StatelessWidget {
                                   children: [
                                     _RoleCard(
                                       label: 'Administrator',
-                                      builder: (hovering) => const _AdminGraphic(),
+                                      builder: (hovering) =>
+                                          const _AdminGraphic(),
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -82,7 +77,8 @@ class RoleSelectionScreen extends StatelessWidget {
                                     ),
                                     _RoleCard(
                                       label: 'Manager',
-                                      builder: (hovering) => const _ManagerGraphic(),
+                                      builder: (hovering) =>
+                                          const _ManagerGraphic(),
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -95,7 +91,8 @@ class RoleSelectionScreen extends StatelessWidget {
                                     ),
                                     _RoleCard(
                                       label: 'Staff',
-                                      builder: (hovering) => const _StaffGraphic(),
+                                      builder: (hovering) =>
+                                          const _StaffGraphic(),
                                       onTap: () {
                                         Navigator.push(
                                           context,
@@ -115,7 +112,7 @@ class RoleSelectionScreen extends StatelessWidget {
                                     vertical: 13,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.96),
+                                    color: Colors.white.withValues(alpha: 0.96),
                                     borderRadius: BorderRadius.circular(30),
                                     boxShadow: const [
                                       BoxShadow(
@@ -139,7 +136,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                      )
+                      ),
                     ),
                   );
                 },
@@ -208,69 +205,77 @@ class _RoleCardState extends State<_RoleCard> {
       onExit: (_) => setState(() => _hovering = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
+        child: AnimatedSlide(
           duration: const Duration(milliseconds: 180),
-          transform: Matrix4.identity()
-            ..translate(0.0, _hovering ? -4.0 : 0.0)
-            ..scale(_hovering ? 1.03 : 1.0),
-          width: 170,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 170,
-                height: 178,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(_hovering ? 0.22 : 0.16),
-                      blurRadius: _hovering ? 18 : 12,
-                      offset: const Offset(0, 10),
+          curve: Curves.easeOutCubic,
+          offset: Offset(0, _hovering ? -0.025 : 0),
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            scale: _hovering ? 1.03 : 1.0,
+            child: SizedBox(
+              width: 170,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildGraphicCard(),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF151722),
+                      letterSpacing: -0.7,
                     ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFDFDFD),
-                              Color(0xFFF8F8F8),
-                              Color(0xFF4D5560),
-                            ],
-                            stops: [0.0, 0.68, 1.0],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          border: Border.all(
-                            color: const Color(0xFFD5D8DF),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned.fill(child: widget.builder(_hovering)),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              Text(
-                widget.label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF151722),
-                  letterSpacing: -0.7,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGraphicCard() {
+    return Container(
+      width: 170,
+      height: 178,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: _hovering ? 0.22 : 0.16),
+            blurRadius: _hovering ? 18 : 12,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFFDFDFD),
+                    Color(0xFFF8F8F8),
+                    Color(0xFF4D5560),
+                  ],
+                  stops: [0.0, 0.68, 1.0],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: Border.all(color: const Color(0xFFD5D8DF)),
+              ),
+            ),
+          ),
+          Positioned.fill(child: widget.builder(_hovering)),
+        ],
       ),
     );
   }
@@ -285,11 +290,7 @@ class _AdminGraphic extends StatelessWidget {
       children: [
         const Positioned.fill(
           child: Center(
-            child: Icon(
-              Icons.settings,
-              size: 180,
-              color: Color(0xFF171311),
-            ),
+            child: Icon(Icons.settings, size: 180, color: Color(0xFF171311)),
           ),
         ),
         Positioned.fill(
@@ -357,10 +358,7 @@ class _ManagerGraphic extends StatelessWidget {
             height: 84,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF444E5B),
-                  Color(0xFF21252C),
-                ],
+                colors: [Color(0xFF444E5B), Color(0xFF21252C)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -370,11 +368,7 @@ class _ManagerGraphic extends StatelessWidget {
         ),
         const Positioned(
           bottom: 66,
-          child: Icon(
-            Icons.air,
-            size: 86,
-            color: Colors.white,
-          ),
+          child: Icon(Icons.air, size: 86, color: Colors.white),
         ),
         Positioned(
           bottom: 50,
@@ -403,10 +397,7 @@ class _StaffGraphic extends StatelessWidget {
       children: [
         const Positioned(
           top: 8,
-          child: CircleAvatar(
-            radius: 52,
-            backgroundColor: Colors.black,
-          ),
+          child: CircleAvatar(radius: 52, backgroundColor: Colors.black),
         ),
         Positioned(
           top: 18,
@@ -476,110 +467,4 @@ class _StaffGraphic extends StatelessWidget {
       ],
     );
   }
-}
-
-class _BackgroundPattern extends StatelessWidget {
-  const _BackgroundPattern();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _RibbonPainter(),
-    );
-  }
-}
-
-class _RibbonPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final darkPaint = Paint()
-      ..color = Colors.black.withOpacity(0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    final lightPaint = Paint()
-      ..color = Colors.white.withOpacity(0.14)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    _drawField(
-      canvas,
-      size,
-      origin: Offset(size.width * 0.64, size.height * 0.64),
-      horizontalRadius: size.width * 0.44,
-      verticalRadius: size.height * 0.34,
-      lineCount: 22,
-      paint: darkPaint,
-    );
-
-    _drawField(
-      canvas,
-      size,
-      origin: Offset(size.width * 0.12, size.height * 0.66),
-      horizontalRadius: size.width * 0.28,
-      verticalRadius: size.height * 0.22,
-      lineCount: 14,
-      paint: darkPaint,
-    );
-
-    _drawField(
-      canvas,
-      size,
-      origin: Offset(size.width * 0.76, size.height * 0.80),
-      horizontalRadius: size.width * 0.36,
-      verticalRadius: size.height * 0.28,
-      lineCount: 12,
-      paint: lightPaint,
-    );
-  }
-
-  void _drawField(
-    Canvas canvas,
-    Size size, {
-    required Offset origin,
-    required double horizontalRadius,
-    required double verticalRadius,
-    required int lineCount,
-    required Paint paint,
-  }) {
-    for (var i = 0; i < lineCount; i++) {
-      final t = i / (lineCount - 1);
-      final lift = (t - 0.5) * 2;
-
-      final path = Path();
-      path.moveTo(-horizontalRadius * 0.7, origin.dy + lift * verticalRadius);
-
-      for (double x = -horizontalRadius; x <= horizontalRadius; x += 14) {
-        final normalized = x / horizontalRadius;
-        final wave = (normalized * normalized) * verticalRadius * 0.78;
-        final twist = normalized * lift * verticalRadius * 1.15;
-        final pointX = origin.dx + x + twist;
-        final pointY = origin.dy + (lift * verticalRadius) - wave;
-        path.lineTo(pointX, pointY);
-      }
-
-      canvas.drawPath(path, paint);
-    }
-
-    for (var i = 0; i < lineCount; i++) {
-      final t = i / (lineCount - 1);
-      final lift = (t - 0.5) * 2;
-
-      final path = Path();
-      path.moveTo(origin.dx + lift * horizontalRadius, size.height + 40);
-
-      for (double y = size.height; y >= -40; y -= 14) {
-        final normalized = (y - origin.dy) / verticalRadius;
-        final bend = normalized * normalized * horizontalRadius * 0.46;
-        final twist = normalized * lift * horizontalRadius * 0.72;
-        final pointX = origin.dx + (lift * horizontalRadius) + bend - twist;
-        path.lineTo(pointX, y);
-      }
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

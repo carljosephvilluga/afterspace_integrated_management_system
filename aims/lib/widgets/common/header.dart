@@ -17,6 +17,7 @@ class Header extends StatelessWidget {
 
   static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _sidebarBlue = Color(0xFF9AA9BD);
+  static const double _navigationRailWidth = 88;
 
   String getRoleText() {
     switch (role) {
@@ -51,7 +52,7 @@ class Header extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 68,
+                  width: _navigationRailWidth,
                   color: _sidebarBlue,
                   child: InkWell(
                     onTap: onMenuTap,
@@ -65,19 +66,24 @@ class Header extends StatelessWidget {
                       children: [
                         InkWell(
                           onTap: () async {
-                            final shouldLogout = await showDialog<bool>(
-                              context: context,
-                              builder: (_) => const ConfirmLogoutDialog(),
-                            ) ?? false;
+                            final shouldLogout =
+                                await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => const ConfirmLogoutDialog(),
+                                ) ??
+                                false;
 
-                            if (shouldLogout) {
+                            if (shouldLogout && context.mounted) {
                               Navigator.pushReplacementNamed(context, '/login');
                             }
                           },
                           child: Row(
                             children: const [
-                              Icon(Icons.logout_rounded,
-                                  size: 22, color: Colors.white),
+                              Icon(
+                                Icons.logout_rounded,
+                                size: 22,
+                                color: Colors.white,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Logout',
@@ -113,7 +119,7 @@ class Header extends StatelessWidget {
                         const SizedBox(width: 10),
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: Colors.white.withOpacity(0.95),
+                          backgroundColor: Colors.white.withValues(alpha: 0.95),
                           child: Icon(
                             getAvatarIcon(),
                             size: 20,

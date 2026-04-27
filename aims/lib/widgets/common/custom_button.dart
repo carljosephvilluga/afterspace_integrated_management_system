@@ -35,12 +35,14 @@ class _CustomButtonState extends State<CustomButton> {
 
     setState(() => _isLoading = true); //Show spinner
 
-    await widget.onPressed!(); //Run the async task
-
-    if (mounted) {
-      setState(
-        () => _isLoading = false,
-      ); //Hide the spinner if widget still exist
+    try {
+      await widget.onPressed!(); //Run the async task
+    } finally {
+      if (mounted) {
+        setState(
+          () => _isLoading = false,
+        ); //Hide the spinner if widget still exist
+      }
     }
   }
 

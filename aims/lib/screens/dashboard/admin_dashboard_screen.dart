@@ -3,6 +3,7 @@ import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/screens/staff_management/staff_management_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -306,8 +307,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _SalesRange _selectedSalesRange = _SalesRange.monthly;
+  late Future<AdminDashboardSummary> _dashboardSummaryFuture;
 
   _SalesReportData get _selectedSalesData => _salesData[_selectedSalesRange]!;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardSummaryFuture = AimsApiClient.instance
+        .fetchAdminDashboardSummary();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -369,115 +378,161 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildDashboardContent() {
     final salesData = _selectedSalesData;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 980;
+    return FutureBuilder<AdminDashboardSummary>(
+      future: _dashboardSummaryFuture,
+      builder: (context, snapshot) {
+        final summary = snapshot.data;
+        final salesValue = summary != null
+            ? AimsApiClient.formatCurrency(summary.totalRevenue)
+            : salesData.totalSales;
+        final customersValue = summary != null
+            ? AimsApiClient.formatCount(summary.userCount)
+            : salesData.totalCustomers;
+        final thirdTitle = summary != null ? 'ACTIVE SESSIONS' : 'TOTAL PROFIT';
+        final thirdValue = summary != null
+            ? AimsApiClient.formatCount(summary.activeSessions)
+            : salesData.totalProfit;
 
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                isCompact
-                    ? Column(
-                        children: [
-                          _buildStatCard(
-                            title: 'TOTAL SALES',
-                            value: salesData.totalSales,
-                            change: salesData.salesChange,
-                            changeColor: _getChangeColor(salesData.salesChange),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildStatCard(
-                            title: 'TOTAL CUSTOMERS',
-                            value: salesData.totalCustomers,
-                            change: salesData.customerChange,
-                            changeColor: _getChangeColor(
-                              salesData.customerChange,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildStatCard(
-                            title: 'TOTAL PROFIT',
-                            value: salesData.totalProfit,
-                            change: salesData.profitChange,
-                            changeColor: _getChangeColor(
-                              salesData.profitChange,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL SALES',
-                              value: salesData.totalSales,
-                              change: salesData.salesChange,
-                              changeColor: _getChangeColor(
-                                salesData.salesChange,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 980;
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isCompact
+                        ? Column(
+                            children: [
+                              _buildStatCard(
+                                title: 'TOTAL SALES',
+                                value: salesValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.salesChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.salesChange,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL CUSTOMERS',
-                              value: salesData.totalCustomers,
-                              change: salesData.customerChange,
-                              changeColor: _getChangeColor(
-                                salesData.customerChange,
+                              const SizedBox(height: 12),
+                              _buildStatCard(
+                                title: 'TOTAL CUSTOMERS',
+                                value: customersValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.customerChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.customerChange,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL PROFIT',
-                              value: salesData.totalProfit,
-                              change: salesData.profitChange,
-                              changeColor: _getChangeColor(
-                                salesData.profitChange,
+                              const SizedBox(height: 12),
+                              _buildStatCard(
+                                title: thirdTitle,
+                                value: thirdValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.profitChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.profitChange,
+                                ),
                               ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: 'TOTAL SALES',
+                                  value: salesValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.salesChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.salesChange,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: 'TOTAL CUSTOMERS',
+                                  value: customersValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.customerChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.customerChange,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: thirdTitle,
+                                  value: thirdValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.profitChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.profitChange,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                    const SizedBox(height: 14),
+                    isCompact
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                height: 320,
+                                child: _buildCustomerReportPanel(),
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                height: 320,
+                                child: _buildCalendarPanel(),
+                              ),
+                            ],
+                          )
+                        : SizedBox(
+                            height: 348,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: _buildCustomerReportPanel(),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(flex: 3, child: _buildCalendarPanel()),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                const SizedBox(height: 14),
-                isCompact
-                    ? Column(
-                        children: [
-                          SizedBox(
-                            height: 320,
-                            child: _buildCustomerReportPanel(),
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(height: 320, child: _buildCalendarPanel()),
-                        ],
-                      )
-                    : SizedBox(
-                        height: 348,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: _buildCustomerReportPanel(),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(flex: 3, child: _buildCalendarPanel()),
-                          ],
-                        ),
-                      ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: isCompact ? 420 : 380,
-                  child: _buildSalesReportPanel(),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: isCompact ? 420 : 380,
+                      child: _buildSalesReportPanel(),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

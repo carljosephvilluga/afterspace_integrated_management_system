@@ -1,6 +1,7 @@
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/manager_dashboard/dashboard_panel.dart';
 import 'package:aims/widgets/manager_dashboard/metric_card.dart';
 import 'package:aims/widgets/manager_dashboard/reservation_list_item.dart';
@@ -394,8 +395,16 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _ManagerRange selectedRange = _ManagerRange.monthly;
+  late Future<ManagerDashboardSummary> _dashboardSummaryFuture;
 
   _ManagerReportData get data => _reportData[selectedRange]!;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardSummaryFuture = AimsApiClient.instance
+        .fetchManagerDashboardSummary();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -416,7 +425,9 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: _desktopFrameWidth,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -511,10 +522,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: _buildReservationsPanel(),
-                  ),
+                  Expanded(flex: 3, child: _buildReservationsPanel()),
                 ],
               ),
             ),
@@ -527,24 +535,37 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   }
 
   Widget _buildMetricRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            title: 'TOTAL REVENUE TODAY',
-            value: data.revenueToday,
-            change: data.revenueChange,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'TOTAL CUSTOMERS TODAY',
-            value: data.customersToday,
-            change: data.customersChange,
-          ),
-        ),
-      ],
+    return FutureBuilder<ManagerDashboardSummary>(
+      future: _dashboardSummaryFuture,
+      builder: (context, snapshot) {
+        final summary = snapshot.data;
+        final revenueValue = summary != null
+            ? AimsApiClient.formatCurrency(summary.revenueToday)
+            : data.revenueToday;
+        final customersValue = summary != null
+            ? AimsApiClient.formatCount(summary.customersToday)
+            : data.customersToday;
+
+        return Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'TOTAL REVENUE TODAY',
+                value: revenueValue,
+                change: summary != null ? '+0%' : data.revenueChange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'TOTAL CUSTOMERS TODAY',
+                value: customersValue,
+                change: summary != null ? '+0%' : data.customersChange,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -584,7 +605,11 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.picture_as_pdf_outlined, size: 14, color: _textPrimary),
+                Icon(
+                  Icons.picture_as_pdf_outlined,
+                  size: 14,
+                  color: _textPrimary,
+                ),
                 SizedBox(width: 4),
                 Text(
                   'Export PDF',
@@ -653,7 +678,11 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                 ),
               ),
               SizedBox(width: 6),
-              Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textMuted),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 10,
+                color: _textMuted,
+              ),
             ],
           ),
         ],
@@ -683,7 +712,11 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
               ),
             ),
             SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textPrimary),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 10,
+              color: _textPrimary,
+            ),
           ],
         ),
       ),
@@ -693,9 +726,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
               (tx) => Expanded(
                 child: Container(
                   decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Color(0x166C7B84)),
-                    ),
+                    border: Border(top: BorderSide(color: Color(0x166C7B84))),
                   ),
                   child: Row(
                     children: [
@@ -729,7 +760,10 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                         flex: 2,
                         child: Text(
                           tx.vendor,
-                          style: const TextStyle(fontSize: 11, color: _textMuted),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: _textMuted,
+                          ),
                         ),
                       ),
                       const Icon(Icons.more_horiz_rounded, color: _textMuted),

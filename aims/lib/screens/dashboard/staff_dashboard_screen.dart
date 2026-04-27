@@ -1,5 +1,6 @@
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:flutter/material.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
@@ -160,10 +161,7 @@ class StaffReservationListItem extends StatelessWidget {
           backgroundColor: Colors.white.withOpacity(0.75),
           child: Text(
             name.substring(0, 1),
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
           ),
         ),
         const SizedBox(width: 12),
@@ -180,10 +178,7 @@ class StaffReservationListItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                email,
-                style: TextStyle(fontSize: 12, color: mutedColor),
-              ),
+              Text(email, style: TextStyle(fontSize: 12, color: mutedColor)),
             ],
           ),
         ),
@@ -199,10 +194,7 @@ class StaffReservationListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              duration,
-              style: TextStyle(fontSize: 12, color: mutedColor),
-            ),
+            Text(duration, style: TextStyle(fontSize: 12, color: mutedColor)),
           ],
         ),
       ],
@@ -340,11 +332,7 @@ class _TableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
     );
   }
 }
@@ -469,6 +457,14 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
 
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
+  late Future<StaffDashboardSummary> _dashboardSummaryFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardSummaryFuture = AimsApiClient.instance
+        .fetchStaffDashboardSummary();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,7 +485,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: _desktopFrameWidth,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -580,10 +578,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 4,
-                    child: _buildReservationsPanel(),
-                  ),
+                  Expanded(flex: 4, child: _buildReservationsPanel()),
                 ],
               ),
             ),
@@ -596,38 +591,53 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   }
 
   Widget _buildMetricRow() {
-    return Row(
-      children: const [
-        Expanded(
-          child: StaffMetricCard(
-            title: 'TOTAL SALES',
-            value: '\$2,38,485',
-            change: '+14%',
-            surfaceColor: _surfaceBlue,
-            textColor: _textPrimary,
-            mutedColor: _textMuted,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: StaffMetricCard(
-            title: 'ACTIVE CUSTOMERS',
-            value: '143',
-            change: '+36%',
-            surfaceColor: _surfaceBlue,
-            textColor: _textPrimary,
-            mutedColor: _textMuted,
-          ),
-        ),
-      ],
+    return FutureBuilder<StaffDashboardSummary>(
+      future: _dashboardSummaryFuture,
+      builder: (context, snapshot) {
+        final summary = snapshot.data;
+        final leftValue = summary != null
+            ? AimsApiClient.formatCount(summary.activeCustomers)
+            : '143';
+        final rightValue = summary != null
+            ? AimsApiClient.formatCount(summary.reservedBookings)
+            : '27';
+        final status = snapshot.hasError
+            ? 'OFFLINE'
+            : summary != null
+            ? 'LIVE'
+            : 'SYNCING';
+
+        return Row(
+          children: [
+            Expanded(
+              child: StaffMetricCard(
+                title: 'ACTIVE CUSTOMERS',
+                value: leftValue,
+                change: status,
+                surfaceColor: _surfaceBlue,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StaffMetricCard(
+                title: 'RESERVED BOOKINGS',
+                value: rightValue,
+                change: status,
+                surfaceColor: _surfaceBlue,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildCalendarPanel() {
-    return _buildPanel(
-      title: '',
-      child: const CalendarChart(),
-    );
+    return _buildPanel(title: '', child: const CalendarChart());
   }
 
   Widget _buildReservationsPanel() {
@@ -671,7 +681,11 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                 ),
               ),
               SizedBox(width: 6),
-              Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textMuted),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 10,
+                color: _textMuted,
+              ),
             ],
           ),
         ],

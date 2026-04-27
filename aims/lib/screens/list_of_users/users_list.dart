@@ -46,6 +46,20 @@ class _StaffUser {
   String get fullName => '$firstName $lastName';
   String get statusLabel => isActive ? 'Active' : 'Inactive';
 
+  String get lastVisit {
+    if (history.isEmpty) return 'No Visits yet';
+
+    final lastAction = history.lastWhere(
+      (entry) => entry.contains('checked in') || entry.contains('checked out'),
+      orElse: () => history.last,
+    );
+
+    if (lastAction.contains(' on ')) {
+      return lastAction.split(' on ').last;
+    }
+    return lastAction;
+  }
+
   _StaffUser copyWith({
     String? id,
     String? firstName,
@@ -784,6 +798,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                     userType: user.userType,
                                     membershipType: user.membershipType,
                                     timeIn: DateTime.now(),
+                                    lastVisit: user.lastVisit,
                                     onConfirm: () {},
 
                                     onEditUser: () {
@@ -864,6 +879,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                       _infoChip('User Type: ${user.userType}'),
                       _infoChip('Membership: ${user.membershipType}'),
                       _infoChip('Phone: ${user.phoneNumber}'),
+
+                      _infoChip('Last Visit: ${user.lastVisit}'),
                     ],
                   ),
                   const SizedBox(height: 14),

@@ -17,6 +17,7 @@ class CheckIn extends StatefulWidget {
   final String userType;
   final String membershipType;
   final DateTime timeIn;
+  final String lastVisit;
   final VoidCallback onConfirm;
   final VoidCallback? onEditUser;
   final VoidCallback? onViewHistory;
@@ -31,6 +32,7 @@ class CheckIn extends StatefulWidget {
     required this.userType,
     required this.membershipType,
     required this.timeIn,
+    required this.lastVisit,
     required this.onConfirm,
     this.onEditUser,
     this.onViewHistory,
@@ -179,7 +181,7 @@ class _CheckInState extends State<CheckIn> {
                     flex: 3,
                     child: _buildReadonlyField(
                       title: 'Last Visit',
-                      value: 'Mar. 1, 2026',
+                      value: widget.lastVisit,
                       trailingWidget: Container(
                         height: 32,
                         margin: const EdgeInsets.only(left: 8),

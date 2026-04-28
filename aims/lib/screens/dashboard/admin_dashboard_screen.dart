@@ -6,6 +6,7 @@ import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/services/sales_report_pdf_exporter.dart';
 import 'package:aims/screens/staff_management/staff_management_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -309,6 +310,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _SalesRange _selectedSalesRange = _SalesRange.monthly;
+  bool _isExportingPdf = false;
   late Future<AdminDashboardSummary> _dashboardSummaryFuture;
   final Map<_SalesRange, Future<SalesReportSeries>> _salesReportFutures = {};
   Timer? _salesRefreshTimer;
@@ -353,6 +355,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return 'monthly';
       case _SalesRange.yearly:
         return 'yearly';
+    }
+  }
+
+  Future<void> _handleExportPdf() async {
+    if (_isExportingPdf) {
+      return;
+    }
+
+    setState(() {
+      _isExportingPdf = true;
+    });
+
+    try {
+      await SalesReportPdfExporter.exportAllRanges(
+        requestedBy: 'Administrator',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sales report PDF generated (daily, weekly, monthly, yearly).',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to export PDF: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingPdf = false;
+        });
+      }
     }
   }
 
@@ -645,30 +689,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildRangeButton(_SalesRange.weekly, 'Weekly'),
           _buildRangeButton(_SalesRange.yearly, 'Yearly'),
           const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: _buttonTan,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.picture_as_pdf_outlined,
-                  size: 16,
-                  color: _textPrimary,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Export PDF',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: _textPrimary,
+          InkWell(
+            onTap: _isExportingPdf ? null : _handleExportPdf,
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _buttonTan,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _isExportingPdf
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: _textPrimary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 16,
+                          color: _textPrimary,
+                        ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isExportingPdf ? 'Exporting...' : 'Export PDF',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

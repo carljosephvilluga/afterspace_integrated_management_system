@@ -422,54 +422,6 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
 
-  static final List<_Reservation> _fallbackReservations = [
-    _Reservation(
-      name: 'Jenny Wilson',
-      email: 'j.wilson@example.com',
-      time: '12:30pm',
-      duration: '2 hours',
-    ),
-    _Reservation(
-      name: 'Devon Lane',
-      email: 'd.roberts@example.com',
-      time: '1:00pm',
-      duration: '3 hours',
-    ),
-    _Reservation(
-      name: 'Jane Cooper',
-      email: 'jgraham@example.com',
-      time: '3:00pm',
-      duration: '4 hours',
-    ),
-    _Reservation(
-      name: 'Dianne Russell',
-      email: 'curtis.d@example.com',
-      time: '4:00pm',
-      duration: '1 hour',
-    ),
-  ];
-
-  static final List<_ActiveCustomerRow> _fallbackActiveCustomers = [
-    _ActiveCustomerRow(
-      name: 'Mika Santos',
-      membership: 'Annual',
-      timeIn: '08:00 AM',
-      status: 'Active',
-    ),
-    _ActiveCustomerRow(
-      name: 'Paolo Reyes',
-      membership: 'Monthly',
-      timeIn: '09:30 AM',
-      status: 'Active',
-    ),
-    _ActiveCustomerRow(
-      name: 'Andrea Lim',
-      membership: 'Open Time',
-      timeIn: '11:15 AM',
-      status: 'Active',
-    ),
-  ];
-
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   late Future<StaffDashboardSnapshot> _dashboardSnapshotFuture;
@@ -612,10 +564,10 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         final summary = snapshot.data?.summary;
         final leftValue = summary != null
             ? AimsApiClient.formatCount(summary.activeCustomers)
-            : '143';
+            : '--';
         final rightValue = summary != null
             ? AimsApiClient.formatCount(summary.reservedBookings)
-            : '27';
+            : '--';
         final status = snapshot.hasError
             ? 'OFFLINE'
             : summary != null
@@ -659,20 +611,49 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     return FutureBuilder<StaffDashboardSnapshot>(
       future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final liveReservations = snapshot.data?.pendingReservations
-            .map(
-              (item) => _Reservation(
-                name: item.customerName,
-                email: item.email.isNotEmpty ? item.email : item.contactDetails,
-                time: _formatTime(item.startAt),
-                duration: _formatDuration(item.endAt.difference(item.startAt)),
-              ),
-            )
-            .toList();
         final reservations =
-            (liveReservations != null && liveReservations.isNotEmpty)
-            ? liveReservations
-            : _fallbackReservations;
+            (snapshot.data?.pendingReservations ??
+                    const <DashboardReservationItem>[])
+                .map(
+                  (item) => _Reservation(
+                    name: item.customerName,
+                    email: item.email.isNotEmpty
+                        ? item.email
+                        : item.contactDetails,
+                    time: _formatTime(item.startAt),
+                    duration: _formatDuration(
+                      item.endAt.difference(item.startAt),
+                    ),
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('Loading reservations...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage(
+              'Unable to load reservations from backend.',
+            ),
+          );
+        }
+
+        if (reservations.isEmpty) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('No pending reservations yet.'),
+          );
+        }
 
         return _buildPanel(
           title: 'Pending Reservations',
@@ -732,19 +713,42 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     return FutureBuilder<StaffDashboardSnapshot>(
       future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final liveRows = snapshot.data?.activeCustomers
-            .map(
-              (item) => _ActiveCustomerRow(
-                name: item.name,
-                membership: item.membershipType,
-                timeIn: _formatTime(item.timeIn),
-                status: item.status,
-              ),
-            )
-            .toList();
-        final rows = (liveRows != null && liveRows.isNotEmpty)
-            ? liveRows
-            : _fallbackActiveCustomers;
+        final rows =
+            (snapshot.data?.activeCustomers ??
+                    const <DashboardActiveCustomerItem>[])
+                .map(
+                  (item) => _ActiveCustomerRow(
+                    name: item.name,
+                    membership: item.membershipType,
+                    timeIn: _formatTime(item.timeIn),
+                    status: item.status,
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage('Loading active customers...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage(
+              'Unable to load active customers from backend.',
+            ),
+          );
+        }
+
+        if (rows.isEmpty) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage('No active customers right now.'),
+          );
+        }
 
         return _buildPanel(
           title: 'Active Customers',
@@ -769,6 +773,20 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       surfaceColor: _surfaceBlue,
       textColor: _textPrimary,
       child: child,
+    );
+  }
+
+  Widget _buildCenteredPanelMessage(String message) {
+    return Center(
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: _textMuted,
+        ),
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/services/sales_report_pdf_exporter.dart';
 import 'package:aims/widgets/manager_dashboard/dashboard_panel.dart';
 import 'package:aims/widgets/manager_dashboard/metric_card.dart';
 import 'package:aims/widgets/manager_dashboard/reservation_list_item.dart';
@@ -19,34 +20,6 @@ class ManagerDashboardScreen extends StatefulWidget {
 }
 
 enum _ManagerRange { daily, monthly, weekly, yearly }
-
-class _ManagerReportData {
-  const _ManagerReportData({
-    required this.revenueToday,
-    required this.customersToday,
-    required this.revenueChange,
-    required this.customersChange,
-    required this.areaSpots,
-    required this.lineSpots,
-    required this.labels,
-    required this.tooltipTitles,
-    required this.tooltipValues,
-    required this.highlightX,
-    required this.maxY,
-  });
-
-  final String revenueToday;
-  final String customersToday;
-  final String revenueChange;
-  final String customersChange;
-  final List<FlSpot> areaSpots;
-  final List<FlSpot> lineSpots;
-  final List<String> labels;
-  final List<String> tooltipTitles;
-  final List<String> tooltipValues;
-  final double highlightX;
-  final double maxY;
-}
 
 class _Reservation {
   const _Reservation({
@@ -90,318 +63,13 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
 
-  static final Map<_ManagerRange, _ManagerReportData> _reportData = {
-    _ManagerRange.daily: _ManagerReportData(
-      revenueToday: '\$18,420',
-      customersToday: '86',
-      revenueChange: '+9%',
-      customersChange: '+4%',
-      labels: ['6a', '8a', '10a', '12p', '2p', '4p', '6p'],
-      tooltipTitles: [
-        '6AM Today',
-        '8AM Today',
-        '10AM Today',
-        '12PM Today',
-        '2PM Today',
-        '4PM Today',
-        '6PM Today',
-      ],
-      tooltipValues: [
-        '\$2,880',
-        '\$3,540',
-        '\$4,180',
-        '\$4,960',
-        '\$6,120',
-        '\$5,480',
-        '\$6,940',
-      ],
-      areaSpots: [
-        FlSpot(0, 10),
-        FlSpot(1, 14),
-        FlSpot(2, 16),
-        FlSpot(3, 19),
-        FlSpot(4, 25),
-        FlSpot(5, 22),
-        FlSpot(6, 28),
-      ],
-      lineSpots: [
-        FlSpot(0, 8),
-        FlSpot(0.5, 9),
-        FlSpot(1, 11),
-        FlSpot(1.5, 10),
-        FlSpot(2, 13),
-        FlSpot(2.5, 12),
-        FlSpot(3, 14),
-        FlSpot(3.5, 15),
-        FlSpot(4, 17),
-        FlSpot(4.5, 16),
-        FlSpot(5, 18),
-        FlSpot(5.5, 19),
-        FlSpot(6, 18),
-      ],
-      highlightX: 4,
-      maxY: 32,
-    ),
-    _ManagerRange.monthly: _ManagerReportData(
-      revenueToday: '\$2,38,485',
-      customersToday: '143',
-      revenueChange: '+14%',
-      customersChange: '+36%',
-      labels: [
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-        'Jan',
-      ],
-      tooltipTitles: [
-        'February 2021',
-        'March 2021',
-        'April 2021',
-        'May 2021',
-        'June 2021',
-        'July 2021',
-        'August 2021',
-        'September 2021',
-        'October 2021',
-        'November 2021',
-        'December 2021',
-        'January 2022',
-      ],
-      tooltipValues: [
-        '\$24,180',
-        '\$28,420',
-        '\$27,350',
-        '\$38,910',
-        '\$45,591',
-        '\$43,280',
-        '\$41,960',
-        '\$48,740',
-        '\$46,180',
-        '\$58,440',
-        '\$55,930',
-        '\$63,110',
-      ],
-      areaSpots: [
-        FlSpot(0, 14),
-        FlSpot(1, 17),
-        FlSpot(2, 16),
-        FlSpot(3, 24),
-        FlSpot(4, 29),
-        FlSpot(5, 27),
-        FlSpot(6, 26),
-        FlSpot(7, 31),
-        FlSpot(8, 29),
-        FlSpot(9, 38),
-        FlSpot(10, 36),
-        FlSpot(11, 42),
-      ],
-      lineSpots: [
-        FlSpot(0, 12),
-        FlSpot(0.4, 11),
-        FlSpot(0.9, 15),
-        FlSpot(1.4, 13),
-        FlSpot(2.1, 11),
-        FlSpot(2.8, 16),
-        FlSpot(3.4, 15),
-        FlSpot(4, 14),
-        FlSpot(4.6, 19),
-        FlSpot(5.2, 17),
-        FlSpot(5.8, 18),
-        FlSpot(6.4, 16),
-        FlSpot(7, 17),
-        FlSpot(7.6, 14),
-        FlSpot(8.2, 13),
-        FlSpot(8.9, 16),
-        FlSpot(9.4, 15),
-        FlSpot(10, 21),
-        FlSpot(10.4, 18),
-        FlSpot(10.9, 19),
-        FlSpot(11, 18),
-      ],
-      highlightX: 4,
-      maxY: 50,
-    ),
-    _ManagerRange.weekly: _ManagerReportData(
-      revenueToday: '\$84,220',
-      customersToday: '512',
-      revenueChange: '+11%',
-      customersChange: '+8%',
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      tooltipTitles: [
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday',
-      ],
-      tooltipValues: [
-        '\$9,420',
-        '\$10,860',
-        '\$10,120',
-        '\$12,310',
-        '\$14,320',
-        '\$16,440',
-        '\$13,780',
-      ],
-      areaSpots: [
-        FlSpot(0, 20),
-        FlSpot(1, 25),
-        FlSpot(2, 23),
-        FlSpot(3, 28),
-        FlSpot(4, 33),
-        FlSpot(5, 39),
-        FlSpot(6, 35),
-      ],
-      lineSpots: [
-        FlSpot(0, 14),
-        FlSpot(0.5, 16),
-        FlSpot(1, 18),
-        FlSpot(1.5, 17),
-        FlSpot(2, 19),
-        FlSpot(2.5, 20),
-        FlSpot(3, 21),
-        FlSpot(3.5, 22),
-        FlSpot(4, 24),
-        FlSpot(4.5, 26),
-        FlSpot(5, 29),
-        FlSpot(5.5, 28),
-        FlSpot(6, 25),
-      ],
-      highlightX: 4,
-      maxY: 45,
-    ),
-    _ManagerRange.yearly: _ManagerReportData(
-      revenueToday: '\$1.8M',
-      customersToday: '8,420',
-      revenueChange: '+24%',
-      customersChange: '+18%',
-      labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
-      tooltipTitles: [
-        'Year 2020',
-        'Year 2021',
-        'Year 2022',
-        'Year 2023',
-        'Year 2024',
-        'Year 2025',
-      ],
-      tooltipValues: [
-        '\$186,000',
-        '\$214,000',
-        '\$241,500',
-        '\$268,000',
-        '\$286,000',
-        '\$332,000',
-      ],
-      areaSpots: [
-        FlSpot(0, 24),
-        FlSpot(1, 31),
-        FlSpot(2, 40),
-        FlSpot(3, 49),
-        FlSpot(4, 60),
-        FlSpot(5, 73),
-      ],
-      lineSpots: [
-        FlSpot(0, 18),
-        FlSpot(0.4, 21),
-        FlSpot(1, 24),
-        FlSpot(1.5, 28),
-        FlSpot(2, 31),
-        FlSpot(2.5, 36),
-        FlSpot(3, 39),
-        FlSpot(3.5, 45),
-        FlSpot(4, 48),
-        FlSpot(4.5, 54),
-        FlSpot(5, 59),
-      ],
-      highlightX: 4,
-      maxY: 80,
-    ),
-  };
-
-  static final List<_Reservation> _reservations = [
-    _Reservation(
-      name: 'Jenny Wilson',
-      email: 'j.wilson@example.com',
-      time: '12:30pm',
-      duration: '2 hours',
-    ),
-    _Reservation(
-      name: 'Devon Lane',
-      email: 'd.roberts@example.com',
-      time: '1:00pm',
-      duration: '3 hours',
-    ),
-    _Reservation(
-      name: 'Jane Cooper',
-      email: 'jgraham@example.com',
-      time: '3:00pm',
-      duration: '4 hours',
-    ),
-    _Reservation(
-      name: 'Dianne Russell',
-      email: 'curtis.d@example.com',
-      time: '4:00pm',
-      duration: '1 hour',
-    ),
-  ];
-
-  static final List<_Transaction> _transactions = [
-    _Transaction(
-      status: 'Completed',
-      statusColor: Color(0xFF61D882),
-      title: 'Visa card  **** 4831',
-      subtitle: 'Card payment',
-      amount: '\$182.94',
-      date: 'Jan 17, 2022',
-      vendor: 'Amazon',
-    ),
-    _Transaction(
-      status: 'Completed',
-      statusColor: Color(0xFF61D882),
-      title: 'Mastercard  **** 6442',
-      subtitle: 'Card payment',
-      amount: '\$99.00',
-      date: 'Jan 17, 2022',
-      vendor: 'Facebook',
-    ),
-    _Transaction(
-      status: 'Pending',
-      statusColor: Color(0xFFF0C84D),
-      title: 'Account  **** 882',
-      subtitle: 'Bank payment',
-      amount: '\$249.94',
-      date: 'Jan 17, 2022',
-      vendor: 'Netflix',
-    ),
-    _Transaction(
-      status: 'Canceled',
-      statusColor: Color(0xFFFF7A7A),
-      title: 'Amex card  **** 5666',
-      subtitle: 'Card payment',
-      amount: '\$199.24',
-      date: 'Jan 17, 2022',
-      vendor: 'Amazon Prime',
-    ),
-  ];
-
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _ManagerRange selectedRange = _ManagerRange.monthly;
+  bool _isExportingPdf = false;
   late Future<ManagerDashboardSnapshot> _dashboardSnapshotFuture;
   final Map<_ManagerRange, Future<SalesReportSeries>> _salesReportFutures = {};
   Timer? _salesRefreshTimer;
-
-  _ManagerReportData get data => _reportData[selectedRange]!;
 
   @override
   void initState() {
@@ -441,6 +109,46 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         return 'monthly';
       case _ManagerRange.yearly:
         return 'yearly';
+    }
+  }
+
+  Future<void> _handleExportPdf() async {
+    if (_isExportingPdf) {
+      return;
+    }
+
+    setState(() {
+      _isExportingPdf = true;
+    });
+
+    try {
+      await SalesReportPdfExporter.exportAllRanges(requestedBy: 'Manager');
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sales report PDF generated (daily, weekly, monthly, yearly).',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to export PDF: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingPdf = false;
+        });
+      }
     }
   }
 
@@ -592,10 +300,15 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         final summary = snapshot.data?.summary;
         final revenueValue = summary != null
             ? AimsApiClient.formatCurrency(summary.revenueToday)
-            : data.revenueToday;
+            : '--';
         final customersValue = summary != null
             ? AimsApiClient.formatCount(summary.customersToday)
-            : data.customersToday;
+            : '--';
+        final status = snapshot.hasError
+            ? 'OFFLINE'
+            : summary != null
+            ? 'LIVE'
+            : 'SYNCING';
 
         return Row(
           children: [
@@ -603,7 +316,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
               child: _buildMetricCard(
                 title: 'TOTAL REVENUE TODAY',
                 value: revenueValue,
-                change: summary != null ? '+0%' : data.revenueChange,
+                change: status,
               ),
             ),
             const SizedBox(width: 12),
@@ -611,7 +324,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
               child: _buildMetricCard(
                 title: 'TOTAL CUSTOMERS TODAY',
                 value: customersValue,
-                change: summary != null ? '+0%' : data.customersChange,
+                change: status,
               ),
             ),
           ],
@@ -647,30 +360,43 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           _buildRangeButton(_ManagerRange.weekly, 'Weekly'),
           _buildRangeButton(_ManagerRange.yearly, 'Yearly'),
           const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: _buttonTan,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.picture_as_pdf_outlined,
-                  size: 14,
-                  color: _textPrimary,
-                ),
-                SizedBox(width: 4),
-                Text(
-                  'Export PDF',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: _textPrimary,
+          InkWell(
+            onTap: _isExportingPdf ? null : _handleExportPdf,
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: _buttonTan,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _isExportingPdf
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: _textPrimary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 14,
+                          color: _textPrimary,
+                        ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isExportingPdf ? 'Exporting...' : 'Export PDF',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -678,34 +404,34 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       child: FutureBuilder<SalesReportSeries>(
         future: _primeSalesReport(selectedRange),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return _buildCenteredPanelMessage('Loading sales report...');
+          }
+
+          if (snapshot.hasError) {
+            return _buildCenteredPanelMessage(
+              'Unable to load sales report from backend.',
+            );
+          }
+
           final live = snapshot.data;
-          final labels = (live?.labels.isNotEmpty ?? false)
-              ? live!.labels
-              : data.labels;
-          final areaSpots = (live?.areaValues.isNotEmpty ?? false)
-              ? _spotsFromValues(live!.areaValues)
-              : data.areaSpots;
-          final lineSpots = (live?.lineValues.isNotEmpty ?? false)
-              ? _spotsFromValues(live!.lineValues)
-              : data.lineSpots;
-          final tooltipTitles = (live?.tooltipTitles.isNotEmpty ?? false)
-              ? live!.tooltipTitles
-              : data.tooltipTitles;
-          final tooltipValues = (live?.tooltipValues.isNotEmpty ?? false)
-              ? live!.tooltipValues
-              : data.tooltipValues;
-          final highlightX = live?.highlightX ?? data.highlightX;
-          final maxY = live?.maxY ?? data.maxY;
+          if (live == null ||
+              live.labels.isEmpty ||
+              live.areaValues.isEmpty ||
+              live.lineValues.isEmpty) {
+            return _buildCenteredPanelMessage('No sales data available yet.');
+          }
 
           return SalesReportLineChart(
             key: ValueKey('${selectedRange}_${snapshot.hasData}'),
-            areaSpots: areaSpots,
-            lineSpots: lineSpots,
-            labels: labels,
-            tooltipTitles: tooltipTitles,
-            tooltipValues: tooltipValues,
-            highlightX: highlightX,
-            maxY: maxY,
+            areaSpots: _spotsFromValues(live.areaValues),
+            lineSpots: _spotsFromValues(live.lineValues),
+            labels: live.labels,
+            tooltipTitles: live.tooltipTitles,
+            tooltipValues: live.tooltipValues,
+            highlightX: live.highlightX,
+            maxY: live.maxY,
           );
         },
       ),
@@ -716,20 +442,49 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     return FutureBuilder<ManagerDashboardSnapshot>(
       future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final liveReservations = snapshot.data?.pendingReservations
-            .map(
-              (item) => _Reservation(
-                name: item.customerName,
-                email: item.email.isNotEmpty ? item.email : item.contactDetails,
-                time: _formatTime(item.startAt),
-                duration: _formatDuration(item.endAt.difference(item.startAt)),
-              ),
-            )
-            .toList();
         final reservations =
-            (liveReservations != null && liveReservations.isNotEmpty)
-            ? liveReservations
-            : _reservations;
+            (snapshot.data?.pendingReservations ??
+                    const <DashboardReservationItem>[])
+                .map(
+                  (item) => _Reservation(
+                    name: item.customerName,
+                    email: item.email.isNotEmpty
+                        ? item.email
+                        : item.contactDetails,
+                    time: _formatTime(item.startAt),
+                    duration: _formatDuration(
+                      item.endAt.difference(item.startAt),
+                    ),
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('Loading reservations...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage(
+              'Unable to load reservations from backend.',
+            ),
+          );
+        }
+
+        if (reservations.isEmpty) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('No pending reservations yet.'),
+          );
+        }
 
         return _buildPanel(
           title: 'Pending Reservations',
@@ -789,53 +544,56 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     return FutureBuilder<ManagerDashboardSnapshot>(
       future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final liveTransactions = snapshot.data?.latestTransactions
-            .map(
-              (item) => _Transaction(
-                status: _transactionStatusLabel(item.status),
-                statusColor: _transactionStatusColor(item.status),
-                title: item.customerName,
-                subtitle: item.paymentMethod,
-                amount: AimsApiClient.formatCurrency(item.finalAmount),
-                date: _formatDate(item.createdAt),
-                vendor: item.email,
-              ),
-            )
-            .toList();
         final transactions =
-            (liveTransactions != null && liveTransactions.isNotEmpty)
-            ? liveTransactions
-            : _transactions;
+            (snapshot.data?.latestTransactions ??
+                    const <DashboardTransactionItem>[])
+                .map(
+                  (item) => _Transaction(
+                    status: _transactionStatusLabel(item.status),
+                    statusColor: _transactionStatusColor(item.status),
+                    title: item.customerName,
+                    subtitle: item.paymentMethod,
+                    amount: AimsApiClient.formatCurrency(item.finalAmount),
+                    date: _formatDate(item.createdAt),
+                    vendor: item.email,
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Recent Transactions',
+            subtitle: 'Live transactions from backend.',
+            action: _buildTransactionsAction(),
+            child: _buildCenteredPanelMessage('Loading transactions...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Recent Transactions',
+            subtitle: 'Live transactions from backend.',
+            action: _buildTransactionsAction(),
+            child: _buildCenteredPanelMessage(
+              'Unable to load transactions from backend.',
+            ),
+          );
+        }
+
+        if (transactions.isEmpty) {
+          return _buildPanel(
+            title: 'Recent Transactions',
+            subtitle: 'Live transactions from backend.',
+            action: _buildTransactionsAction(),
+            child: _buildCenteredPanelMessage('No transactions found yet.'),
+          );
+        }
 
         return _buildPanel(
           title: 'Recent Transactions',
           subtitle: 'Live transactions from backend.',
-          action: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _buttonTan,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'See All Transactions',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: _textPrimary,
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 10,
-                  color: _textPrimary,
-                ),
-              ],
-            ),
-          ),
+          action: _buildTransactionsAction(),
           child: Column(
             children: transactions
                 .map(
@@ -943,6 +701,45 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       surfaceColor: _surfaceBlue,
       textColor: _textPrimary,
       child: child,
+    );
+  }
+
+  Widget _buildTransactionsAction() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: _buttonTan,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'See All Transactions',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+            ),
+          ),
+          SizedBox(width: 8),
+          Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textPrimary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCenteredPanelMessage(String message) {
+    return Center(
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: _textMuted,
+        ),
+      ),
     );
   }
 

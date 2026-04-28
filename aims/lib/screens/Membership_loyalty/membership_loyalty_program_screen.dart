@@ -8,60 +8,18 @@ import 'package:aims/widgets/membership_loyalty_widgets/edit_membership_dialog.d
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_action_button.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_section.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_table.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/utils/space_pricing.dart';
 import 'package:flutter/material.dart';
 
 class MembershipLoyaltyProgramScreen extends StatefulWidget {
-  const MembershipLoyaltyProgramScreen({
-    super.key,
-    this.role = UserRole.staff,
-  });
+  const MembershipLoyaltyProgramScreen({super.key, this.role = UserRole.staff});
 
   final UserRole role;
 
   @override
   State<MembershipLoyaltyProgramScreen> createState() =>
       _MembershipLoyaltyProgramScreenState();
-}
-
-class _MembershipType {
-  const _MembershipType({
-    required this.type,
-    required this.duration,
-    required this.price,
-    required this.benefits,
-  });
-
-  final String type;
-  final String duration;
-  final String price;
-  final String benefits;
-}
-
-class _LoyaltyReward {
-  const _LoyaltyReward({
-    required this.memberName,
-    required this.entries,
-    required this.freeHours,
-  });
-
-  final String memberName;
-  final String entries;
-  final String freeHours;
-}
-
-class _Promotion {
-  const _Promotion({
-    required this.name,
-    required this.type,
-    required this.discount,
-    required this.expiry,
-  });
-
-  final String name;
-  final String type;
-  final String discount;
-  final String expiry;
 }
 
 class _MembershipLoyaltyProgramScreenState
@@ -76,66 +34,18 @@ class _MembershipLoyaltyProgramScreenState
   static const Color _textMuted = Color(0xFF6F7E87);
   static const Color _cardWhite = Color(0xF7FFFFFF);
 
-  static const List<_LoyaltyReward> _rewards = [
-    _LoyaltyReward(
-      memberName: 'Mika Santos',
-      entries: '8 visits',
-      freeHours: '2 hours',
-    ),
-    _LoyaltyReward(
-      memberName: 'Paolo Reyes',
-      entries: '12 visits',
-      freeHours: '4 hours',
-    ),
-    _LoyaltyReward(
-      memberName: 'Andrea Lim',
-      entries: '5 visits',
-      freeHours: '1 hour',
-    ),
-  ];
-
   bool isSidebarOpen = true;
-  String selectedMenu = 'Membership and Loyalty Program';
-  late final List<_MembershipType> _memberships;
-  late final List<_Promotion> _promotions;
+  String selectedMenu = 'Pricing and Promo Management';
+  bool _isLoadingData = false;
+  String? _loadError;
+  List<PricingMembershipType> _membershipTypes = [];
+  List<PricingPromotion> _promotions = [];
+  List<LoyaltyRewardRecord> _loyaltyRewards = [];
 
   @override
   void initState() {
     super.initState();
-    _memberships = [
-      const _MembershipType(
-        type: 'Monthly Membership',
-        duration: '30 days',
-        price: 'PHP 2,499',
-        benefits: 'Flexible coworking access',
-      ),
-      const _MembershipType(
-        type: 'Annual Membership',
-        duration: '12 months',
-        price: 'PHP 24,999',
-        benefits: 'Priority booking and discounts',
-      ),
-      const _MembershipType(
-        type: 'Student Pass',
-        duration: '15 days',
-        price: 'PHP 1,199',
-        benefits: 'Discounted day access',
-      ),
-    ];
-    _promotions = [
-      const _Promotion(
-        name: 'Summer Study Boost',
-        type: 'Student Promo',
-        discount: '15% off',
-        expiry: 'May 30, 2026',
-      ),
-      const _Promotion(
-        name: 'Team Workspace Bundle',
-        type: 'Corporate Promo',
-        discount: '20% off',
-        expiry: 'June 15, 2026',
-      ),
-    ];
+    _refreshPricingPromoData();
   }
 
   @override
@@ -157,7 +67,9 @@ class _MembershipLoyaltyProgramScreenState
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: _desktopFrameWidth,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -186,11 +98,11 @@ class _MembershipLoyaltyProgramScreenState
                                     children: [
                                       _buildInfoChip(
                                         label: 'Membership Types',
-                                        value: '${_memberships.length}',
+                                        value: '${_membershipTypes.length}',
                                       ),
                                       _buildInfoChip(
                                         label: 'Reward Members',
-                                        value: '${_rewards.length}',
+                                        value: '${_loyaltyRewards.length}',
                                       ),
                                       _buildInfoChip(
                                         label: 'Active Promos',
@@ -198,6 +110,21 @@ class _MembershipLoyaltyProgramScreenState
                                       ),
                                     ],
                                   ),
+                                  if (_isLoadingData) ...[
+                                    const SizedBox(height: 12),
+                                    const LinearProgressIndicator(minHeight: 3),
+                                  ],
+                                  if (_loadError != null) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _loadError!,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFC95656),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 24),
                                   if (stackedButtons)
                                     Column(
@@ -219,7 +146,8 @@ class _MembershipLoyaltyProgramScreenState
                                           icon: Icons.local_offer_outlined,
                                           onPressed: _openCreatePromoDialog,
                                         ),
-                                        if (widget.role == UserRole.manager) ...[
+                                        if (widget.role ==
+                                            UserRole.manager) ...[
                                           const SizedBox(height: 12),
                                           MembershipProgramActionButton(
                                             label: 'Update Hourly Rates',
@@ -251,7 +179,8 @@ class _MembershipLoyaltyProgramScreenState
                                           icon: Icons.local_offer_outlined,
                                           onPressed: _openCreatePromoDialog,
                                         ),
-                                        if (widget.role == UserRole.manager) ...[
+                                        if (widget.role ==
+                                            UserRole.manager) ...[
                                           const SizedBox(width: 16),
                                           MembershipProgramActionButton(
                                             label: 'Update Hourly Rates',
@@ -269,7 +198,8 @@ class _MembershipLoyaltyProgramScreenState
                                   const SizedBox(height: 18),
                                   MembershipProgramSection(
                                     title: 'Membership Types',
-                                    subtitle: 'Review available plans and their inclusions.',
+                                    subtitle:
+                                        'Review available plans and their inclusions.',
                                     backgroundColor: _panelBlue,
                                     textColor: _textPrimary,
                                     child: MembershipProgramTable(
@@ -281,7 +211,7 @@ class _MembershipLoyaltyProgramScreenState
                                         '',
                                       ],
                                       flexes: const [3, 2, 2, 3, 2],
-                                      rows: _memberships
+                                      rows: _membershipTypes
                                           .map(
                                             (membership) => [
                                               membership.type,
@@ -302,7 +232,8 @@ class _MembershipLoyaltyProgramScreenState
                                   const SizedBox(height: 18),
                                   MembershipProgramSection(
                                     title: 'Loyalty Rewards Tracking',
-                                    subtitle: 'Monitor visits and complimentary hours.',
+                                    subtitle:
+                                        'Monitor visits and complimentary hours.',
                                     backgroundColor: _panelBlue,
                                     textColor: _textPrimary,
                                     child: MembershipProgramTable(
@@ -312,12 +243,12 @@ class _MembershipLoyaltyProgramScreenState
                                         'Free Hours',
                                       ],
                                       flexes: const [4, 3, 2],
-                                      rows: _rewards
+                                      rows: _loyaltyRewards
                                           .map(
                                             (reward) => [
                                               reward.memberName,
-                                              reward.entries,
-                                              reward.freeHours,
+                                              '${reward.entries} visits',
+                                              '${reward.freeHours} hour${reward.freeHours == 1 ? '' : 's'}',
                                             ],
                                           )
                                           .toList(),
@@ -329,7 +260,8 @@ class _MembershipLoyaltyProgramScreenState
                                   const SizedBox(height: 18),
                                   MembershipProgramSection(
                                     title: 'Active Promotions',
-                                    subtitle: 'Current promo campaigns available to members.',
+                                    subtitle:
+                                        'Current promo campaigns available to members.',
                                     backgroundColor: _panelBlue,
                                     textColor: _textPrimary,
                                     child: MembershipProgramTable(
@@ -346,7 +278,9 @@ class _MembershipLoyaltyProgramScreenState
                                               promotion.name,
                                               promotion.type,
                                               promotion.discount,
-                                              promotion.expiry,
+                                              _formatPromoDate(
+                                                promotion.expiry,
+                                              ),
                                             ],
                                           )
                                           .toList(),
@@ -404,6 +338,59 @@ class _MembershipLoyaltyProgramScreenState
     }
   }
 
+  Future<void> _refreshPricingPromoData({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoadingData = true;
+        _loadError = null;
+      });
+    }
+
+    try {
+      final snapshot = await AimsApiClient.instance.fetchPricingPromoSnapshot();
+      if (!mounted) {
+        return;
+      }
+
+      SpacePricingStore.updateFromRecord(snapshot.spacePricing);
+      setState(() {
+        _membershipTypes = snapshot.membershipTypes;
+        _promotions = snapshot.promotions;
+        _loyaltyRewards = snapshot.loyaltyRewards;
+        _loadError = null;
+      });
+    } on AimsApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadError = 'Unable to load pricing and promos from backend.';
+      });
+    } finally {
+      if (showLoader && mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _openCreatePromoDialog() async {
     final result = await showDialog<PromoDialogResult>(
       context: context,
@@ -415,17 +402,21 @@ class _MembershipLoyaltyProgramScreenState
       return;
     }
 
-    setState(() {
-      _promotions.insert(
-        0,
-        _Promotion(
-          name: result.name,
-          type: result.type,
-          discount: result.discount,
-          expiry: result.expiry,
-        ),
+    try {
+      await AimsApiClient.instance.createPromotion(
+        name: result.name,
+        type: result.type,
+        discount: result.discount,
+        expiry: result.expiry,
+        benefits: result.benefits,
       );
-    });
+      await _refreshPricingPromoData(showLoader: false);
+      _showMessage('Promotion created.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to create promotion right now.');
+    }
   }
 
   Future<void> _openAddMembershipDialog() async {
@@ -439,17 +430,20 @@ class _MembershipLoyaltyProgramScreenState
       return;
     }
 
-    setState(() {
-      _memberships.insert(
-        0,
-        _MembershipType(
-          type: result.type,
-          duration: result.duration,
-          price: result.price,
-          benefits: result.benefits,
-        ),
+    try {
+      await AimsApiClient.instance.createMembershipType(
+        type: result.type,
+        duration: result.duration,
+        price: result.price,
+        benefits: result.benefits,
       );
-    });
+      await _refreshPricingPromoData(showLoader: false);
+      _showMessage('Membership type created.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to create membership type right now.');
+    }
   }
 
   Future<void> _openEditHourlyPricingDialog() async {
@@ -471,14 +465,22 @@ class _MembershipLoyaltyProgramScreenState
       return;
     }
 
-    SpacePricingStore.update(
-      boardRoomHourlyRate: result.boardRoomHourlyRate,
-      ordinarySpaceHourlyRate: result.ordinarySpaceHourlyRate,
-    );
+    try {
+      final updated = await AimsApiClient.instance.updateSpacePricing(
+        boardRoomHourlyRate: result.boardRoomHourlyRate,
+        ordinarySpaceHourlyRate: result.ordinarySpaceHourlyRate,
+      );
+      SpacePricingStore.updateFromRecord(updated);
+      _showMessage('Hourly pricing updated.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to update hourly pricing right now.');
+    }
   }
 
   Future<void> _editMembership(int index) async {
-    final membership = _memberships[index];
+    final membership = _membershipTypes[index];
     final result = await showDialog<MembershipDialogResult>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.18),
@@ -494,24 +496,31 @@ class _MembershipLoyaltyProgramScreenState
       return;
     }
 
-    setState(() {
-      _memberships[index] = _MembershipType(
+    try {
+      await AimsApiClient.instance.updateMembershipType(
+        membershipTypeId: membership.membershipTypeId,
         type: result.type,
         duration: result.duration,
         price: result.price,
         benefits: result.benefits,
       );
-    });
+      await _refreshPricingPromoData(showLoader: false);
+      _showMessage('Membership type updated.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to update membership type right now.');
+    }
   }
 
   Future<void> _deleteMembership(int index) async {
-    final membership = _memberships[index];
-    final shouldDelete = await showDialog<bool>(
+    final membership = _membershipTypes[index];
+    final shouldDelete =
+        await showDialog<bool>(
           context: context,
           barrierColor: Colors.black.withOpacity(0.18),
-          builder: (_) => DeleteMembershipDialog(
-            membershipType: membership.type,
-          ),
+          builder: (_) =>
+              DeleteMembershipDialog(membershipType: membership.type),
         ) ??
         false;
 
@@ -519,9 +528,17 @@ class _MembershipLoyaltyProgramScreenState
       return;
     }
 
-    setState(() {
-      _memberships.removeAt(index);
-    });
+    try {
+      await AimsApiClient.instance.deleteMembershipType(
+        membership.membershipTypeId,
+      );
+      await _refreshPricingPromoData(showLoader: false);
+      _showMessage('Membership type deleted.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to delete membership type right now.');
+    }
   }
 
   Widget _buildPageHero() {
@@ -561,7 +578,7 @@ class _MembershipLoyaltyProgramScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Membership and Loyalty Program',
+                  'Pricing and Promo Management',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
@@ -585,10 +602,7 @@ class _MembershipLoyaltyProgramScreenState
     );
   }
 
-  Widget _buildInfoChip({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildInfoChip({required String label, required String value}) {
     return Container(
       constraints: const BoxConstraints(minWidth: 160),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -655,7 +669,8 @@ class _MembershipLoyaltyProgramScreenState
                     value: SpacePricingStore.formatCurrency(
                       pricing.ordinarySpaceHourlyRate,
                     ),
-                    description: 'Hourly charge for regular seats and open spaces.',
+                    description:
+                        'Hourly charge for regular seats and open spaces.',
                     icon: Icons.event_seat_outlined,
                   ),
                 ],
@@ -791,5 +806,25 @@ class _MembershipLoyaltyProgramScreenState
         ),
       ],
     );
+  }
+
+  String _formatPromoDate(DateTime value) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    final month = months[(value.month - 1).clamp(0, 11)];
+    return '$month ${value.day}, ${value.year}';
   }
 }

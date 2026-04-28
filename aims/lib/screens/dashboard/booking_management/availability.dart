@@ -264,7 +264,7 @@ class _StaffBookingManagementScreenState
       return;
     }
 
-    if (title == 'Membership and Loyalty Program') {
+    if (title == 'Pricing and Promo Management') {
       Navigator.pushReplacementNamed(
         context,
         widget.role == UserRole.manager

@@ -21,6 +21,38 @@ $activeSessions = aims_int(
     $pdo->query("SELECT COUNT(*) FROM sessions WHERE LOWER(status) = 'active'")->fetchColumn()
 );
 
+$weeklyActivityStmt = $pdo->query(
+    <<<SQL
+SELECT
+    DATE(s.check_in) AS day_key,
+    COUNT(*) AS total
+FROM sessions s
+WHERE s.check_in >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+  AND s.check_in < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+GROUP BY DATE(s.check_in)
+SQL
+);
+$weeklyCountsByDay = [];
+foreach ($weeklyActivityStmt->fetchAll() ?: [] as $row) {
+    $dayKey = aims_str($row['day_key'] ?? '');
+    if ($dayKey === '') {
+        continue;
+    }
+    $weeklyCountsByDay[$dayKey] = aims_int($row['total'] ?? 0);
+}
+
+$weeklyActivity = [];
+$today = new DateTimeImmutable('today');
+for ($offset = 6; $offset >= 0; $offset--) {
+    $day = $today->sub(new DateInterval('P' . $offset . 'D'));
+    $dayKey = $day->format('Y-m-d');
+    $weeklyActivity[] = [
+        'date' => $dayKey,
+        'label' => $day->format('D'),
+        'count' => $weeklyCountsByDay[$dayKey] ?? 0,
+    ];
+}
+
 $pendingReservationsStmt = $pdo->query(
     <<<SQL
 SELECT
@@ -121,6 +153,7 @@ aims_ok([
     'activeCustomers' => $activeCustomers,
     'reservedBookings' => $reservedBookings,
     'activeSessions' => $activeSessions,
+    'weeklyActivity' => $weeklyActivity,
     'pendingReservations' => $pendingReservations,
     'activeCustomerRows' => $activeCustomerRows,
     'latestTransactions' => $latestTransactions,

@@ -19,7 +19,7 @@ From XAMPP Control Panel, start:
 - `Apache`
 - `MySQL`
 
-## 3) Create database and seed data
+## 3) Create database schema
 
 Open phpMyAdmin:
 
@@ -29,13 +29,19 @@ Import:
 
 `C:\xampp\htdocs\aims_api\setup\schema.sql`
 
-This creates `afterspace_db` and seed records.
+This creates `afterspace_db` schema plus seeded login accounts only.
 
 Seed login accounts:
 
 - Admin: `ADMIN-001` / `admin123`
 - Manager: `MGR-001` / `manager123`
 - Staff: `STF-001` / `staff123`
+
+If you already imported an older seeded schema, run:
+
+`C:\xampp\htdocs\aims_api\setup\clear_all_data.sql`
+
+in phpMyAdmin to wipe all existing rows. Then re-import `schema.sql` to restore only the login accounts above.
 
 ## 4) Verify endpoints
 
@@ -88,6 +94,10 @@ flutter run --dart-define=AIMS_API_BASE_URL=http://10.0.2.2/aims_api
 - `POST /api/schedules`
 - `PATCH /api/schedules`
 - `DELETE /api/schedules`
+- `GET /api/pricing-promos`
+- `POST /api/pricing-promos` (`kind=membership|promotion`)
+- `PATCH /api/pricing-promos` (`kind=membership|pricing`)
+- `DELETE /api/pricing-promos` (`kind=membership|promotion`)
 
 ## Note
 

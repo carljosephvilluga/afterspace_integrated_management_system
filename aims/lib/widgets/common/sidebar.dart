@@ -36,7 +36,7 @@ class Sidebar extends StatelessWidget {
     _SidebarItemData(icon: Icons.groups_outlined, title: 'List of Users'),
     _SidebarItemData(
       icon: Icons.loyalty_outlined,
-      title: 'Membership and Loyalty Program',
+      title: 'Pricing and Promo Management',
     ),
   ];
 
@@ -46,7 +46,7 @@ class Sidebar extends StatelessWidget {
     _SidebarItemData(icon: Icons.groups_outlined, title: 'List of Users'),
     _SidebarItemData(
       icon: Icons.loyalty_outlined,
-      title: 'Membership and Loyalty Program',
+      title: 'Pricing and Promo Management',
     ),
   ];
 

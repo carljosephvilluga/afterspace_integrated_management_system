@@ -228,7 +228,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
             case 'List of Users':
               Navigator.pushReplacementNamed(context, '/manager-users');
               break;
-            case 'Membership and Loyalty Program':
+            case 'Pricing and Promo Management':
               Navigator.pushReplacementNamed(context, '/manager-membership');
               break;
           }

@@ -314,6 +314,46 @@ SQL
     );
     $pdo->exec(
         <<<SQL
+CREATE TABLE IF NOT EXISTS membership_types (
+    membership_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_name VARCHAR(120) NOT NULL,
+    duration_label VARCHAR(80) NOT NULL,
+    price_label VARCHAR(80) NOT NULL,
+    benefits TEXT NOT NULL,
+    created_by_staff_id INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_membership_types_staff
+        FOREIGN KEY (created_by_staff_id) REFERENCES staff_accounts(staff_id)
+        ON DELETE SET NULL
+)
+SQL
+    );
+    $pdo->exec(
+        <<<SQL
+CREATE TABLE IF NOT EXISTS space_pricing (
+    pricing_id TINYINT UNSIGNED PRIMARY KEY,
+    board_room_hourly_rate DECIMAL(10,2) NOT NULL,
+    ordinary_space_hourly_rate DECIMAL(10,2) NOT NULL,
+    updated_by_staff_id INT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_space_pricing_staff
+        FOREIGN KEY (updated_by_staff_id) REFERENCES staff_accounts(staff_id)
+        ON DELETE SET NULL
+)
+SQL
+    );
+    if (!aims_table_has_column('promotions', 'promo_type')) {
+        $pdo->exec('ALTER TABLE promotions ADD COLUMN promo_type VARCHAR(100) NULL AFTER promo_name');
+    }
+    if (!aims_table_has_column('promotions', 'discount_label')) {
+        $pdo->exec('ALTER TABLE promotions ADD COLUMN discount_label VARCHAR(100) NULL AFTER discount_rate');
+    }
+    if (!aims_table_has_column('promotions', 'benefits')) {
+        $pdo->exec('ALTER TABLE promotions ADD COLUMN benefits TEXT NULL AFTER end_date');
+    }
+    $pdo->exec(
+        <<<SQL
 INSERT INTO user_profiles (
     user_id,
     first_name,
@@ -337,4 +377,24 @@ SQL
     );
 
     $ensured = true;
+}
+
+function aims_table_has_column(string $tableName, string $columnName): bool
+{
+    $stmt = aims_pdo()->prepare(
+        <<<SQL
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = :table_name
+  AND COLUMN_NAME = :column_name
+LIMIT 1
+SQL
+    );
+    $stmt->execute([
+        ':table_name' => $tableName,
+        ':column_name' => $columnName,
+    ]);
+
+    return $stmt->fetchColumn() !== false;
 }

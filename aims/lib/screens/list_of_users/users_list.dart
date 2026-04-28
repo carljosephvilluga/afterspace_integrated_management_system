@@ -160,6 +160,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_refresh);
+    _syncSpacePricing();
     _loadUsers();
   }
 
@@ -217,6 +218,20 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
         setState(() {
           _isLoadingUsers = false;
         });
+      }
+    }
+  }
+
+  Future<void> _syncSpacePricing({bool notifyOnError = false}) async {
+    try {
+      await SpacePricingStore.syncFromBackend();
+    } on AimsApiException catch (error) {
+      if (notifyOnError) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (notifyOnError) {
+        _showMessage('Unable to load hourly pricing from backend.');
       }
     }
   }
@@ -409,7 +424,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       return;
     }
 
-    if (title == 'Membership and Loyalty Program') {
+    if (title == 'Pricing and Promo Management') {
       Navigator.pushReplacementNamed(
         context,
         widget.role == UserRole.manager
@@ -739,7 +754,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                       // Active users can check out; inactive users can check in.
                       user.isActive
                           ? ElevatedButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
+                                await _syncSpacePricing();
                                 final visit = _activeVisitFor(user);
                                 final totalAmount =
                                     SpacePricingStore.totalForVisit(

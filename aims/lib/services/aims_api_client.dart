@@ -86,6 +86,18 @@ class DashboardActiveCustomerItem {
   final String status;
 }
 
+class DashboardWeeklyActivityItem {
+  const DashboardWeeklyActivityItem({
+    required this.date,
+    required this.label,
+    required this.count,
+  });
+
+  final DateTime date;
+  final String label;
+  final int count;
+}
+
 class DashboardTransactionItem {
   const DashboardTransactionItem({
     required this.transactionId,
@@ -113,12 +125,14 @@ class DashboardTransactionItem {
 class StaffDashboardSnapshot {
   const StaffDashboardSnapshot({
     required this.summary,
+    required this.weeklyActivity,
     required this.pendingReservations,
     required this.activeCustomers,
     required this.latestTransactions,
   });
 
   final StaffDashboardSummary summary;
+  final List<DashboardWeeklyActivityItem> weeklyActivity;
   final List<DashboardReservationItem> pendingReservations;
   final List<DashboardActiveCustomerItem> activeCustomers;
   final List<DashboardTransactionItem> latestTransactions;
@@ -188,6 +202,74 @@ class UserRecord {
   final String membershipType;
   final bool isActive;
   final List<String> history;
+}
+
+class PricingMembershipType {
+  const PricingMembershipType({
+    required this.membershipTypeId,
+    required this.type,
+    required this.duration,
+    required this.price,
+    required this.benefits,
+  });
+
+  final int membershipTypeId;
+  final String type;
+  final String duration;
+  final String price;
+  final String benefits;
+}
+
+class PricingPromotion {
+  const PricingPromotion({
+    required this.promoId,
+    required this.name,
+    required this.type,
+    required this.discount,
+    required this.expiry,
+  });
+
+  final int promoId;
+  final String name;
+  final String type;
+  final String discount;
+  final DateTime expiry;
+}
+
+class LoyaltyRewardRecord {
+  const LoyaltyRewardRecord({
+    required this.memberName,
+    required this.entries,
+    required this.freeHours,
+  });
+
+  final String memberName;
+  final int entries;
+  final int freeHours;
+}
+
+class SpacePricingRecord {
+  const SpacePricingRecord({
+    required this.boardRoomHourlyRate,
+    required this.ordinarySpaceHourlyRate,
+  });
+
+  final double boardRoomHourlyRate;
+  final double ordinarySpaceHourlyRate;
+}
+
+class PricingPromoSnapshot {
+  const PricingPromoSnapshot({
+    required this.membershipTypes,
+    required this.promotions,
+    required this.loyaltyRewards,
+    required this.spacePricing,
+  });
+
+  final List<PricingMembershipType> membershipTypes;
+  final List<PricingPromotion> promotions;
+  final List<LoyaltyRewardRecord> loyaltyRewards;
+  final SpacePricingRecord spacePricing;
 }
 
 class SalesReportSeries {
@@ -396,6 +478,9 @@ class AimsApiClient {
     final pendingReservations = _asList(
       data['pendingReservations'],
     ).map((item) => _parseDashboardReservation(item)).toList();
+    final weeklyActivity = _asList(
+      data['weeklyActivity'],
+    ).map((item) => _parseDashboardWeeklyActivity(item)).toList();
     final activeCustomerRows = _asList(
       data['activeCustomerRows'],
     ).map((item) => _parseDashboardActiveCustomer(item)).toList();
@@ -405,6 +490,7 @@ class AimsApiClient {
 
     return StaffDashboardSnapshot(
       summary: summary,
+      weeklyActivity: weeklyActivity,
       pendingReservations: pendingReservations,
       activeCustomers: activeCustomerRows,
       latestTransactions: latestTransactions,
@@ -626,6 +712,134 @@ class AimsApiClient {
     );
   }
 
+  Future<PricingPromoSnapshot> fetchPricingPromoSnapshot() async {
+    final envelope = await _send(
+      method: 'GET',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+    );
+    final data = _asMap(envelope['data']);
+    final membershipTypes = _asList(
+      data['membershipTypes'],
+    ).map((item) => _parsePricingMembershipType(item)).toList();
+    final promotions = _asList(
+      data['promotions'],
+    ).map((item) => _parsePricingPromotion(item)).toList();
+    final loyaltyRewards = _asList(
+      data['loyaltyRewards'],
+    ).map((item) => _parseLoyaltyReward(item)).toList();
+    final spacePricing = _parseSpacePricingRecord(data['spacePricing']);
+
+    return PricingPromoSnapshot(
+      membershipTypes: membershipTypes,
+      promotions: promotions,
+      loyaltyRewards: loyaltyRewards,
+      spacePricing: spacePricing,
+    );
+  }
+
+  Future<PricingMembershipType> createMembershipType({
+    required String type,
+    required String duration,
+    required String price,
+    required String benefits,
+  }) async {
+    final envelope = await _send(
+      method: 'POST',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+      body: {
+        'kind': 'membership',
+        'type': type,
+        'duration': duration,
+        'price': price,
+        'benefits': benefits,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parsePricingMembershipType(data['membershipType']);
+  }
+
+  Future<PricingMembershipType> updateMembershipType({
+    required int membershipTypeId,
+    required String type,
+    required String duration,
+    required String price,
+    required String benefits,
+  }) async {
+    final envelope = await _send(
+      method: 'PATCH',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+      body: {
+        'kind': 'membership',
+        'membershipTypeId': membershipTypeId,
+        'type': type,
+        'duration': duration,
+        'price': price,
+        'benefits': benefits,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parsePricingMembershipType(data['membershipType']);
+  }
+
+  Future<void> deleteMembershipType(int membershipTypeId) async {
+    await _send(
+      method: 'DELETE',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+      body: {'kind': 'membership', 'membershipTypeId': membershipTypeId},
+    );
+  }
+
+  Future<PricingPromotion> createPromotion({
+    required String name,
+    required String type,
+    required String discount,
+    required String expiry,
+    String benefits = '',
+  }) async {
+    final envelope = await _send(
+      method: 'POST',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+      body: {
+        'kind': 'promotion',
+        'name': name,
+        'type': type,
+        'discount': discount,
+        'expiry': expiry,
+        'benefits': benefits,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parsePricingPromotion(data['promotion']);
+  }
+
+  Future<SpacePricingRecord> fetchSpacePricing() async {
+    final snapshot = await fetchPricingPromoSnapshot();
+    return snapshot.spacePricing;
+  }
+
+  Future<SpacePricingRecord> updateSpacePricing({
+    required double boardRoomHourlyRate,
+    required double ordinarySpaceHourlyRate,
+  }) async {
+    final envelope = await _send(
+      method: 'PATCH',
+      path: '/api/pricing-promos/',
+      withAuth: true,
+      body: {
+        'kind': 'pricing',
+        'boardRoomHourlyRate': boardRoomHourlyRate,
+        'ordinarySpaceHourlyRate': ordinarySpaceHourlyRate,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parseSpacePricingRecord(data['spacePricing']);
+  }
+
   Future<SalesReportSeries> fetchSalesReport({required String range}) async {
     final envelope = await _send(
       method: 'GET',
@@ -774,7 +988,7 @@ class AimsApiClient {
     );
     final cents = parts.length > 1 ? '.${parts[1]}' : '';
     final sign = value < 0 ? '-' : '';
-    return '$sign\$$dollars$cents';
+    return '$sign₱$dollars$cents';
   }
 
   static String formatCount(num value) {
@@ -923,6 +1137,17 @@ class AimsApiClient {
     );
   }
 
+  DashboardWeeklyActivityItem _parseDashboardWeeklyActivity(dynamic raw) {
+    final map = _asMap(raw);
+    final date = _asDateTime(map['date']);
+    final label = _asString(map['label']);
+    return DashboardWeeklyActivityItem(
+      date: date,
+      label: label.isEmpty ? _weekdayShort(date.weekday) : label,
+      count: _asInt(map['count']),
+    );
+  }
+
   DashboardTransactionItem _parseDashboardTransaction(dynamic raw) {
     final map = _asMap(raw);
     return DashboardTransactionItem(
@@ -951,6 +1176,45 @@ class AimsApiClient {
       membershipType: _asString(map['membershipType']),
       isActive: _asBool(map['isActive']),
       history: _asList(map['history']).map((item) => _asString(item)).toList(),
+    );
+  }
+
+  PricingMembershipType _parsePricingMembershipType(dynamic raw) {
+    final map = _asMap(raw);
+    return PricingMembershipType(
+      membershipTypeId: _asInt(map['membershipTypeId']),
+      type: _asString(map['type']),
+      duration: _asString(map['duration']),
+      price: _asString(map['price']),
+      benefits: _asString(map['benefits']),
+    );
+  }
+
+  PricingPromotion _parsePricingPromotion(dynamic raw) {
+    final map = _asMap(raw);
+    return PricingPromotion(
+      promoId: _asInt(map['promoId']),
+      name: _asString(map['name']),
+      type: _asString(map['type']),
+      discount: _asString(map['discount']),
+      expiry: _asDateTime(map['expiry']),
+    );
+  }
+
+  LoyaltyRewardRecord _parseLoyaltyReward(dynamic raw) {
+    final map = _asMap(raw);
+    return LoyaltyRewardRecord(
+      memberName: _asString(map['memberName']),
+      entries: _asInt(map['entries']),
+      freeHours: _asInt(map['freeHours']),
+    );
+  }
+
+  SpacePricingRecord _parseSpacePricingRecord(dynamic raw) {
+    final map = _asMap(raw);
+    return SpacePricingRecord(
+      boardRoomHourlyRate: _asDouble(map['boardRoomHourlyRate']),
+      ordinarySpaceHourlyRate: _asDouble(map['ordinarySpaceHourlyRate']),
     );
   }
 
@@ -1036,5 +1300,26 @@ class AimsApiClient {
         normalized == '1' ||
         normalized == 'yes' ||
         normalized == 'active';
+  }
+
+  String _weekdayShort(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'Mon';
+      case DateTime.tuesday:
+        return 'Tue';
+      case DateTime.wednesday:
+        return 'Wed';
+      case DateTime.thursday:
+        return 'Thu';
+      case DateTime.friday:
+        return 'Fri';
+      case DateTime.saturday:
+        return 'Sat';
+      case DateTime.sunday:
+        return 'Sun';
+      default:
+        return 'Day';
+    }
   }
 }

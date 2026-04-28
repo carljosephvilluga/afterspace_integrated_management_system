@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:aims/services/aims_api_client.dart';
@@ -317,26 +319,31 @@ class _TableHeader extends StatelessWidget {
   }
 }
 
-class CalendarChart extends StatelessWidget {
-  const CalendarChart({super.key});
+class _CalendarChart extends StatelessWidget {
+  const _CalendarChart({required this.bars});
+
+  final List<_WeeklyActivityBar> bars;
 
   @override
   Widget build(BuildContext context) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const heights = [0.45, 0.65, 0.55, 0.8, 0.7, 0.35, 0.6];
+    final maxCount = bars.isEmpty
+        ? 1
+        : bars
+              .map((bar) => bar.count)
+              .reduce((left, right) => left > right ? left : right);
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
+          children: [
+            const Text(
               'Weekly Activity',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             Text(
-              'April 2026',
-              style: TextStyle(fontSize: 12, color: Color(0xFF7D8A93)),
+              _buildRangeLabel(),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF7D8A93)),
             ),
           ],
         ),
@@ -344,7 +351,12 @@ class CalendarChart extends StatelessWidget {
         Expanded(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(days.length, (index) {
+            children: List.generate(bars.length, (index) {
+              final item = bars[index];
+              final heightFactor = item.count <= 0
+                  ? 0.08
+                  : (item.count / maxCount).clamp(0.08, 1.0);
+
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -355,10 +367,10 @@ class CalendarChart extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: FractionallySizedBox(
-                            heightFactor: heights[index],
+                            heightFactor: heightFactor,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: index == 3
+                                color: index == bars.length - 1
                                     ? const Color(0xFF80AEC1)
                                     : Colors.white.withOpacity(0.75),
                                 borderRadius: BorderRadius.circular(16),
@@ -369,7 +381,7 @@ class CalendarChart extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        days[index],
+                        item.label,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF7D8A93),
@@ -384,6 +396,34 @@ class CalendarChart extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _buildRangeLabel() {
+    if (bars.isEmpty) {
+      return 'Last 7 days';
+    }
+
+    final start = bars.first.date;
+    final end = bars.last.date;
+    return '${_monthShort(start.month)} ${start.day} - ${_monthShort(end.month)} ${end.day}';
+  }
+
+  String _monthShort(int month) {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[(month - 1).clamp(0, 11)];
   }
 }
 
@@ -415,6 +455,18 @@ class _ActiveCustomerRow {
   final String status;
 }
 
+class _WeeklyActivityBar {
+  const _WeeklyActivityBar({
+    required this.label,
+    required this.date,
+    required this.count,
+  });
+
+  final String label;
+  final DateTime date;
+  final int count;
+}
+
 class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
@@ -425,12 +477,36 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   late Future<StaffDashboardSnapshot> _dashboardSnapshotFuture;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _dashboardSnapshotFuture = AimsApiClient.instance
-        .fetchStaffDashboardSnapshot();
+    _reloadDashboard(notify: false);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _reloadDashboard();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _reloadDashboard({bool notify = true}) {
+    final nextFuture = AimsApiClient.instance.fetchStaffDashboardSnapshot();
+    if (!notify || !mounted) {
+      _dashboardSnapshotFuture = nextFuture;
+      return;
+    }
+
+    setState(() {
+      _dashboardSnapshotFuture = nextFuture;
+    });
   }
 
   @override
@@ -494,7 +570,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       return;
     }
 
-    if (title == 'Membership and Loyalty Program') {
+    if (title == 'Pricing and Promo Management') {
       Navigator.pushNamed(context, '/membership-loyalty-program');
       return;
     }
@@ -604,7 +680,51 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   }
 
   Widget _buildCalendarPanel() {
-    return _buildPanel(title: '', child: const CalendarChart());
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final bars =
+            (snapshot.data?.weeklyActivity ??
+                    const <DashboardWeeklyActivityItem>[])
+                .map(
+                  (item) => _WeeklyActivityBar(
+                    label: item.label,
+                    date: item.date,
+                    count: item.count,
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage('Loading weekly activity...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage(
+              'Unable to load weekly activity from backend.',
+            ),
+          );
+        }
+
+        if (bars.isEmpty) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage('No weekly activity yet.'),
+          );
+        }
+
+        return _buildPanel(
+          title: '',
+          child: _CalendarChart(bars: bars),
+        );
+      },
+    );
   }
 
   Widget _buildReservationsPanel() {

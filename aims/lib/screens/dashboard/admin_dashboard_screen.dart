@@ -310,8 +310,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _SalesRange _selectedSalesRange = _SalesRange.monthly;
+  int _selectedCustomerReportDays = 7;
   bool _isExportingPdf = false;
   late Future<AdminDashboardSummary> _dashboardSummaryFuture;
+  late Future<CustomerReportSummary> _customerReportFuture;
   final Map<_SalesRange, Future<SalesReportSeries>> _salesReportFutures = {};
   Timer? _salesRefreshTimer;
 
@@ -322,12 +324,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     _dashboardSummaryFuture = AimsApiClient.instance
         .fetchAdminDashboardSummary();
+    _customerReportFuture = AimsApiClient.instance.fetchCustomerReport(
+      days: _selectedCustomerReportDays,
+    );
     _refreshSalesReport(_selectedSalesRange);
     _salesRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!mounted || selectedMenu != 'Dashboard') {
         return;
       }
       _refreshSalesReport(_selectedSalesRange, notify: false);
+      _refreshCustomerReport(days: _selectedCustomerReportDays, notify: false);
     });
   }
 
@@ -339,6 +345,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _refreshSalesReport(_SalesRange range, {bool notify = true}) {
     _salesReportFutures[range] = AimsApiClient.instance.fetchSalesReport(
       range: _rangeToApi(range),
+    );
+    if (notify && mounted) {
+      setState(() {});
+    }
+  }
+
+  void _refreshCustomerReport({required int days, bool notify = true}) {
+    final normalizedDays = days.clamp(1, 365).toInt();
+    _selectedCustomerReportDays = normalizedDays;
+    _customerReportFuture = AimsApiClient.instance.fetchCustomerReport(
+      days: normalizedDays,
     );
     if (notify && mounted) {
       setState(() {});
@@ -634,33 +651,96 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildCustomerReportPanel() {
+    final labels = const [
+      'Monthly Membership',
+      'Walk-in',
+      'Monthly Subscription',
+      'Loyal Customers',
+    ];
+
     return _buildPanel(
       title: 'Customer Report',
-      action: _buildSoftPill('7 days', icon: Icons.keyboard_arrow_down_rounded),
+      action: PopupMenuButton<int>(
+        initialValue: _selectedCustomerReportDays,
+        onSelected: (days) {
+          _refreshCustomerReport(days: days);
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: 7, child: Text('7 days')),
+          PopupMenuItem(value: 30, child: Text('30 days')),
+          PopupMenuItem(value: 90, child: Text('90 days')),
+        ],
+        child: _buildSoftPill(
+          '$_selectedCustomerReportDays days',
+          icon: Icons.keyboard_arrow_down_rounded,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.only(top: 8),
-        child: Column(
-          children: [
-            const Expanded(child: CustomerReportBarChart()),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 6,
-              children: const [
-                _LegendItem(
-                  color: Color(0xFF45BFDA),
-                  label: 'Monthly Membership',
+        child: FutureBuilder<CustomerReportSummary>(
+          future: _customerReportFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(
+                child: Text(
+                  'Loading customer report...',
+                  style: TextStyle(color: _textMuted, fontSize: 12),
                 ),
-                _LegendItem(color: Color(0xFFFAA61A), label: 'Walk- in'),
-                _LegendItem(
-                  color: Color(0xFFFF4545),
-                  label: 'Monthly Subscription',
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Unable to load customer report.',
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                _LegendItem(color: Color(0xFF94CF1A), label: 'Loyal Customers'),
+              );
+            }
+
+            final report = snapshot.data;
+            final values = report?.chartValues ?? const [0.0, 0.0, 0.0, 0.0];
+            final maxY = ((report?.maxValue ?? 1) * 1.25).toDouble();
+            final counts = report == null
+                ? const [0, 0, 0, 0]
+                : [
+                    report.monthlyMembership,
+                    report.walkIn,
+                    report.monthlySubscription,
+                    report.loyalCustomers,
+                  ];
+
+            return Column(
+              children: [
+                Expanded(
+                  child: CustomerReportBarChart(barValues: values, maxY: maxY),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 6,
+                  children: List.generate(4, (index) {
+                    const colors = [
+                      Color(0xFF45BFDA),
+                      Color(0xFFFAA61A),
+                      Color(0xFFFF4545),
+                      Color(0xFF94CF1A),
+                    ];
+                    return _LegendItem(
+                      color: colors[index],
+                      label: '${labels[index]} (${counts[index]})',
+                    );
+                  }),
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

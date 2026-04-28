@@ -296,6 +296,24 @@ SQL
     );
     $pdo->exec(
         <<<SQL
+CREATE TABLE IF NOT EXISTS meeting_schedules (
+    schedule_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    notes VARCHAR(255) NULL,
+    start_at DATETIME NOT NULL,
+    end_at DATETIME NOT NULL,
+    created_by_staff_id INT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_meeting_schedules_start_at (start_at),
+    CONSTRAINT fk_meeting_schedules_staff
+        FOREIGN KEY (created_by_staff_id) REFERENCES staff_accounts(staff_id)
+        ON DELETE SET NULL
+)
+SQL
+    );
+    $pdo->exec(
+        <<<SQL
 INSERT INTO user_profiles (
     user_id,
     first_name,

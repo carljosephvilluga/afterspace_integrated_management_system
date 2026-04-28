@@ -210,6 +210,63 @@ class SalesReportSeries {
   final double maxY;
 }
 
+class CustomerReportSummary {
+  const CustomerReportSummary({
+    required this.days,
+    required this.from,
+    required this.to,
+    required this.monthlyMembership,
+    required this.walkIn,
+    required this.monthlySubscription,
+    required this.loyalCustomers,
+    required this.totalCustomers,
+    required this.maxValue,
+  });
+
+  final int days;
+  final DateTime from;
+  final DateTime to;
+  final int monthlyMembership;
+  final int walkIn;
+  final int monthlySubscription;
+  final int loyalCustomers;
+  final int totalCustomers;
+  final int maxValue;
+
+  List<double> get chartValues => <double>[
+    monthlyMembership.toDouble(),
+    walkIn.toDouble(),
+    monthlySubscription.toDouble(),
+    loyalCustomers.toDouble(),
+  ];
+}
+
+class MeetingScheduleRecord {
+  const MeetingScheduleRecord({
+    required this.scheduleId,
+    required this.title,
+    required this.notes,
+    required this.startAt,
+    required this.endAt,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.createdByStaffId,
+    required this.createdByEmployeeId,
+    required this.createdByName,
+  });
+
+  final int scheduleId;
+  final String title;
+  final String notes;
+  final DateTime startAt;
+  final DateTime endAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int createdByStaffId;
+  final String createdByEmployeeId;
+  final String createdByName;
+}
+
 class AimsApiException implements Exception {
   const AimsApiException(this.message);
 
@@ -603,6 +660,107 @@ class AimsApiClient {
     );
   }
 
+  Future<CustomerReportSummary> fetchCustomerReport({int days = 7}) async {
+    final normalizedDays = days.clamp(1, 365);
+    final envelope = await _send(
+      method: 'GET',
+      path: '/api/reports/customer/?days=$normalizedDays',
+      withAuth: true,
+    );
+    final data = _asMap(envelope['data']);
+    return CustomerReportSummary(
+      days: _asInt(data['days']),
+      from: _asDateTime(data['from']),
+      to: _asDateTime(data['to']),
+      monthlyMembership: _asInt(data['monthlyMembership']),
+      walkIn: _asInt(data['walkIn']),
+      monthlySubscription: _asInt(data['monthlySubscription']),
+      loyalCustomers: _asInt(data['loyalCustomers']),
+      totalCustomers: _asInt(data['totalCustomers']),
+      maxValue: _asInt(data['maxValue']),
+    );
+  }
+
+  Future<List<MeetingScheduleRecord>> fetchMeetingSchedules({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final query = <String>[];
+    if (from != null) {
+      query.add(
+        'from=${Uri.encodeQueryComponent(from.toIso8601String().split('T').first)}',
+      );
+    }
+    if (to != null) {
+      query.add(
+        'to=${Uri.encodeQueryComponent(to.toIso8601String().split('T').first)}',
+      );
+    }
+
+    final path = query.isEmpty
+        ? '/api/schedules/'
+        : '/api/schedules/?${query.join('&')}';
+    final envelope = await _send(method: 'GET', path: path, withAuth: true);
+    final data = _asMap(envelope['data']);
+
+    return _asList(
+      data['schedules'],
+    ).map((item) => _parseMeetingScheduleRecord(item)).toList();
+  }
+
+  Future<MeetingScheduleRecord> createMeetingSchedule({
+    required String title,
+    required DateTime startAt,
+    required DateTime endAt,
+    String notes = '',
+  }) async {
+    final envelope = await _send(
+      method: 'POST',
+      path: '/api/schedules/',
+      withAuth: true,
+      body: {
+        'title': title,
+        'startAt': startAt.toIso8601String(),
+        'endAt': endAt.toIso8601String(),
+        'notes': notes,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parseMeetingScheduleRecord(data['schedule']);
+  }
+
+  Future<MeetingScheduleRecord> updateMeetingSchedule({
+    required int scheduleId,
+    required String title,
+    required DateTime startAt,
+    required DateTime endAt,
+    String notes = '',
+  }) async {
+    final envelope = await _send(
+      method: 'PATCH',
+      path: '/api/schedules/',
+      withAuth: true,
+      body: {
+        'scheduleId': scheduleId,
+        'title': title,
+        'startAt': startAt.toIso8601String(),
+        'endAt': endAt.toIso8601String(),
+        'notes': notes,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parseMeetingScheduleRecord(data['schedule']);
+  }
+
+  Future<void> deleteMeetingSchedule(int scheduleId) async {
+    await _send(
+      method: 'DELETE',
+      path: '/api/schedules/',
+      withAuth: true,
+      body: {'scheduleId': scheduleId},
+    );
+  }
+
   static String formatCurrency(double value) {
     final absolute = value.abs();
     final isWholeNumber = absolute % 1 == 0;
@@ -793,6 +951,22 @@ class AimsApiClient {
       membershipType: _asString(map['membershipType']),
       isActive: _asBool(map['isActive']),
       history: _asList(map['history']).map((item) => _asString(item)).toList(),
+    );
+  }
+
+  MeetingScheduleRecord _parseMeetingScheduleRecord(dynamic raw) {
+    final map = _asMap(raw);
+    return MeetingScheduleRecord(
+      scheduleId: _asInt(map['scheduleId']),
+      title: _asString(map['title']),
+      notes: _asString(map['notes']),
+      startAt: _asDateTime(map['startAt']),
+      endAt: _asDateTime(map['endAt']),
+      createdAt: _asDateTime(map['createdAt']),
+      updatedAt: _asDateTime(map['updatedAt']),
+      createdByStaffId: _asInt(map['createdByStaffId']),
+      createdByEmployeeId: _asString(map['createdByEmployeeId']),
+      createdByName: _asString(map['createdByName']),
     );
   }
 

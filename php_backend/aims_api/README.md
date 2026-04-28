@@ -83,6 +83,11 @@ flutter run --dart-define=AIMS_API_BASE_URL=http://10.0.2.2/aims_api
 - `PATCH /api/users`
 - `DELETE /api/users`
 - `GET /api/reports/sales?range=daily|weekly|monthly|yearly`
+- `GET /api/reports/customer?days=7|30|90...`
+- `GET /api/schedules?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `POST /api/schedules`
+- `PATCH /api/schedules`
+- `DELETE /api/schedules`
 
 ## Note
 

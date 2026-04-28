@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aims/screens/dashboard/booking_management/Booking.dart';
 import 'package:aims/screens/dashboard/booking_management/Calendar.dart';
 import 'package:aims/screens/dashboard/booking_management/booking_models.dart';
@@ -31,6 +33,7 @@ class _StaffBookingManagementScreenState
   late List<BookingReservation> _reservations;
   bool _isLoadingReservations = false;
   bool _isSubmitting = false;
+  Timer? _reservationRefreshTimer;
 
   @override
   void initState() {
@@ -40,6 +43,18 @@ class _StaffBookingManagementScreenState
     _selectedDay = DateTime(now.year, now.month, now.day);
     _reservations = const [];
     _loadReservations();
+    _reservationRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted || _isSubmitting) {
+        return;
+      }
+      _loadReservations(showLoader: false, showErrorToast: false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _reservationRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -286,10 +301,15 @@ class _StaffBookingManagementScreenState
     _cancelReservationOnServer(reservation);
   }
 
-  Future<void> _loadReservations() async {
-    setState(() {
-      _isLoadingReservations = true;
-    });
+  Future<void> _loadReservations({
+    bool showLoader = true,
+    bool showErrorToast = true,
+  }) async {
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoadingReservations = true;
+      });
+    }
 
     try {
       final records = await AimsApiClient.instance.fetchBookings(limit: 500);
@@ -300,11 +320,15 @@ class _StaffBookingManagementScreenState
         _reservations = mapped;
       });
     } on AimsApiException catch (error) {
-      _showToast(error.message);
+      if (showErrorToast) {
+        _showToast(error.message);
+      }
     } catch (_) {
-      _showToast('Unable to load reservations right now.');
+      if (showErrorToast) {
+        _showToast('Unable to load reservations right now.');
+      }
     } finally {
-      if (mounted) {
+      if (showLoader && mounted) {
         setState(() {
           _isLoadingReservations = false;
         });
@@ -346,11 +370,10 @@ class _StaffBookingManagementScreenState
       final reservation = _toReservation(created);
       if (!mounted) return;
       setState(() {
-        _reservations = [..._reservations, reservation]
-          ..sort((a, b) => a.start.compareTo(b.start));
         _selectedDay = draft.date;
         _focusedDay = DateTime(draft.date.year, draft.date.month, 1);
       });
+      await _loadReservations(showLoader: false, showErrorToast: false);
       _showToast(
         '${reservation.customerName} reserved ${reservation.spaceType.label} for ${formatMonthDayYear(draft.date)}.',
       );
@@ -382,15 +405,7 @@ class _StaffBookingManagementScreenState
     });
     try {
       await AimsApiClient.instance.checkInBooking(bookingId);
-      if (!mounted) return;
-      setState(() {
-        _reservations = _reservations.map((item) {
-          if (item.backendId != reservation.backendId) {
-            return item;
-          }
-          return item.copyWith(status: BookingStatus.checkedIn);
-        }).toList();
-      });
+      await _loadReservations(showLoader: false, showErrorToast: false);
       _showToast('${reservation.customerName} is now checked in.');
     } on AimsApiException catch (error) {
       _showToast(error.message);
@@ -420,15 +435,7 @@ class _StaffBookingManagementScreenState
     });
     try {
       await AimsApiClient.instance.cancelBooking(bookingId);
-      if (!mounted) return;
-      setState(() {
-        _reservations = _reservations.map((item) {
-          if (item.backendId != reservation.backendId) {
-            return item;
-          }
-          return item.copyWith(status: BookingStatus.cancelled);
-        }).toList();
-      });
+      await _loadReservations(showLoader: false, showErrorToast: false);
       _showToast('${reservation.customerName} reservation has been cancelled.');
     } on AimsApiException catch (error) {
       _showToast(error.message);
@@ -478,7 +485,7 @@ class _StaffBookingManagementScreenState
   }
 }
 
-class RealTimeAvailabilityPanel extends StatelessWidget {
+class RealTimeAvailabilityPanel extends StatefulWidget {
   const RealTimeAvailabilityPanel({
     super.key,
     required this.selectedDay,
@@ -487,6 +494,15 @@ class RealTimeAvailabilityPanel extends StatelessWidget {
 
   final DateTime selectedDay;
   final List<BookingReservation> reservations;
+
+  @override
+  State<RealTimeAvailabilityPanel> createState() =>
+      _RealTimeAvailabilityPanelState();
+}
+
+class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
+  bool _boardRoomExpanded = false;
+  bool _openSpaceExpanded = false;
 
   static const Color _panelBlue = Color(0xFFCFEFF5);
   static const Color _cardTan = Color(0xFFD8C0AC);
@@ -504,11 +520,21 @@ class RealTimeAvailabilityPanel extends StatelessWidget {
       bookingClosingHour,
     );
     final openSeatsNow = openSeatsLeftForRange(
-      reservations,
-      selectedDay,
+      widget.reservations,
+      widget.selectedDay,
       rangeStart,
       rangeEnd,
     );
+    final dayWindows = availabilityWindowsForDay(
+      widget.reservations,
+      widget.selectedDay,
+    );
+    final boardRoomTaken = dayWindows
+        .where((window) => !window.boardRoomAvailable)
+        .toList();
+    final openSpaceTaken = dayWindows
+        .where((window) => window.openSeatsLeft < openSpaceCapacity)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -529,65 +555,168 @@ class RealTimeAvailabilityPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            formatMonthDayYear(selectedDay),
+            formatMonthDayYear(widget.selectedDay),
             style: const TextStyle(fontSize: 12, color: Color(0xFF71808A)),
           ),
           const SizedBox(height: 12),
           _availabilityCard(
             icon: BookingSpaceType.boardRoom.icon,
             title: 'Board Room',
-            availabilityText: nextBoardRoomAvailability(
-              reservations,
-              selectedDay,
-            ),
+            summaryText: _boardRoomSummary(boardRoomTaken),
+            expanded: _boardRoomExpanded,
+            onTap: () {
+              setState(() {
+                _boardRoomExpanded = !_boardRoomExpanded;
+              });
+            },
+            detailLines: boardRoomTaken
+                .map((window) => formatTimeRange(window.start, window.end))
+                .toList(),
+            emptyDetailText: 'No booked board room slots yet for this day.',
           ),
           const SizedBox(height: 10),
           _availabilityCard(
             icon: BookingSpaceType.openSpace.icon,
             title: 'Open Space',
-            availabilityText:
-                'Available seats now: ${openSeatsNow < 0 ? 0 : openSeatsNow}\n${nextOpenSpaceAvailability(reservations, selectedDay)}',
+            summaryText:
+                'Available seats now: ${openSeatsNow < 0 ? 0 : openSeatsNow}',
+            expanded: _openSpaceExpanded,
+            onTap: () {
+              setState(() {
+                _openSpaceExpanded = !_openSpaceExpanded;
+              });
+            },
+            detailLines: openSpaceTaken.map((window) {
+              final seatsTaken = openSpaceCapacity - window.openSeatsLeft;
+              return '${formatTimeRange(window.start, window.end)}  |  $seatsTaken seat${seatsTaken == 1 ? '' : 's'} taken';
+            }).toList(),
+            emptyDetailText: 'No open space slots are taken yet for this day.',
           ),
         ],
       ),
     );
   }
 
+  String _boardRoomSummary(List<AvailabilityWindow> takenWindows) {
+    if (takenWindows.isEmpty) {
+      return 'No board room slots taken yet.';
+    }
+
+    final preview = takenWindows
+        .take(2)
+        .map((window) => formatTimeRange(window.start, window.end))
+        .join('\n');
+    final remaining = takenWindows.length - 2;
+    if (remaining > 0) {
+      return '$preview\n+$remaining more';
+    }
+    return preview;
+  }
+
   Widget _availabilityCard({
     required IconData icon,
     required String title,
-    required String availabilityText,
+    required String summaryText,
+    required bool expanded,
+    required VoidCallback onTap,
+    required List<String> detailLines,
+    required String emptyDetailText,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _cardTan,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: _text, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _cardTan,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: _text, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _text,
+                    ),
+                  ),
+                ),
+                Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 20,
                   color: _text,
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              summaryText,
+              style: const TextStyle(fontSize: 12, height: 1.45, color: _text),
+            ),
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 180),
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: const SizedBox(height: 0),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Time taken for this day',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    detailLines.isEmpty
+                        ? Text(
+                            emptyDetailText,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: _text,
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: detailLines
+                                .map(
+                                  (line) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 2),
+                                    child: Text(
+                                      line,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        height: 1.4,
+                                        color: _text,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ],
+                ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            availabilityText,
-            style: const TextStyle(fontSize: 12, height: 1.45, color: _text),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

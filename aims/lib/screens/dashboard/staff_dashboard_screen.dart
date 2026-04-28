@@ -202,36 +202,16 @@ class StaffReservationListItem extends StatelessWidget {
   }
 }
 
-class ActiveCustomersTable extends StatelessWidget {
-  const ActiveCustomersTable({
-    super.key,
+class _ActiveCustomersTable extends StatelessWidget {
+  const _ActiveCustomersTable({
+    required this.rows,
     required this.textColor,
     required this.mutedColor,
   });
 
+  final List<_ActiveCustomerRow> rows;
   final Color textColor;
   final Color mutedColor;
-
-  static const List<Map<String, String>> _rows = [
-    {
-      'name': 'Mika Santos',
-      'status': 'Active',
-      'membership': 'Annual',
-      'timeIn': '08:00 AM',
-    },
-    {
-      'name': 'Paolo Reyes',
-      'status': 'Active',
-      'membership': 'Monthly',
-      'timeIn': '09:30 AM',
-    },
-    {
-      'name': 'Andrea Lim',
-      'status': 'Active',
-      'membership': 'Open Time',
-      'timeIn': '11:15 AM',
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -255,10 +235,10 @@ class ActiveCustomersTable extends StatelessWidget {
         const SizedBox(height: 10),
         Expanded(
           child: ListView.separated(
-            itemCount: _rows.length,
+            itemCount: rows.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              final row = _rows[index];
+              final row = rows[index];
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -272,7 +252,7 @@ class ActiveCustomersTable extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        row['name']!,
+                        row.name,
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.w600,
@@ -281,13 +261,13 @@ class ActiveCustomersTable extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        row['membership']!,
+                        row.membership,
                         style: TextStyle(color: textColor),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        row['timeIn']!,
+                        row.timeIn,
                         style: TextStyle(color: textColor),
                       ),
                     ),
@@ -301,10 +281,10 @@ class ActiveCustomersTable extends StatelessWidget {
                           color: const Color(0xFF2D8C63).withOpacity(0.14),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: const Text(
-                          'Active',
+                        child: Text(
+                          row.status,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(0xFF2D8C63),
                             fontWeight: FontWeight.w700,
                           ),
@@ -421,6 +401,20 @@ class _Reservation {
   final String duration;
 }
 
+class _ActiveCustomerRow {
+  const _ActiveCustomerRow({
+    required this.name,
+    required this.membership,
+    required this.timeIn,
+    required this.status,
+  });
+
+  final String name;
+  final String membership;
+  final String timeIn;
+  final String status;
+}
+
 class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
@@ -428,7 +422,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
 
-  static final List<_Reservation> _reservations = [
+  static final List<_Reservation> _fallbackReservations = [
     _Reservation(
       name: 'Jenny Wilson',
       email: 'j.wilson@example.com',
@@ -455,15 +449,36 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
     ),
   ];
 
+  static final List<_ActiveCustomerRow> _fallbackActiveCustomers = [
+    _ActiveCustomerRow(
+      name: 'Mika Santos',
+      membership: 'Annual',
+      timeIn: '08:00 AM',
+      status: 'Active',
+    ),
+    _ActiveCustomerRow(
+      name: 'Paolo Reyes',
+      membership: 'Monthly',
+      timeIn: '09:30 AM',
+      status: 'Active',
+    ),
+    _ActiveCustomerRow(
+      name: 'Andrea Lim',
+      membership: 'Open Time',
+      timeIn: '11:15 AM',
+      status: 'Active',
+    ),
+  ];
+
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
-  late Future<StaffDashboardSummary> _dashboardSummaryFuture;
+  late Future<StaffDashboardSnapshot> _dashboardSnapshotFuture;
 
   @override
   void initState() {
     super.initState();
-    _dashboardSummaryFuture = AimsApiClient.instance
-        .fetchStaffDashboardSummary();
+    _dashboardSnapshotFuture = AimsApiClient.instance
+        .fetchStaffDashboardSnapshot();
   }
 
   @override
@@ -591,10 +606,10 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   }
 
   Widget _buildMetricRow() {
-    return FutureBuilder<StaffDashboardSummary>(
-      future: _dashboardSummaryFuture,
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final summary = snapshot.data;
+        final summary = snapshot.data?.summary;
         final leftValue = summary != null
             ? AimsApiClient.formatCount(summary.activeCustomers)
             : '143';
@@ -641,65 +656,105 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   }
 
   Widget _buildReservationsPanel() {
-    return _buildPanel(
-      title: 'Pending Reservations',
-      subtitle: 'Lorem ipsum dolor sit ametis.',
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _reservations.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 18,
-                thickness: 1,
-                color: Color(0x1A6C7B84),
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final liveReservations = snapshot.data?.pendingReservations
+            .map(
+              (item) => _Reservation(
+                name: item.customerName,
+                email: item.email.isNotEmpty ? item.email : item.contactDetails,
+                time: _formatTime(item.startAt),
+                duration: _formatDuration(item.endAt.difference(item.startAt)),
               ),
-              itemBuilder: (context, index) {
-                final item = _reservations[index];
-                return StaffReservationListItem(
-                  name: item.name,
-                  email: item.email,
-                  time: item.time,
-                  duration: item.duration,
-                  textColor: _textPrimary,
-                  mutedColor: _textMuted,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Row(
+            )
+            .toList();
+        final reservations =
+            (liveReservations != null && liveReservations.isNotEmpty)
+            ? liveReservations
+            : _fallbackReservations;
+
+        return _buildPanel(
+          title: 'Pending Reservations',
+          subtitle: 'Live reservations from backend.',
+          child: Column(
             children: [
-              Text(
-                'SEE ALL CUSTOMERS',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: _textMuted,
-                  letterSpacing: 0.4,
+              Expanded(
+                child: ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reservations.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 18,
+                    thickness: 1,
+                    color: Color(0x1A6C7B84),
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = reservations[index];
+                    return StaffReservationListItem(
+                      name: item.name,
+                      email: item.email,
+                      time: item.time,
+                      duration: item.duration,
+                      textColor: _textPrimary,
+                      mutedColor: _textMuted,
+                    );
+                  },
                 ),
               ),
-              SizedBox(width: 6),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 10,
-                color: _textMuted,
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Text(
+                    'SEE ALL CUSTOMERS',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: _textMuted,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 10,
+                    color: _textMuted,
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildActiveCustomersPanel() {
-    return _buildPanel(
-      title: 'Active Customers',
-      child: ActiveCustomersTable(
-        textColor: _textPrimary,
-        mutedColor: _textMuted,
-      ),
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final liveRows = snapshot.data?.activeCustomers
+            .map(
+              (item) => _ActiveCustomerRow(
+                name: item.name,
+                membership: item.membershipType,
+                timeIn: _formatTime(item.timeIn),
+                status: item.status,
+              ),
+            )
+            .toList();
+        final rows = (liveRows != null && liveRows.isNotEmpty)
+            ? liveRows
+            : _fallbackActiveCustomers;
+
+        return _buildPanel(
+          title: 'Active Customers',
+          child: _ActiveCustomersTable(
+            rows: rows,
+            textColor: _textPrimary,
+            mutedColor: _textMuted,
+          ),
+        );
+      },
     );
   }
 
@@ -715,6 +770,29 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       textColor: _textPrimary,
       child: child,
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
+  }
+
+  String _formatDuration(Duration value) {
+    final totalMinutes = value.inMinutes;
+    if (totalMinutes <= 0) {
+      return '0 min';
+    }
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+      return '$hours h $minutes min';
+    }
+    if (hours > 0) {
+      return '$hours hour${hours > 1 ? 's' : ''}';
+    }
+    return '$minutes min';
   }
 
   Widget _buildPlaceholder(String title) {

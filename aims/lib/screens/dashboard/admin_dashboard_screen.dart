@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aims/widgets/admin_dashboard/calendar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
@@ -308,6 +310,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String selectedMenu = 'Dashboard';
   _SalesRange _selectedSalesRange = _SalesRange.monthly;
   late Future<AdminDashboardSummary> _dashboardSummaryFuture;
+  final Map<_SalesRange, Future<SalesReportSeries>> _salesReportFutures = {};
+  Timer? _salesRefreshTimer;
 
   _SalesReportData get _selectedSalesData => _salesData[_selectedSalesRange]!;
 
@@ -316,6 +320,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     _dashboardSummaryFuture = AimsApiClient.instance
         .fetchAdminDashboardSummary();
+    _refreshSalesReport(_selectedSalesRange);
+    _salesRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _refreshSalesReport(_selectedSalesRange, notify: false);
+    });
+  }
+
+  Future<SalesReportSeries> _primeSalesReport(_SalesRange range) {
+    return _salesReportFutures[range] ??
+        AimsApiClient.instance.fetchSalesReport(range: _rangeToApi(range));
+  }
+
+  void _refreshSalesReport(_SalesRange range, {bool notify = true}) {
+    _salesReportFutures[range] = AimsApiClient.instance.fetchSalesReport(
+      range: _rangeToApi(range),
+    );
+    if (notify && mounted) {
+      setState(() {});
+    }
+  }
+
+  String _rangeToApi(_SalesRange range) {
+    switch (range) {
+      case _SalesRange.daily:
+        return 'daily';
+      case _SalesRange.weekly:
+        return 'weekly';
+      case _SalesRange.monthly:
+        return 'monthly';
+      case _SalesRange.yearly:
+        return 'yearly';
+    }
+  }
+
+  List<FlSpot> _spotsFromValues(List<double> values) {
+    return List<FlSpot>.generate(
+      values.length,
+      (index) => FlSpot(index.toDouble(), values[index]),
+    );
+  }
+
+  @override
+  void dispose() {
+    _salesRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -622,21 +673,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: SalesReportLineChart(
-            key: ValueKey(_selectedSalesRange),
-            areaSpots: salesData.areaSpots,
-            lineSpots: salesData.lineSpots,
-            labels: salesData.labels,
-            tooltipTitles: salesData.tooltipTitles,
-            tooltipValues: salesData.tooltipValues,
-            highlightX: salesData.highlightX,
-            maxY: salesData.maxY,
-          ),
-        ),
+      child: FutureBuilder<SalesReportSeries>(
+        future: _primeSalesReport(_selectedSalesRange),
+        builder: (context, snapshot) {
+          final live = snapshot.data;
+          final labels = (live?.labels.isNotEmpty ?? false)
+              ? live!.labels
+              : salesData.labels;
+          final areaSpots = (live?.areaValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.areaValues)
+              : salesData.areaSpots;
+          final lineSpots = (live?.lineValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.lineValues)
+              : salesData.lineSpots;
+          final tooltipTitles = (live?.tooltipTitles.isNotEmpty ?? false)
+              ? live!.tooltipTitles
+              : salesData.tooltipTitles;
+          final tooltipValues = (live?.tooltipValues.isNotEmpty ?? false)
+              ? live!.tooltipValues
+              : salesData.tooltipValues;
+          final highlightX = live?.highlightX ?? salesData.highlightX;
+          final maxY = live?.maxY ?? salesData.maxY;
+
+          return Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: SalesReportLineChart(
+                key: ValueKey('${_selectedSalesRange}_${snapshot.hasData}'),
+                areaSpots: areaSpots,
+                lineSpots: lineSpots,
+                labels: labels,
+                tooltipTitles: tooltipTitles,
+                tooltipValues: tooltipValues,
+                highlightX: highlightX,
+                maxY: maxY,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -646,6 +721,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return InkWell(
       onTap: () {
+        _refreshSalesReport(range, notify: false);
         setState(() {
           _selectedSalesRange = range;
         });

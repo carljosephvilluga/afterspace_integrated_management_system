@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
@@ -395,15 +397,64 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _ManagerRange selectedRange = _ManagerRange.monthly;
-  late Future<ManagerDashboardSummary> _dashboardSummaryFuture;
+  late Future<ManagerDashboardSnapshot> _dashboardSnapshotFuture;
+  final Map<_ManagerRange, Future<SalesReportSeries>> _salesReportFutures = {};
+  Timer? _salesRefreshTimer;
 
   _ManagerReportData get data => _reportData[selectedRange]!;
 
   @override
   void initState() {
     super.initState();
-    _dashboardSummaryFuture = AimsApiClient.instance
-        .fetchManagerDashboardSummary();
+    _dashboardSnapshotFuture = AimsApiClient.instance
+        .fetchManagerDashboardSnapshot();
+    _refreshSalesReport(selectedRange);
+    _salesRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _refreshSalesReport(selectedRange, notify: false);
+    });
+  }
+
+  Future<SalesReportSeries> _primeSalesReport(_ManagerRange range) {
+    return _salesReportFutures[range] ??
+        AimsApiClient.instance.fetchSalesReport(range: _rangeToApi(range));
+  }
+
+  void _refreshSalesReport(_ManagerRange range, {bool notify = true}) {
+    _salesReportFutures[range] = AimsApiClient.instance.fetchSalesReport(
+      range: _rangeToApi(range),
+    );
+    if (notify && mounted) {
+      setState(() {});
+    }
+  }
+
+  String _rangeToApi(_ManagerRange range) {
+    switch (range) {
+      case _ManagerRange.daily:
+        return 'daily';
+      case _ManagerRange.weekly:
+        return 'weekly';
+      case _ManagerRange.monthly:
+        return 'monthly';
+      case _ManagerRange.yearly:
+        return 'yearly';
+    }
+  }
+
+  List<FlSpot> _spotsFromValues(List<double> values) {
+    return List<FlSpot>.generate(
+      values.length,
+      (index) => FlSpot(index.toDouble(), values[index]),
+    );
+  }
+
+  @override
+  void dispose() {
+    _salesRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -535,10 +586,10 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   }
 
   Widget _buildMetricRow() {
-    return FutureBuilder<ManagerDashboardSummary>(
-      future: _dashboardSummaryFuture,
+    return FutureBuilder<ManagerDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
       builder: (context, snapshot) {
-        final summary = snapshot.data;
+        final summary = snapshot.data?.summary;
         final revenueValue = summary != null
             ? AimsApiClient.formatCurrency(summary.revenueToday)
             : data.revenueToday;
@@ -624,157 +675,229 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           ),
         ],
       ),
-      child: SalesReportLineChart(
-        key: ValueKey(selectedRange),
-        areaSpots: data.areaSpots,
-        lineSpots: data.lineSpots,
-        labels: data.labels,
-        tooltipTitles: data.tooltipTitles,
-        tooltipValues: data.tooltipValues,
-        highlightX: data.highlightX,
-        maxY: data.maxY,
+      child: FutureBuilder<SalesReportSeries>(
+        future: _primeSalesReport(selectedRange),
+        builder: (context, snapshot) {
+          final live = snapshot.data;
+          final labels = (live?.labels.isNotEmpty ?? false)
+              ? live!.labels
+              : data.labels;
+          final areaSpots = (live?.areaValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.areaValues)
+              : data.areaSpots;
+          final lineSpots = (live?.lineValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.lineValues)
+              : data.lineSpots;
+          final tooltipTitles = (live?.tooltipTitles.isNotEmpty ?? false)
+              ? live!.tooltipTitles
+              : data.tooltipTitles;
+          final tooltipValues = (live?.tooltipValues.isNotEmpty ?? false)
+              ? live!.tooltipValues
+              : data.tooltipValues;
+          final highlightX = live?.highlightX ?? data.highlightX;
+          final maxY = live?.maxY ?? data.maxY;
+
+          return SalesReportLineChart(
+            key: ValueKey('${selectedRange}_${snapshot.hasData}'),
+            areaSpots: areaSpots,
+            lineSpots: lineSpots,
+            labels: labels,
+            tooltipTitles: tooltipTitles,
+            tooltipValues: tooltipValues,
+            highlightX: highlightX,
+            maxY: maxY,
+          );
+        },
       ),
     );
   }
 
   Widget _buildReservationsPanel() {
-    return _buildPanel(
-      title: 'Pending Reservations',
-      subtitle: 'Lorem ipsum dolor sit amet.',
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _reservations.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 18,
-                thickness: 1,
-                color: Color(0x1A6C7B84),
+    return FutureBuilder<ManagerDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final liveReservations = snapshot.data?.pendingReservations
+            .map(
+              (item) => _Reservation(
+                name: item.customerName,
+                email: item.email.isNotEmpty ? item.email : item.contactDetails,
+                time: _formatTime(item.startAt),
+                duration: _formatDuration(item.endAt.difference(item.startAt)),
               ),
-              itemBuilder: (context, index) {
-                final item = _reservations[index];
-                return ReservationListItem(
-                  name: item.name,
-                  email: item.email,
-                  time: item.time,
-                  duration: item.duration,
-                  textColor: _textPrimary,
-                  mutedColor: _textMuted,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Row(
+            )
+            .toList();
+        final reservations =
+            (liveReservations != null && liveReservations.isNotEmpty)
+            ? liveReservations
+            : _reservations;
+
+        return _buildPanel(
+          title: 'Pending Reservations',
+          subtitle: 'Live reservations from backend.',
+          child: Column(
             children: [
-              Text(
-                'SEE ALL CUSTOMERS',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: _textMuted,
-                  letterSpacing: 0.4,
+              Expanded(
+                child: ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reservations.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 18,
+                    thickness: 1,
+                    color: Color(0x1A6C7B84),
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = reservations[index];
+                    return ReservationListItem(
+                      name: item.name,
+                      email: item.email,
+                      time: item.time,
+                      duration: item.duration,
+                      textColor: _textPrimary,
+                      mutedColor: _textMuted,
+                    );
+                  },
                 ),
               ),
-              SizedBox(width: 6),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 10,
-                color: _textMuted,
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Text(
+                    'SEE ALL CUSTOMERS',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: _textMuted,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 10,
+                    color: _textMuted,
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildTransactionsPanel() {
-    return _buildPanel(
-      title: 'Recent Transactions',
-      subtitle: 'Lorem ipsum dolor sit amet, consectetur adipis.',
-      action: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: _buttonTan,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'See All Transactions',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: _textPrimary,
-              ),
-            ),
-            SizedBox(width: 8),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 10,
-              color: _textPrimary,
-            ),
-          ],
-        ),
-      ),
-      child: Column(
-        children: _transactions
+    return FutureBuilder<ManagerDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final liveTransactions = snapshot.data?.latestTransactions
             .map(
-              (tx) => Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Color(0x166C7B84))),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: TransactionStatusCell(
-                          status: tx.status,
-                          statusColor: tx.statusColor,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: TransactionTitleCell(
-                          title: tx.title,
-                          subtitle: tx.subtitle,
-                          textColor: _textPrimary,
-                          mutedColor: _textMuted,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: TransactionAmountCell(
-                          amount: tx.amount,
-                          date: tx.date,
-                          textColor: _textPrimary,
-                          mutedColor: _textMuted,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          tx.vendor,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: _textMuted,
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.more_horiz_rounded, color: _textMuted),
-                      const SizedBox(width: 8),
-                    ],
-                  ),
-                ),
+              (item) => _Transaction(
+                status: _transactionStatusLabel(item.status),
+                statusColor: _transactionStatusColor(item.status),
+                title: item.customerName,
+                subtitle: item.paymentMethod,
+                amount: AimsApiClient.formatCurrency(item.finalAmount),
+                date: _formatDate(item.createdAt),
+                vendor: item.email,
               ),
             )
-            .toList(),
-      ),
+            .toList();
+        final transactions =
+            (liveTransactions != null && liveTransactions.isNotEmpty)
+            ? liveTransactions
+            : _transactions;
+
+        return _buildPanel(
+          title: 'Recent Transactions',
+          subtitle: 'Live transactions from backend.',
+          action: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: _buttonTan,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'See All Transactions',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: _textPrimary,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 10,
+                  color: _textPrimary,
+                ),
+              ],
+            ),
+          ),
+          child: Column(
+            children: transactions
+                .map(
+                  (tx) => Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: Color(0x166C7B84)),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: TransactionStatusCell(
+                              status: tx.status,
+                              statusColor: tx.statusColor,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: TransactionTitleCell(
+                              title: tx.title,
+                              subtitle: tx.subtitle,
+                              textColor: _textPrimary,
+                              mutedColor: _textMuted,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: TransactionAmountCell(
+                              amount: tx.amount,
+                              date: tx.date,
+                              textColor: _textPrimary,
+                              mutedColor: _textMuted,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              tx.vendor,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: _textMuted,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.more_horiz_rounded,
+                            color: _textMuted,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      },
     );
   }
 
@@ -783,6 +906,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
 
     return InkWell(
       onTap: () {
+        _refreshSalesReport(range, notify: false);
         setState(() {
           selectedRange = range;
         });
@@ -820,6 +944,64 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       textColor: _textPrimary,
       child: child,
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
+  }
+
+  String _formatDuration(Duration value) {
+    final totalMinutes = value.inMinutes;
+    if (totalMinutes <= 0) {
+      return '0 min';
+    }
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+      return '$hours h $minutes min';
+    }
+    if (hours > 0) {
+      return '$hours hour${hours > 1 ? 's' : ''}';
+    }
+    return '$minutes min';
+  }
+
+  String _formatDate(DateTime dateTime) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final month = months[dateTime.month - 1];
+    return '$month ${dateTime.day}, ${dateTime.year}';
+  }
+
+  String _transactionStatusLabel(String status) {
+    final normalized = status.trim().toLowerCase();
+    if (normalized == 'paid') return 'Completed';
+    if (normalized == 'pending') return 'Pending';
+    if (normalized == 'failed') return 'Failed';
+    return 'Completed';
+  }
+
+  Color _transactionStatusColor(String status) {
+    final normalized = status.trim().toLowerCase();
+    if (normalized == 'paid') return const Color(0xFF61D882);
+    if (normalized == 'pending') return const Color(0xFFF0C84D);
+    if (normalized == 'failed') return const Color(0xFFFF7A7A);
+    return const Color(0xFF61D882);
   }
 
   Widget _buildPlaceholder(String title) {

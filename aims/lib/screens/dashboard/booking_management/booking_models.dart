@@ -6,6 +6,7 @@ enum BookingStatus { reserved, checkedIn, cancelled }
 
 class BookingReservation {
   const BookingReservation({
+    this.backendId,
     required this.id,
     required this.customerName,
     required this.contactDetails,
@@ -16,6 +17,7 @@ class BookingReservation {
     required this.status,
   });
 
+  final int? backendId;
   final String id;
   final String customerName;
   final String contactDetails;
@@ -26,6 +28,7 @@ class BookingReservation {
   final BookingStatus status;
 
   BookingReservation copyWith({
+    int? backendId,
     String? id,
     String? customerName,
     String? contactDetails,
@@ -36,6 +39,7 @@ class BookingReservation {
     BookingStatus? status,
   }) {
     return BookingReservation(
+      backendId: backendId ?? this.backendId,
       id: id ?? this.id,
       customerName: customerName ?? this.customerName,
       contactDetails: contactDetails ?? this.contactDetails,
@@ -283,7 +287,9 @@ List<BookingReservation> reservationsForDay(
     ..sort((a, b) => a.start.compareTo(b.start));
 }
 
-List<BookingReservation> reservationsForToday(List<BookingReservation> reservations) {
+List<BookingReservation> reservationsForToday(
+  List<BookingReservation> reservations,
+) {
   return reservationsForDay(reservations, DateTime.now());
 }
 
@@ -292,9 +298,10 @@ List<BookingReservation> reservationsForSpace(
   DateTime day,
   BookingSpaceType spaceType,
 ) {
-  return reservationsForDay(reservations, day)
-      .where((reservation) => reservation.spaceType == spaceType)
-      .toList();
+  return reservationsForDay(
+    reservations,
+    day,
+  ).where((reservation) => reservation.spaceType == spaceType).toList();
 }
 
 int openSeatsLeftForRange(
@@ -305,18 +312,15 @@ int openSeatsLeftForRange(
 ) {
   final rangeStart = DateTime(day.year, day.month, day.day, startHour);
   final rangeEnd = DateTime(day.year, day.month, day.day, endHour);
-  final overlaps = reservationsForSpace(
-    reservations,
-    day,
-    BookingSpaceType.openSpace,
-  ).where(
-    (reservation) => reservationsOverlap(
-      reservation.start,
-      reservation.end,
-      rangeStart,
-      rangeEnd,
-    ),
-  );
+  final overlaps =
+      reservationsForSpace(reservations, day, BookingSpaceType.openSpace).where(
+        (reservation) => reservationsOverlap(
+          reservation.start,
+          reservation.end,
+          rangeStart,
+          rangeEnd,
+        ),
+      );
 
   final usedSeats = overlaps.length;
   return openSpaceCapacity - usedSeats;
@@ -348,7 +352,8 @@ String? availabilityErrorForDraft(
   List<BookingReservation> reservations,
   ReservationDraft draft,
 ) {
-  if (draft.customerName.trim().isEmpty || draft.contactDetails.trim().isEmpty) {
+  if (draft.customerName.trim().isEmpty ||
+      draft.contactDetails.trim().isEmpty) {
     return 'Enter the customer name and contact details.';
   }
 
@@ -356,7 +361,8 @@ String? availabilityErrorForDraft(
     return 'The end time must be later than the start time.';
   }
 
-  if (draft.startHour < bookingOpeningHour || draft.endHour > bookingClosingHour) {
+  if (draft.startHour < bookingOpeningHour ||
+      draft.endHour > bookingClosingHour) {
     return 'Bookings must stay within operating hours.';
   }
 
@@ -421,10 +427,10 @@ String nextBoardRoomAvailability(
   List<BookingReservation> reservations,
   DateTime day,
 ) {
-  final windows = availabilityWindowsForDay(reservations, day)
-      .where((window) => window.boardRoomAvailable)
-      .take(3)
-      .toList();
+  final windows = availabilityWindowsForDay(
+    reservations,
+    day,
+  ).where((window) => window.boardRoomAvailable).take(3).toList();
 
   if (windows.isEmpty) {
     return 'Fully reserved today';
@@ -437,10 +443,10 @@ String nextOpenSpaceAvailability(
   List<BookingReservation> reservations,
   DateTime day,
 ) {
-  final windows = availabilityWindowsForDay(reservations, day)
-      .where((window) => window.openSeatsLeft > 0)
-      .take(3)
-      .toList();
+  final windows = availabilityWindowsForDay(
+    reservations,
+    day,
+  ).where((window) => window.openSeatsLeft > 0).take(3).toList();
 
   if (windows.isEmpty) {
     return 'No seats available today';

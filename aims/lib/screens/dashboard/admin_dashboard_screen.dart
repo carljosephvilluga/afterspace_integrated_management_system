@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:aims/widgets/admin_dashboard/calendar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/services/sales_report_pdf_exporter.dart';
 import 'package:aims/screens/staff_management/staff_management_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -58,9 +62,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   static const Map<_SalesRange, _SalesReportData> _salesData = {
     _SalesRange.daily: _SalesReportData(
-      totalSales: '\$12,480',
+      totalSales: '₱12,480',
       totalCustomers: '46',
-      totalProfit: '\$4,910',
+      totalProfit: '₱4,910',
       salesChange: '+8%',
       customerChange: '+5%',
       profitChange: '+11%',
@@ -75,13 +79,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         '6PM Today',
       ],
       tooltipValues: [
-        '\$1,120',
-        '\$1,880',
-        '\$2,460',
-        '\$2,790',
-        '\$2,980',
-        '\$2,640',
-        '\$3,120',
+        '₱1,120',
+        '₱1,880',
+        '₱2,460',
+        '₱2,790',
+        '₱2,980',
+        '₱2,640',
+        '₱3,120',
       ],
       areaSpots: [
         FlSpot(0, 9),
@@ -111,9 +115,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       maxY: 35,
     ),
     _SalesRange.monthly: _SalesReportData(
-      totalSales: '\$2,38,485',
+      totalSales: '₱2,38,485',
       totalCustomers: '143',
-      totalProfit: '\$89,240',
+      totalProfit: '₱89,240',
       salesChange: '+14%',
       customerChange: '+36%',
       profitChange: '+22%',
@@ -146,18 +150,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'January 2026',
       ],
       tooltipValues: [
-        '\$24,180',
-        '\$28,420',
-        '\$27,350',
-        '\$38,910',
-        '\$45,591',
-        '\$43,280',
-        '\$41,960',
-        '\$48,740',
-        '\$46,180',
-        '\$58,440',
-        '\$55,930',
-        '\$63,110',
+        '₱24,180',
+        '₱28,420',
+        '₱27,350',
+        '₱38,910',
+        '₱45,591',
+        '₱43,280',
+        '₱41,960',
+        '₱48,740',
+        '₱46,180',
+        '₱58,440',
+        '₱55,930',
+        '₱63,110',
       ],
       areaSpots: [
         FlSpot(0, 14),
@@ -200,9 +204,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       maxY: 50,
     ),
     _SalesRange.weekly: _SalesReportData(
-      totalSales: '\$58,920',
+      totalSales: '₱58,920',
       totalCustomers: '87',
-      totalProfit: '\$21,770',
+      totalProfit: '₱21,770',
       salesChange: '+9%',
       customerChange: '+12%',
       profitChange: '+7%',
@@ -217,13 +221,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'Sunday',
       ],
       tooltipValues: [
-        '\$5,180',
-        '\$6,240',
-        '\$5,920',
-        '\$7,430',
-        '\$9,420',
-        '\$10,880',
-        '\$8,760',
+        '₱5,180',
+        '₱6,240',
+        '₱5,920',
+        '₱7,430',
+        '₱9,420',
+        '₱10,880',
+        '₱8,760',
       ],
       areaSpots: [
         FlSpot(0, 20),
@@ -253,9 +257,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       maxY: 45,
     ),
     _SalesRange.yearly: _SalesReportData(
-      totalSales: '\$1.42M',
+      totalSales: '₱1.42M',
       totalCustomers: '1,284',
-      totalProfit: '\$534,900',
+      totalProfit: '₱534,900',
       salesChange: '+31%',
       customerChange: '+18%',
       profitChange: '+27%',
@@ -269,12 +273,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         'Year 2025',
       ],
       tooltipValues: [
-        '\$128,000',
-        '\$164,000',
-        '\$198,500',
-        '\$241,000',
-        '\$286,000',
-        '\$332,000',
+        '₱128,000',
+        '₱164,000',
+        '₱198,500',
+        '₱241,000',
+        '₱286,000',
+        '₱332,000',
       ],
       areaSpots: [
         FlSpot(0, 28),
@@ -306,8 +310,125 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
   _SalesRange _selectedSalesRange = _SalesRange.monthly;
+  int _selectedCustomerReportDays = 7;
+  bool _isExportingPdf = false;
+  late Future<AdminDashboardSummary> _dashboardSummaryFuture;
+  late Future<CustomerReportSummary> _customerReportFuture;
+  final Map<_SalesRange, Future<SalesReportSeries>> _salesReportFutures = {};
+  Timer? _salesRefreshTimer;
 
   _SalesReportData get _selectedSalesData => _salesData[_selectedSalesRange]!;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardSummaryFuture = AimsApiClient.instance
+        .fetchAdminDashboardSummary();
+    _customerReportFuture = AimsApiClient.instance.fetchCustomerReport(
+      days: _selectedCustomerReportDays,
+    );
+    _refreshSalesReport(_selectedSalesRange);
+    _salesRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _refreshSalesReport(_selectedSalesRange, notify: false);
+      _refreshCustomerReport(days: _selectedCustomerReportDays, notify: false);
+    });
+  }
+
+  Future<SalesReportSeries> _primeSalesReport(_SalesRange range) {
+    return _salesReportFutures[range] ??
+        AimsApiClient.instance.fetchSalesReport(range: _rangeToApi(range));
+  }
+
+  void _refreshSalesReport(_SalesRange range, {bool notify = true}) {
+    _salesReportFutures[range] = AimsApiClient.instance.fetchSalesReport(
+      range: _rangeToApi(range),
+    );
+    if (notify && mounted) {
+      setState(() {});
+    }
+  }
+
+  void _refreshCustomerReport({required int days, bool notify = true}) {
+    final normalizedDays = days.clamp(1, 365).toInt();
+    _selectedCustomerReportDays = normalizedDays;
+    _customerReportFuture = AimsApiClient.instance.fetchCustomerReport(
+      days: normalizedDays,
+    );
+    if (notify && mounted) {
+      setState(() {});
+    }
+  }
+
+  String _rangeToApi(_SalesRange range) {
+    switch (range) {
+      case _SalesRange.daily:
+        return 'daily';
+      case _SalesRange.weekly:
+        return 'weekly';
+      case _SalesRange.monthly:
+        return 'monthly';
+      case _SalesRange.yearly:
+        return 'yearly';
+    }
+  }
+
+  Future<void> _handleExportPdf() async {
+    if (_isExportingPdf) {
+      return;
+    }
+
+    setState(() {
+      _isExportingPdf = true;
+    });
+
+    try {
+      await SalesReportPdfExporter.exportAllRanges(
+        requestedBy: 'Administrator',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sales report PDF generated (daily, weekly, monthly, yearly).',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to export PDF: $error'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExportingPdf = false;
+        });
+      }
+    }
+  }
+
+  List<FlSpot> _spotsFromValues(List<double> values) {
+    return List<FlSpot>.generate(
+      values.length,
+      (index) => FlSpot(index.toDouble(), values[index]),
+    );
+  }
+
+  @override
+  void dispose() {
+    _salesRefreshTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -369,148 +490,257 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildDashboardContent() {
     final salesData = _selectedSalesData;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 980;
+    return FutureBuilder<AdminDashboardSummary>(
+      future: _dashboardSummaryFuture,
+      builder: (context, snapshot) {
+        final summary = snapshot.data;
+        final salesValue = summary != null
+            ? AimsApiClient.formatCurrency(summary.totalRevenue)
+            : salesData.totalSales;
+        final customersValue = summary != null
+            ? AimsApiClient.formatCount(summary.userCount)
+            : salesData.totalCustomers;
+        final thirdTitle = summary != null ? 'ACTIVE SESSIONS' : 'TOTAL PROFIT';
+        final thirdValue = summary != null
+            ? AimsApiClient.formatCount(summary.activeSessions)
+            : salesData.totalProfit;
 
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                isCompact
-                    ? Column(
-                        children: [
-                          _buildStatCard(
-                            title: 'TOTAL SALES',
-                            value: salesData.totalSales,
-                            change: salesData.salesChange,
-                            changeColor: _getChangeColor(salesData.salesChange),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildStatCard(
-                            title: 'TOTAL CUSTOMERS',
-                            value: salesData.totalCustomers,
-                            change: salesData.customerChange,
-                            changeColor: _getChangeColor(
-                              salesData.customerChange,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildStatCard(
-                            title: 'TOTAL PROFIT',
-                            value: salesData.totalProfit,
-                            change: salesData.profitChange,
-                            changeColor: _getChangeColor(
-                              salesData.profitChange,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL SALES',
-                              value: salesData.totalSales,
-                              change: salesData.salesChange,
-                              changeColor: _getChangeColor(
-                                salesData.salesChange,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 980;
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isCompact
+                        ? Column(
+                            children: [
+                              _buildStatCard(
+                                title: 'TOTAL SALES',
+                                value: salesValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.salesChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.salesChange,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL CUSTOMERS',
-                              value: salesData.totalCustomers,
-                              change: salesData.customerChange,
-                              changeColor: _getChangeColor(
-                                salesData.customerChange,
+                              const SizedBox(height: 12),
+                              _buildStatCard(
+                                title: 'TOTAL CUSTOMERS',
+                                value: customersValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.customerChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.customerChange,
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              title: 'TOTAL PROFIT',
-                              value: salesData.totalProfit,
-                              change: salesData.profitChange,
-                              changeColor: _getChangeColor(
-                                salesData.profitChange,
+                              const SizedBox(height: 12),
+                              _buildStatCard(
+                                title: thirdTitle,
+                                value: thirdValue,
+                                change: summary != null
+                                    ? '+0%'
+                                    : salesData.profitChange,
+                                changeColor: _getChangeColor(
+                                  summary != null
+                                      ? '+0%'
+                                      : salesData.profitChange,
+                                ),
                               ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: 'TOTAL SALES',
+                                  value: salesValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.salesChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.salesChange,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: 'TOTAL CUSTOMERS',
+                                  value: customersValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.customerChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.customerChange,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  title: thirdTitle,
+                                  value: thirdValue,
+                                  change: summary != null
+                                      ? '+0%'
+                                      : salesData.profitChange,
+                                  changeColor: _getChangeColor(
+                                    summary != null
+                                        ? '+0%'
+                                        : salesData.profitChange,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                    const SizedBox(height: 14),
+                    isCompact
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                height: 320,
+                                child: _buildCustomerReportPanel(),
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                height: 320,
+                                child: _buildCalendarPanel(),
+                              ),
+                            ],
+                          )
+                        : SizedBox(
+                            height: 348,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: _buildCustomerReportPanel(),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(flex: 3, child: _buildCalendarPanel()),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                const SizedBox(height: 14),
-                isCompact
-                    ? Column(
-                        children: [
-                          SizedBox(
-                            height: 320,
-                            child: _buildCustomerReportPanel(),
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(height: 320, child: _buildCalendarPanel()),
-                        ],
-                      )
-                    : SizedBox(
-                        height: 348,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: _buildCustomerReportPanel(),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(flex: 3, child: _buildCalendarPanel()),
-                          ],
-                        ),
-                      ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: isCompact ? 420 : 380,
-                  child: _buildSalesReportPanel(),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: isCompact ? 420 : 380,
+                      child: _buildSalesReportPanel(),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildCustomerReportPanel() {
+    final labels = const [
+      'Monthly Membership',
+      'Walk-in',
+      'Monthly Subscription',
+      'Loyal Customers',
+    ];
+
     return _buildPanel(
       title: 'Customer Report',
-      action: _buildSoftPill('7 days', icon: Icons.keyboard_arrow_down_rounded),
+      action: PopupMenuButton<int>(
+        initialValue: _selectedCustomerReportDays,
+        onSelected: (days) {
+          _refreshCustomerReport(days: days);
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: 7, child: Text('7 days')),
+          PopupMenuItem(value: 30, child: Text('30 days')),
+          PopupMenuItem(value: 90, child: Text('90 days')),
+        ],
+        child: _buildSoftPill(
+          '$_selectedCustomerReportDays days',
+          icon: Icons.keyboard_arrow_down_rounded,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.only(top: 8),
-        child: Column(
-          children: [
-            const Expanded(child: CustomerReportBarChart()),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 10,
-              runSpacing: 6,
-              children: const [
-                _LegendItem(
-                  color: Color(0xFF45BFDA),
-                  label: 'Monthly Membership',
+        child: FutureBuilder<CustomerReportSummary>(
+          future: _customerReportFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(
+                child: Text(
+                  'Loading customer report...',
+                  style: TextStyle(color: _textMuted, fontSize: 12),
                 ),
-                _LegendItem(color: Color(0xFFFAA61A), label: 'Walk- in'),
-                _LegendItem(
-                  color: Color(0xFFFF4545),
-                  label: 'Monthly Subscription',
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Unable to load customer report.',
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                _LegendItem(color: Color(0xFF94CF1A), label: 'Loyal Customers'),
+              );
+            }
+
+            final report = snapshot.data;
+            final values = report?.chartValues ?? const [0.0, 0.0, 0.0, 0.0];
+            final maxY = ((report?.maxValue ?? 1) * 1.25).toDouble();
+            final counts = report == null
+                ? const [0, 0, 0, 0]
+                : [
+                    report.monthlyMembership,
+                    report.walkIn,
+                    report.monthlySubscription,
+                    report.loyalCustomers,
+                  ];
+
+            return Column(
+              children: [
+                Expanded(
+                  child: CustomerReportBarChart(barValues: values, maxY: maxY),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 6,
+                  children: List.generate(4, (index) {
+                    const colors = [
+                      Color(0xFF45BFDA),
+                      Color(0xFFFAA61A),
+                      Color(0xFFFF4545),
+                      Color(0xFF94CF1A),
+                    ];
+                    return _LegendItem(
+                      color: colors[index],
+                      label: '${labels[index]} (${counts[index]})',
+                    );
+                  }),
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -539,49 +769,86 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildRangeButton(_SalesRange.weekly, 'Weekly'),
           _buildRangeButton(_SalesRange.yearly, 'Yearly'),
           const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: _buttonTan,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.picture_as_pdf_outlined,
-                  size: 16,
-                  color: _textPrimary,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Export PDF',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: _textPrimary,
+          InkWell(
+            onTap: _isExportingPdf ? null : _handleExportPdf,
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _buttonTan,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _isExportingPdf
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: _textPrimary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 16,
+                          color: _textPrimary,
+                        ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isExportingPdf ? 'Exporting...' : 'Export PDF',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 14),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: SalesReportLineChart(
-            key: ValueKey(_selectedSalesRange),
-            areaSpots: salesData.areaSpots,
-            lineSpots: salesData.lineSpots,
-            labels: salesData.labels,
-            tooltipTitles: salesData.tooltipTitles,
-            tooltipValues: salesData.tooltipValues,
-            highlightX: salesData.highlightX,
-            maxY: salesData.maxY,
-          ),
-        ),
+      child: FutureBuilder<SalesReportSeries>(
+        future: _primeSalesReport(_selectedSalesRange),
+        builder: (context, snapshot) {
+          final live = snapshot.data;
+          final labels = (live?.labels.isNotEmpty ?? false)
+              ? live!.labels
+              : salesData.labels;
+          final areaSpots = (live?.areaValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.areaValues)
+              : salesData.areaSpots;
+          final lineSpots = (live?.lineValues.isNotEmpty ?? false)
+              ? _spotsFromValues(live!.lineValues)
+              : salesData.lineSpots;
+          final tooltipTitles = (live?.tooltipTitles.isNotEmpty ?? false)
+              ? live!.tooltipTitles
+              : salesData.tooltipTitles;
+          final tooltipValues = (live?.tooltipValues.isNotEmpty ?? false)
+              ? live!.tooltipValues
+              : salesData.tooltipValues;
+          final highlightX = live?.highlightX ?? salesData.highlightX;
+          final maxY = live?.maxY ?? salesData.maxY;
+
+          return Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: SalesReportLineChart(
+                key: ValueKey('${_selectedSalesRange}_${snapshot.hasData}'),
+                areaSpots: areaSpots,
+                lineSpots: lineSpots,
+                labels: labels,
+                tooltipTitles: tooltipTitles,
+                tooltipValues: tooltipValues,
+                highlightX: highlightX,
+                maxY: maxY,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -591,6 +858,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return InkWell(
       onTap: () {
+        _refreshSalesReport(range, notify: false);
         setState(() {
           _selectedSalesRange = range;
         });

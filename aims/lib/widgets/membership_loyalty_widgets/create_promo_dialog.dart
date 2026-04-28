@@ -8,12 +8,14 @@ class PromoDialogResult {
     required this.type,
     required this.discount,
     required this.expiry,
+    required this.benefits,
   });
 
   final String name;
   final String type;
   final String discount;
   final String expiry;
+  final String benefits;
 }
 
 class CreatePromoDialog extends StatefulWidget {
@@ -29,26 +31,13 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
   static const Color _panelBlue = Color(0xFFCDECF3);
   static const Color _headerBlue = Color(0xFF80AEC1);
 
-  final TextEditingController _promoNameController = TextEditingController(
-    text: 'Exam Season Promo',
-  );
-  final TextEditingController _priceController = TextEditingController(
-    text: 'P 100.00',
-  );
-  final TextEditingController _typeController = TextEditingController(
-    text: 'Student Discount',
-  );
-  final TextEditingController _durationController = TextEditingController(
-    text: 'March 02, 2026- March 13, 2026',
-  );
-  final TextEditingController _benefitsController = TextEditingController(
-    text: 'Avail for 4 hours and Get 1 hour free(for students only)',
-  );
+  final TextEditingController _promoNameController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _durationController = TextEditingController();
+  final TextEditingController _benefitsController = TextEditingController();
 
-  DateTimeRange? _selectedRange = DateTimeRange(
-    start: DateTime(2026, 3, 2),
-    end: DateTime(2026, 3, 13),
-  );
+  DateTimeRange? _selectedRange;
 
   @override
   void dispose() {
@@ -152,15 +141,34 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
                         width: 190,
                         height: 42,
                         onPressed: () async {
+                          final name = _promoNameController.text.trim();
+                          final type = _typeController.text.trim();
+                          final discount = _priceController.text.trim();
+                          final expiry = _selectedRange == null
+                              ? _durationController.text.trim()
+                              : _formatDate(_selectedRange!.end);
+                          if (name.isEmpty ||
+                              type.isEmpty ||
+                              discount.isEmpty ||
+                              expiry.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please complete promo name, type, discount, and expiry.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
                           Navigator.pop(
                             context,
                             PromoDialogResult(
-                              name: _promoNameController.text.trim(),
-                              type: _typeController.text.trim(),
-                              discount: _priceController.text.trim(),
-                              expiry: _selectedRange == null
-                                  ? _durationController.text.trim()
-                                  : _formatDate(_selectedRange!.end),
+                              name: name,
+                              type: type,
+                              discount: discount,
+                              expiry: expiry,
+                              benefits: _benefitsController.text.trim(),
                             ),
                           );
                         },
@@ -208,10 +216,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
               SizedBox(height: 4),
               Text(
                 'Add a promo name, schedule, and benefit details.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _textMuted,
-                ),
+                style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],
           ),
@@ -239,15 +244,15 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
           ),
           const SizedBox(height: 14),
           MembershipProgramInputField(
-            label: 'Price',
+            label: 'Discount',
             controller: _priceController,
-            hintText: 'P 0.00',
+            hintText: 'Enter discount',
           ),
           const SizedBox(height: 14),
           MembershipProgramInputField(
             label: 'Promo Type',
             controller: _typeController,
-            hintText: 'Student Discount',
+            hintText: 'Enter promo type',
           ),
         ],
       );
@@ -267,9 +272,9 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
         const SizedBox(width: 14),
         Expanded(
           child: MembershipProgramInputField(
-            label: 'Price',
+            label: 'Discount',
             controller: _priceController,
-            hintText: 'P 0.00',
+            hintText: 'Enter discount',
           ),
         ),
         const SizedBox(width: 14),
@@ -278,7 +283,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
           child: MembershipProgramInputField(
             label: 'Promo Type',
             controller: _typeController,
-            hintText: 'Student Discount',
+            hintText: 'Enter promo type',
           ),
         ),
       ],
@@ -310,11 +315,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
 
     if (stacked) {
       return Column(
-        children: [
-          durationField,
-          const SizedBox(height: 14),
-          benefitsField,
-        ],
+        children: [durationField, const SizedBox(height: 14), benefitsField],
       );
     }
 

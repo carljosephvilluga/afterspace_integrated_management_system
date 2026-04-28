@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:flutter/material.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
@@ -160,10 +163,7 @@ class StaffReservationListItem extends StatelessWidget {
           backgroundColor: Colors.white.withOpacity(0.75),
           child: Text(
             name.substring(0, 1),
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
           ),
         ),
         const SizedBox(width: 12),
@@ -180,10 +180,7 @@ class StaffReservationListItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                email,
-                style: TextStyle(fontSize: 12, color: mutedColor),
-              ),
+              Text(email, style: TextStyle(fontSize: 12, color: mutedColor)),
             ],
           ),
         ),
@@ -199,10 +196,7 @@ class StaffReservationListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              duration,
-              style: TextStyle(fontSize: 12, color: mutedColor),
-            ),
+            Text(duration, style: TextStyle(fontSize: 12, color: mutedColor)),
           ],
         ),
       ],
@@ -210,36 +204,16 @@ class StaffReservationListItem extends StatelessWidget {
   }
 }
 
-class ActiveCustomersTable extends StatelessWidget {
-  const ActiveCustomersTable({
-    super.key,
+class _ActiveCustomersTable extends StatelessWidget {
+  const _ActiveCustomersTable({
+    required this.rows,
     required this.textColor,
     required this.mutedColor,
   });
 
+  final List<_ActiveCustomerRow> rows;
   final Color textColor;
   final Color mutedColor;
-
-  static const List<Map<String, String>> _rows = [
-    {
-      'name': 'Mika Santos',
-      'status': 'Active',
-      'membership': 'Annual',
-      'timeIn': '08:00 AM',
-    },
-    {
-      'name': 'Paolo Reyes',
-      'status': 'Active',
-      'membership': 'Monthly',
-      'timeIn': '09:30 AM',
-    },
-    {
-      'name': 'Andrea Lim',
-      'status': 'Active',
-      'membership': 'Open Time',
-      'timeIn': '11:15 AM',
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -263,10 +237,10 @@ class ActiveCustomersTable extends StatelessWidget {
         const SizedBox(height: 10),
         Expanded(
           child: ListView.separated(
-            itemCount: _rows.length,
+            itemCount: rows.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              final row = _rows[index];
+              final row = rows[index];
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -280,7 +254,7 @@ class ActiveCustomersTable extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        row['name']!,
+                        row.name,
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.w600,
@@ -289,13 +263,13 @@ class ActiveCustomersTable extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        row['membership']!,
+                        row.membership,
                         style: TextStyle(color: textColor),
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        row['timeIn']!,
+                        row.timeIn,
                         style: TextStyle(color: textColor),
                       ),
                     ),
@@ -309,10 +283,10 @@ class ActiveCustomersTable extends StatelessWidget {
                           color: const Color(0xFF2D8C63).withOpacity(0.14),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: const Text(
-                          'Active',
+                        child: Text(
+                          row.status,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Color(0xFF2D8C63),
                             fontWeight: FontWeight.w700,
                           ),
@@ -340,35 +314,36 @@ class _TableHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
     );
   }
 }
 
-class CalendarChart extends StatelessWidget {
-  const CalendarChart({super.key});
+class _CalendarChart extends StatelessWidget {
+  const _CalendarChart({required this.bars});
+
+  final List<_WeeklyActivityBar> bars;
 
   @override
   Widget build(BuildContext context) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const heights = [0.45, 0.65, 0.55, 0.8, 0.7, 0.35, 0.6];
+    final maxCount = bars.isEmpty
+        ? 1
+        : bars
+              .map((bar) => bar.count)
+              .reduce((left, right) => left > right ? left : right);
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
+          children: [
+            const Text(
               'Weekly Activity',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             Text(
-              'April 2026',
-              style: TextStyle(fontSize: 12, color: Color(0xFF7D8A93)),
+              _buildRangeLabel(),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF7D8A93)),
             ),
           ],
         ),
@@ -376,7 +351,12 @@ class CalendarChart extends StatelessWidget {
         Expanded(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(days.length, (index) {
+            children: List.generate(bars.length, (index) {
+              final item = bars[index];
+              final heightFactor = item.count <= 0
+                  ? 0.08
+                  : (item.count / maxCount).clamp(0.08, 1.0);
+
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -387,10 +367,10 @@ class CalendarChart extends StatelessWidget {
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: FractionallySizedBox(
-                            heightFactor: heights[index],
+                            heightFactor: heightFactor,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: index == 3
+                                color: index == bars.length - 1
                                     ? const Color(0xFF80AEC1)
                                     : Colors.white.withOpacity(0.75),
                                 borderRadius: BorderRadius.circular(16),
@@ -401,7 +381,7 @@ class CalendarChart extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        days[index],
+                        item.label,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF7D8A93),
@@ -416,6 +396,34 @@ class CalendarChart extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _buildRangeLabel() {
+    if (bars.isEmpty) {
+      return 'Last 7 days';
+    }
+
+    final start = bars.first.date;
+    final end = bars.last.date;
+    return '${_monthShort(start.month)} ${start.day} - ${_monthShort(end.month)} ${end.day}';
+  }
+
+  String _monthShort(int month) {
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[(month - 1).clamp(0, 11)];
   }
 }
 
@@ -433,6 +441,32 @@ class _Reservation {
   final String duration;
 }
 
+class _ActiveCustomerRow {
+  const _ActiveCustomerRow({
+    required this.name,
+    required this.membership,
+    required this.timeIn,
+    required this.status,
+  });
+
+  final String name;
+  final String membership;
+  final String timeIn;
+  final String status;
+}
+
+class _WeeklyActivityBar {
+  const _WeeklyActivityBar({
+    required this.label,
+    required this.date,
+    required this.count,
+  });
+
+  final String label;
+  final DateTime date;
+  final int count;
+}
+
 class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
@@ -440,35 +474,40 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF7D8A93);
 
-  static final List<_Reservation> _reservations = [
-    _Reservation(
-      name: 'Jenny Wilson',
-      email: 'j.wilson@example.com',
-      time: '12:30pm',
-      duration: '2 hours',
-    ),
-    _Reservation(
-      name: 'Devon Lane',
-      email: 'd.roberts@example.com',
-      time: '1:00pm',
-      duration: '3 hours',
-    ),
-    _Reservation(
-      name: 'Jane Cooper',
-      email: 'jgraham@example.com',
-      time: '3:00pm',
-      duration: '4 hours',
-    ),
-    _Reservation(
-      name: 'Dianne Russell',
-      email: 'curtis.d@example.com',
-      time: '4:00pm',
-      duration: '1 hour',
-    ),
-  ];
-
   bool isSidebarOpen = true;
   String selectedMenu = 'Dashboard';
+  late Future<StaffDashboardSnapshot> _dashboardSnapshotFuture;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _reloadDashboard(notify: false);
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _reloadDashboard();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _reloadDashboard({bool notify = true}) {
+    final nextFuture = AimsApiClient.instance.fetchStaffDashboardSnapshot();
+    if (!notify || !mounted) {
+      _dashboardSnapshotFuture = nextFuture;
+      return;
+    }
+
+    setState(() {
+      _dashboardSnapshotFuture = nextFuture;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,7 +528,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
             Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopFrameWidth),
+                  constraints: const BoxConstraints(
+                    maxWidth: _desktopFrameWidth,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -529,7 +570,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       return;
     }
 
-    if (title == 'Membership and Loyalty Program') {
+    if (title == 'Pricing and Promo Management') {
       Navigator.pushNamed(context, '/membership-loyalty-program');
       return;
     }
@@ -580,10 +621,7 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 4,
-                    child: _buildReservationsPanel(),
-                  ),
+                  Expanded(flex: 4, child: _buildReservationsPanel()),
                 ],
               ),
             ),
@@ -596,96 +634,251 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   }
 
   Widget _buildMetricRow() {
-    return Row(
-      children: const [
-        Expanded(
-          child: StaffMetricCard(
-            title: 'TOTAL SALES',
-            value: '\$2,38,485',
-            change: '+14%',
-            surfaceColor: _surfaceBlue,
-            textColor: _textPrimary,
-            mutedColor: _textMuted,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: StaffMetricCard(
-            title: 'ACTIVE CUSTOMERS',
-            value: '143',
-            change: '+36%',
-            surfaceColor: _surfaceBlue,
-            textColor: _textPrimary,
-            mutedColor: _textMuted,
-          ),
-        ),
-      ],
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final summary = snapshot.data?.summary;
+        final leftValue = summary != null
+            ? AimsApiClient.formatCount(summary.activeCustomers)
+            : '--';
+        final rightValue = summary != null
+            ? AimsApiClient.formatCount(summary.reservedBookings)
+            : '--';
+        final status = snapshot.hasError
+            ? 'OFFLINE'
+            : summary != null
+            ? 'LIVE'
+            : 'SYNCING';
+
+        return Row(
+          children: [
+            Expanded(
+              child: StaffMetricCard(
+                title: 'ACTIVE CUSTOMERS',
+                value: leftValue,
+                change: status,
+                surfaceColor: _surfaceBlue,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StaffMetricCard(
+                title: 'RESERVED BOOKINGS',
+                value: rightValue,
+                change: status,
+                surfaceColor: _surfaceBlue,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildCalendarPanel() {
-    return _buildPanel(
-      title: '',
-      child: const CalendarChart(),
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final bars =
+            (snapshot.data?.weeklyActivity ??
+                    const <DashboardWeeklyActivityItem>[])
+                .map(
+                  (item) => _WeeklyActivityBar(
+                    label: item.label,
+                    date: item.date,
+                    count: item.count,
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage('Loading weekly activity...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage(
+              'Unable to load weekly activity from backend.',
+            ),
+          );
+        }
+
+        if (bars.isEmpty) {
+          return _buildPanel(
+            title: '',
+            child: _buildCenteredPanelMessage('No weekly activity yet.'),
+          );
+        }
+
+        return _buildPanel(
+          title: '',
+          child: _CalendarChart(bars: bars),
+        );
+      },
     );
   }
 
   Widget _buildReservationsPanel() {
-    return _buildPanel(
-      title: 'Pending Reservations',
-      subtitle: 'Lorem ipsum dolor sit ametis.',
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _reservations.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 18,
-                thickness: 1,
-                color: Color(0x1A6C7B84),
-              ),
-              itemBuilder: (context, index) {
-                final item = _reservations[index];
-                return StaffReservationListItem(
-                  name: item.name,
-                  email: item.email,
-                  time: item.time,
-                  duration: item.duration,
-                  textColor: _textPrimary,
-                  mutedColor: _textMuted,
-                );
-              },
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final reservations =
+            (snapshot.data?.pendingReservations ??
+                    const <DashboardReservationItem>[])
+                .map(
+                  (item) => _Reservation(
+                    name: item.customerName,
+                    email: item.email.isNotEmpty
+                        ? item.email
+                        : item.contactDetails,
+                    time: _formatTime(item.startAt),
+                    duration: _formatDuration(
+                      item.endAt.difference(item.startAt),
+                    ),
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('Loading reservations...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage(
+              'Unable to load reservations from backend.',
             ),
-          ),
-          const SizedBox(height: 8),
-          const Row(
+          );
+        }
+
+        if (reservations.isEmpty) {
+          return _buildPanel(
+            title: 'Pending Reservations',
+            subtitle: 'Live reservations from backend.',
+            child: _buildCenteredPanelMessage('No pending reservations yet.'),
+          );
+        }
+
+        return _buildPanel(
+          title: 'Pending Reservations',
+          subtitle: 'Live reservations from backend.',
+          child: Column(
             children: [
-              Text(
-                'SEE ALL CUSTOMERS',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: _textMuted,
-                  letterSpacing: 0.4,
+              Expanded(
+                child: ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reservations.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 18,
+                    thickness: 1,
+                    color: Color(0x1A6C7B84),
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = reservations[index];
+                    return StaffReservationListItem(
+                      name: item.name,
+                      email: item.email,
+                      time: item.time,
+                      duration: item.duration,
+                      textColor: _textPrimary,
+                      mutedColor: _textMuted,
+                    );
+                  },
                 ),
               ),
-              SizedBox(width: 6),
-              Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textMuted),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Text(
+                    'SEE ALL CUSTOMERS',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: _textMuted,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 10,
+                    color: _textMuted,
+                  ),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildActiveCustomersPanel() {
-    return _buildPanel(
-      title: 'Active Customers',
-      child: ActiveCustomersTable(
-        textColor: _textPrimary,
-        mutedColor: _textMuted,
-      ),
+    return FutureBuilder<StaffDashboardSnapshot>(
+      future: _dashboardSnapshotFuture,
+      builder: (context, snapshot) {
+        final rows =
+            (snapshot.data?.activeCustomers ??
+                    const <DashboardActiveCustomerItem>[])
+                .map(
+                  (item) => _ActiveCustomerRow(
+                    name: item.name,
+                    membership: item.membershipType,
+                    timeIn: _formatTime(item.timeIn),
+                    status: item.status,
+                  ),
+                )
+                .toList();
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage('Loading active customers...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage(
+              'Unable to load active customers from backend.',
+            ),
+          );
+        }
+
+        if (rows.isEmpty) {
+          return _buildPanel(
+            title: 'Active Customers',
+            child: _buildCenteredPanelMessage('No active customers right now.'),
+          );
+        }
+
+        return _buildPanel(
+          title: 'Active Customers',
+          child: _ActiveCustomersTable(
+            rows: rows,
+            textColor: _textPrimary,
+            mutedColor: _textMuted,
+          ),
+        );
+      },
     );
   }
 
@@ -701,6 +894,43 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
       textColor: _textPrimary,
       child: child,
     );
+  }
+
+  Widget _buildCenteredPanelMessage(String message) {
+    return Center(
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: _textMuted,
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
+  }
+
+  String _formatDuration(Duration value) {
+    final totalMinutes = value.inMinutes;
+    if (totalMinutes <= 0) {
+      return '0 min';
+    }
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+      return '$hours h $minutes min';
+    }
+    if (hours > 0) {
+      return '$hours hour${hours > 1 ? 's' : ''}';
+    }
+    return '$minutes min';
   }
 
   Widget _buildPlaceholder(String title) {

@@ -3,6 +3,7 @@ import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/forms/user_form.dart';
 import 'package:aims/screens/list_of_users/checkIn.dart';
 import 'package:aims/screens/list_of_users/checkOut.dart';
@@ -22,6 +23,7 @@ class StaffUsersListScreen extends StatefulWidget {
 
 class _StaffUser {
   const _StaffUser({
+    required this.backendId,
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -33,6 +35,7 @@ class _StaffUser {
     required this.history,
   });
 
+  final int backendId;
   final String id;
   final String firstName;
   final String lastName;
@@ -61,6 +64,7 @@ class _StaffUser {
   }
 
   _StaffUser copyWith({
+    int? backendId,
     String? id,
     String? firstName,
     String? lastName,
@@ -72,6 +76,7 @@ class _StaffUser {
     List<String>? history,
   }) {
     return _StaffUser(
+      backendId: backendId ?? this.backendId,
       id: id ?? this.id,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
@@ -148,54 +153,15 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   String selectedMenu = 'List of Users';
   String _selectedFilter = 'Last Name';
   String _selectedDropdownValue = 'All';
-  int _nextUserNumber = 4;
-
-  final List<_StaffUser> _users = [
-    _StaffUser(
-      id: 'USR-0001',
-      firstName: 'Mika',
-      lastName: 'Santos',
-      email: 'mika.santos@example.com',
-      phoneNumber: '09171234567',
-      userType: 'Student',
-      membershipType: 'Annual',
-      isActive: true,
-      history: ['User added on 2026-04-15 09:00 AM'],
-    ),
-    _StaffUser(
-      id: 'USR-0002',
-      firstName: 'Paolo',
-      lastName: 'Reyes',
-      email: 'paolo.reyes@example.com',
-      phoneNumber: '09987654321',
-      userType: 'Professional',
-      membershipType: 'Monthly Membership',
-      isActive: true,
-      history: [
-        'User added on 2026-04-14 10:20 AM',
-        'User edited on 2026-04-16 04:05 PM',
-      ],
-    ),
-    _StaffUser(
-      id: 'USR-0003',
-      firstName: 'Andrea',
-      lastName: 'Lim',
-      email: 'andrea.lim@example.com',
-      phoneNumber: '09175557777',
-      userType: 'Student',
-      membershipType: 'Open Time',
-      isActive: false,
-      history: ['User added on 2026-04-11 11:40 AM'],
-    ),
-  ];
+  bool _isLoadingUsers = false;
+  List<_StaffUser> _users = [];
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_refresh);
-    for (final user in _users.where((item) => item.isActive)) {
-      _activeVisits[user.id] = _defaultActiveVisitFor(user);
-    }
+    _syncSpacePricing();
+    _loadUsers();
   }
 
   @override
@@ -221,6 +187,81 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
 
   _ActiveVisit _activeVisitFor(_StaffUser user) {
     return _activeVisits[user.id] ?? _defaultActiveVisitFor(user);
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() {
+      _isLoadingUsers = true;
+    });
+
+    try {
+      final records = await AimsApiClient.instance.fetchUsers();
+      final users = records.map(_fromUserRecord).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _users = users;
+        _activeVisits
+          ..clear()
+          ..addEntries(
+            users
+                .where((user) => user.isActive)
+                .map((user) => MapEntry(user.id, _defaultActiveVisitFor(user))),
+          );
+      });
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to load users from backend right now.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingUsers = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _syncSpacePricing({bool notifyOnError = false}) async {
+    try {
+      await SpacePricingStore.syncFromBackend();
+    } on AimsApiException catch (error) {
+      if (notifyOnError) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (notifyOnError) {
+        _showMessage('Unable to load hourly pricing from backend.');
+      }
+    }
+  }
+
+  _StaffUser _fromUserRecord(UserRecord record) {
+    return _StaffUser(
+      backendId: record.userId,
+      id: record.userCode,
+      firstName: record.firstName,
+      lastName: record.lastName,
+      email: record.email,
+      phoneNumber: record.phoneNumber,
+      userType: record.userType,
+      membershipType: record.membershipType,
+      isActive: record.isActive,
+      history: record.history,
+    );
+  }
+
+  String _suggestNextUserCode() {
+    var maxCode = 0;
+    for (final user in _users) {
+      final value =
+          int.tryParse(user.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (value > maxCode) {
+        maxCode = value;
+      }
+    }
+    final nextCode = maxCode + 1;
+    return 'USR-${nextCode.toString().padLeft(4, '0')}';
   }
 
   @override
@@ -271,6 +312,13 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                 _buildPageHeader(context),
                                 const SizedBox(height: 16),
                                 _buildSearchSection(filteredUsers.length),
+                                if (_isLoadingUsers)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 12),
+                                    child: LinearProgressIndicator(
+                                      minHeight: 3,
+                                    ),
+                                  ),
                                 const SizedBox(height: 16),
                                 Expanded(
                                   child: Container(
@@ -376,7 +424,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       return;
     }
 
-    if (title == 'Membership and Loyalty Program') {
+    if (title == 'Pricing and Promo Management') {
       Navigator.pushReplacementNamed(
         context,
         widget.role == UserRole.manager
@@ -706,7 +754,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                       // Active users can check out; inactive users can check in.
                       user.isActive
                           ? ElevatedButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
+                                await _syncSpacePricing();
                                 final visit = _activeVisitFor(user);
                                 final totalAmount =
                                     SpacePricingStore.totalForVisit(
@@ -728,46 +777,10 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                         builder: (_) => PaymentDialog(
                                           totalAmount: totalAmount,
                                           onConfirm: () {
-                                            setState(() {
-                                              final index = _users.indexWhere(
-                                                (u) => u.id == user.id,
-                                              );
-                                              if (index != -1) {
-                                                _users[index] = user.copyWith(
-                                                  isActive: false,
-                                                  history: [
-                                                    ...user.history,
-                                                    _historyLabel(
-                                                      "User checked out & paid",
-                                                    ),
-                                                  ],
-                                                );
-                                                _activeVisits.remove(user.id);
-                                              }
-                                            });
-
-                                            showDialog(
-                                              context: context,
-                                              builder: (_) =>
-                                                  PaymentSuccessDialog(
-                                                    onGenerateReceipt: () {
-                                                      showDialog(
-                                                        context: context,
-                                                        builder: (_) =>
-                                                            ReceiptDialog(
-                                                              bookingId:
-                                                                  'BK-${user.id}',
-                                                              customerName:
-                                                                  user.fullName,
-                                                              spaceUsed: visit
-                                                                  .spaceUsed,
-
-                                                              totalAmount:
-                                                                  totalAmount,
-                                                            ),
-                                                      );
-                                                    },
-                                                  ),
+                                            _completeCheckout(
+                                              user: user,
+                                              visit: visit,
+                                              totalAmount: totalAmount,
                                             );
                                           },
                                         ),
@@ -816,9 +829,26 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                   return;
                                 }
 
+                                try {
+                                  await AimsApiClient.instance.checkInUser(
+                                    userEmail: user.email,
+                                    spaceUsed: result.spaceUsed,
+                                    checkInAt: result.timeIn,
+                                  );
+                                } on AimsApiException catch (error) {
+                                  _showMessage(error.message);
+                                  return;
+                                } catch (_) {
+                                  _showMessage(
+                                    'Unable to check in right now. Please try again.',
+                                  );
+                                  return;
+                                }
+
+                                if (!mounted) return;
                                 setState(() {
                                   final index = _users.indexWhere(
-                                    (u) => u.id == user.id,
+                                    (u) => u.backendId == user.backendId,
                                   );
                                   if (index != -1) {
                                     _users[index] = user.copyWith(
@@ -964,33 +994,34 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<void> _openAddUserForm(BuildContext context) async {
-    final generatedId = 'USR-${_nextUserNumber.toString().padLeft(4, '0')}';
+    final generatedId = _suggestNextUserCode();
 
     final result = await Navigator.of(context).push<UserFormData>(
       MaterialPageRoute(builder: (_) => AddUser(userId: generatedId)),
     );
 
     if (result == null) return;
-
-    final timestamp = _historyLabel('User added');
-    final newUser = _StaffUser(
-      id: 'USR-${_nextUserNumber.toString().padLeft(4, '0')}',
-      firstName: result.firstName,
-      lastName: result.lastName,
-      email: result.email,
-      phoneNumber: result.phoneNumber,
-      userType: result.userType,
-      membershipType: result.membershipType,
-      isActive: false,
-      history: [timestamp],
-    );
-
-    setState(() {
-      _nextUserNumber += 1;
-      _users.insert(0, newUser);
-    });
-
-    _showMessage('${newUser.fullName} added to All Users.');
+    try {
+      final created = await AimsApiClient.instance.createUser(
+        firstName: result.firstName,
+        lastName: result.lastName,
+        email: result.email,
+        phoneNumber: result.phoneNumber,
+        userType: result.userType,
+        membershipType: result.membershipType,
+        isActive: false,
+      );
+      final newUser = _fromUserRecord(created);
+      if (!mounted) return;
+      setState(() {
+        _users.insert(0, newUser);
+      });
+      _showMessage('${newUser.fullName} added to All Users.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to add user right now. Please try again.');
+    }
   }
 
   Future<void> _openEditUserForm(BuildContext context, _StaffUser user) async {
@@ -999,11 +1030,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     );
 
     if (result == null) return;
-
-    setState(() {
-      final index = _users.indexWhere((item) => item.id == user.id);
-      if (index == -1) return;
-      _users[index] = user.copyWith(
+    try {
+      final updated = await AimsApiClient.instance.updateUser(
+        userId: user.backendId,
         firstName: result.firstName,
         lastName: result.lastName,
         email: result.email,
@@ -1011,11 +1040,22 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
         userType: result.userType,
         membershipType: result.membershipType,
         isActive: result.isActive,
-        history: [...user.history, _historyLabel('User edited')],
       );
-    });
-
-    _showMessage('${user.id} updated successfully.');
+      final updatedUser = _fromUserRecord(updated);
+      if (!mounted) return;
+      setState(() {
+        final index = _users.indexWhere(
+          (item) => item.backendId == user.backendId,
+        );
+        if (index == -1) return;
+        _users[index] = updatedUser;
+      });
+      _showMessage('${updatedUser.id} updated successfully.');
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Unable to update user right now. Please try again.');
+    }
   }
 
   Future<bool> _confirmDeleteUser(BuildContext context, _StaffUser user) async {
@@ -1049,13 +1089,22 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     if (!shouldDelete) {
       return false;
     }
-
-    setState(() {
-      _users.removeWhere((item) => item.id == user.id);
-    });
-
-    _showMessage('${user.fullName} deleted. ${_historyLabel('User deleted')}');
-    return true;
+    try {
+      await AimsApiClient.instance.deleteUser(user.backendId);
+      if (!mounted) return false;
+      setState(() {
+        _users.removeWhere((item) => item.backendId == user.backendId);
+        _activeVisits.remove(user.id);
+      });
+      _showMessage('${user.fullName} deleted.');
+      return true;
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+      return false;
+    } catch (_) {
+      _showMessage('Unable to delete user right now. Please try again.');
+      return false;
+    }
   }
 
   void _openHistoryScreen(BuildContext context, _StaffUser user) {
@@ -1080,6 +1129,56 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _completeCheckout({
+    required _StaffUser user,
+    required _ActiveVisit visit,
+    required double totalAmount,
+  }) async {
+    try {
+      await AimsApiClient.instance.checkOutUser(
+        userEmail: user.email,
+        amount: totalAmount,
+        paymentMethod: 'cash',
+        paymentStatus: 'paid',
+      );
+    } on AimsApiException catch (error) {
+      _showMessage(error.message);
+      return;
+    } catch (_) {
+      _showMessage('Unable to check out right now. Please try again.');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      final index = _users.indexWhere((u) => u.backendId == user.backendId);
+      if (index != -1) {
+        _users[index] = user.copyWith(
+          isActive: false,
+          history: [...user.history, _historyLabel("User checked out & paid")],
+        );
+        _activeVisits.remove(user.id);
+      }
+    });
+
+    showDialog(
+      context: context,
+      builder: (_) => PaymentSuccessDialog(
+        onGenerateReceipt: () {
+          showDialog(
+            context: context,
+            builder: (_) => ReceiptDialog(
+              bookingId: 'BK-${user.id}',
+              customerName: user.fullName,
+              spaceUsed: visit.spaceUsed,
+              totalAmount: totalAmount,
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

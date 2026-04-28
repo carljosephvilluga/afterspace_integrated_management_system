@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/dialogs/confirm_logout_dialog.dart'; // import the reusable logout dialog
 
 enum UserRole { admin, manager, staff }
@@ -74,6 +75,8 @@ class Header extends StatelessWidget {
                                 false;
 
                             if (shouldLogout && context.mounted) {
+                              await AimsApiClient.instance.logout();
+                              if (!context.mounted) return;
                               Navigator.pushReplacementNamed(context, '/login');
                             }
                           },

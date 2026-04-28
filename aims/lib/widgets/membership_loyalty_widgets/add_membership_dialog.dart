@@ -29,18 +29,11 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
   static const Color _panelBlue = Color(0xFFCDECF3);
   static const Color _headerBlue = Color(0xFF80AEC1);
 
-  final TextEditingController _nameController = TextEditingController(
-    text: 'Monthly Membership',
-  );
-  final TextEditingController _durationValueController = TextEditingController(
-    text: '1',
-  );
-  final TextEditingController _priceController = TextEditingController(
-    text: 'P 1499.00',
-  );
-  final TextEditingController _benefitsController = TextEditingController(
-    text: 'Unlimited use of all the resources for a month. (excluding food)',
-  );
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _durationValueController =
+      TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _benefitsController = TextEditingController();
 
   final List<String> _durationUnits = const [
     'Month(s)',
@@ -152,14 +145,46 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
                         width: 200,
                         height: 42,
                         onPressed: () async {
+                          final type = _nameController.text.trim();
+                          final durationValue = _durationValueController.text
+                              .trim();
+                          final price = _priceController.text.trim();
+                          final benefits = _benefitsController.text.trim();
+
+                          if (type.isEmpty ||
+                              durationValue.isEmpty ||
+                              price.isEmpty ||
+                              benefits.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please complete membership name, duration, price, and benefits.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final parsedDuration = int.tryParse(durationValue);
+                          if (parsedDuration == null || parsedDuration <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Duration must be a positive number.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
                           Navigator.pop(
                             context,
                             AddMembershipDialogResult(
-                              type: _nameController.text.trim(),
+                              type: type,
                               duration:
-                                  '${_durationValueController.text.trim()} $_selectedDurationUnit',
-                              price: _priceController.text.trim(),
-                              benefits: _benefitsController.text.trim(),
+                                  '$parsedDuration $_selectedDurationUnit',
+                              price: price,
+                              benefits: benefits,
                             ),
                           );
                         },
@@ -207,10 +232,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
               SizedBox(height: 4),
               Text(
                 'Set a plan name, duration, price, and benefits.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _textMuted,
-                ),
+                style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],
           ),
@@ -234,7 +256,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
           MembershipProgramInputField(
             label: 'Membership Name',
             controller: _nameController,
-            hintText: 'Monthly Membership',
+            hintText: 'Enter membership name',
           ),
           const SizedBox(height: 14),
           MembershipProgramInputField(
@@ -254,7 +276,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
           child: MembershipProgramInputField(
             label: 'Membership Name',
             controller: _nameController,
-            hintText: 'Monthly Membership',
+            hintText: 'Enter membership name',
           ),
         ),
         const SizedBox(width: 14),
@@ -281,11 +303,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
 
     if (stacked) {
       return Column(
-        children: [
-          durationField,
-          const SizedBox(height: 14),
-          benefitsField,
-        ],
+        children: [durationField, const SizedBox(height: 14), benefitsField],
       );
     }
 

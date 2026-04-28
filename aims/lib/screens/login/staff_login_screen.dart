@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/common/custom_text_field.dart'; // reusable text field widget
 import 'package:aims/widgets/common/custom_button.dart'; // reusable button widget
 import 'package:aims/widgets/utils/validators.dart'; // for input validation
@@ -133,15 +134,23 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                             borderColor: Colors.blue,
                             onPressed: () async {
                               if (_formKey.currentState!.validate()) {
-                                // Simulate async login
-                                await Future.delayed(
-                                  const Duration(seconds: 1),
-                                );
-                                if (!context.mounted) return;
-                                Navigator.pushNamed(
-                                  context,
-                                  '/staff-dashboard',
-                                );
+                                try {
+                                  await AimsApiClient.instance.login(
+                                    role: 'staff',
+                                    employeeId: staffIdController.text.trim(),
+                                    password: passwordController.text,
+                                  );
+                                  if (!context.mounted) return;
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/staff-dashboard',
+                                  );
+                                } on AimsApiException catch (error) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(error.message)),
+                                  );
+                                }
                               }
                             },
                           ),

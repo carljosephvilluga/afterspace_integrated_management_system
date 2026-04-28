@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:aims/services/aims_api_client.dart';
 import 'package:flutter/foundation.dart';
 
 class SpacePricing {
@@ -17,11 +18,8 @@ class SpacePricingStore {
 
   static final ValueNotifier<SpacePricing> pricingNotifier =
       ValueNotifier<SpacePricing>(
-    const SpacePricing(
-      boardRoomHourlyRate: 350,
-      ordinarySpaceHourlyRate: 120,
-    ),
-  );
+        const SpacePricing(boardRoomHourlyRate: 0, ordinarySpaceHourlyRate: 0),
+      );
 
   static SpacePricing get current => pricingNotifier.value;
 
@@ -33,6 +31,18 @@ class SpacePricingStore {
       boardRoomHourlyRate: boardRoomHourlyRate,
       ordinarySpaceHourlyRate: ordinarySpaceHourlyRate,
     );
+  }
+
+  static void updateFromRecord(SpacePricingRecord record) {
+    update(
+      boardRoomHourlyRate: record.boardRoomHourlyRate,
+      ordinarySpaceHourlyRate: record.ordinarySpaceHourlyRate,
+    );
+  }
+
+  static Future<void> syncFromBackend() async {
+    final record = await AimsApiClient.instance.fetchSpacePricing();
+    updateFromRecord(record);
   }
 
   static double hourlyRateForSpace(String spaceUsed) {
@@ -54,6 +64,6 @@ class SpacePricingStore {
   }
 
   static String formatCurrency(double amount) {
-    return 'PHP ${amount.toStringAsFixed(2)}';
+    return AimsApiClient.formatCurrency(amount);
   }
 }

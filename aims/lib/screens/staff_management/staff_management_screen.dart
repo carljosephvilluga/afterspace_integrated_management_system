@@ -1,6 +1,6 @@
 import 'package:aims/widgets/common/custom_button.dart';
-import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:aims/widgets/dialogs/confirm_deletion.dart';
 
 class StaffManagementScreen extends StatefulWidget {
   const StaffManagementScreen({super.key, this.embedded = false});
@@ -32,7 +32,9 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
       'hours': '8',
       'email': 'juan@example.com',
       'phone': '09123456789',
-      'schedule': '2026-04-27 08:00 - 17:00',
+      'workSchedule': 'Mon-Fri',   // dropdown choice
+      'timeFrom': '08:00',
+      'timeTo': '17:00',
     },
     {
       'id': 'STF-002',
@@ -45,7 +47,9 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
       'hours': '6',
       'email': 'maria@example.com',
       'phone': '09987654321',
-      'schedule': '2026-04-27 09:00 - 15:00',
+      'workSchedule': 'Weekends',
+      'timeFrom': '09:00',
+      'timeTo': '15:00',
     },
   ];
 
@@ -61,6 +65,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _scheduleController = TextEditingController();
+  final TextEditingController _timeFromController = TextEditingController();
+  final TextEditingController _timeToController = TextEditingController();
 
   String searchQuery = '';
   String selectedFilter = 'All';
@@ -79,6 +85,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     _lastNameController.dispose();
     _statusController.dispose();
     _hoursController.dispose();
+    _timeFromController.dispose();
+    _timeToController.dispose();
     super.dispose();
   }
 
@@ -345,7 +353,19 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                 icon: Icons.delete_outline,
                 textColor: _danger,
                 borderColor: const Color(0xFFF1C9C9),
-                onPressed: () => setState(() => staffList.remove(staff)),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ConfirmDeleteDialog(
+                      staff: staff,
+                      onDelete: () {
+                        setState(() {
+                          staffList.remove(staff);
+                        });
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -438,6 +458,45 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
+  Widget _compactTextField({
+    required String hint,
+    required TextEditingController controller,
+    IconData? suffixIcon,
+  }) {
+    return SizedBox(
+      height: 40, // compact height
+      child: TextField(
+        controller: controller,
+        readOnly: suffixIcon != null, // for calendar/time pickers
+        decoration: InputDecoration(
+          hintText: hint,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.grey),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          suffixIcon: suffixIcon != null ? Icon(suffixIcon) : null,
+        ),
+      ),
+    );
+  }
+
+  final List<String> daysOfWeek = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  ];
+
+  final Map<String, bool> selectedDays = {
+    'Monday': false,
+    'Tuesday': false,
+    'Wednesday': false,
+    'Thursday': false,
+    'Friday': false,
+    'Saturday': false,
+    'Sunday': false,
+  };
+
   void _showAddForm() {
     _idController.clear();
     _lastNameController.clear();
@@ -450,298 +509,702 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        titlePadding: const EdgeInsets.only(top: 12, left: 16, right: 8),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Expanded(
-            child: Center(
-              child: Text(
-                'Staff Details',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: Colors.grey, width: 1.5),
+            ),
+            titlePadding: const EdgeInsets.only(top: 20, left: 20, right: 20),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Expanded(
+                  child: Center(
+                    child: Text(
+                      'Staff Details',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 700,
+              height: 300,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Staff ID",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: '0001', controller: _idController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Last Name",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              _compactTextField(hint: 'Last Name', controller: _lastNameController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("First Name",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              _compactTextField(hint: 'First Name', controller: _firstNameController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 70,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("M.I.",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              _compactTextField(hint: 'M.I.', controller: _middleInitialController),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Email",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              _compactTextField(hint: 'Enter email', controller: _emailController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Phone Number",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              _compactTextField(hint: 'Enter phone number', controller: _phoneController),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                      // Row: Role + Work Days + Time
+                    // Row: Role + Schedule Staff + Time
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Role
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Role",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              DropdownButtonFormField<String>(
+                                value: _userTypeController.text.isEmpty ? null : _userTypeController.text,
+                                items: const [
+                                  DropdownMenuItem(value: 'Staff', child: Text('Staff')),
+                                  DropdownMenuItem(value: 'Manager', child: Text('Manager')),
+                                  DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                                ],
+                                onChanged: (value) => _userTypeController.text = value ?? '',
+                                decoration: InputDecoration(
+                                  hintText: 'Select Role',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Schedule Staff dropdown
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Work Schedule",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              DropdownButtonFormField<String>(
+                                value: _scheduleController.text.isEmpty ? null : _scheduleController.text,
+                                items: const [
+                                  DropdownMenuItem(value: 'Mon-Fri', child: Text('Mon–Fri')),
+                                  DropdownMenuItem(value: 'Weekends', child: Text('Weekends')),
+                                  DropdownMenuItem(value: 'Whole Week', child: Text('Whole Week')),
+                                  DropdownMenuItem(value: 'Custom', child: Text('Custom')),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _scheduleController.text = value ?? '';
+
+                                    if (value == 'Mon-Fri') {
+                                      selectedDays.updateAll((day, _) =>
+                                        ['Monday','Tuesday','Wednesday','Thursday','Friday'].contains(day));
+                                    } else if (value == 'Weekends') {
+                                      selectedDays.updateAll((day, _) =>
+                                        ['Saturday','Sunday'].contains(day));
+                                    } else if (value == 'Whole Week') {
+                                      selectedDays.updateAll((day, _) => true);
+                                    } else if (value == 'Custom') {
+                                      selectedDays.updateAll((day, _) => false);
+                                    }
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Select Schedule',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Time From / To
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Time",
+                              style: TextStyle(fontWeight: FontWeight.bold),),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _timeFromController,
+                                      readOnly: true,
+                                      decoration: const InputDecoration(hintText: 'From'),
+                                      onTap: () async {
+                                        final picked = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                        );
+                                        if (picked != null) {
+                                          _timeFromController.text = picked.format(context);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _timeToController,
+                                      readOnly: true,
+                                      decoration: const InputDecoration(hintText: 'To'),
+                                      onTap: () async {
+                                        final picked = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                        );
+                                        if (picked != null) {
+                                          _timeToController.text = picked.format(context);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (_scheduleController.text == 'Custom') ...[
+                      const SizedBox(height: 20),
+                      const Text("Work Days"),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: daysOfWeek.map((day) {
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Checkbox(
+                                value: selectedDays[day],
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    selectedDays[day] = value ?? false;
+                                  });
+                                },
+                              ),
+                              Text(day.substring(0, 3)), // Mon, Tue, Wed...
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ],
-        ),
-        content: SizedBox(
-          width: 600,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                 Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Staff ID"),
-                        const SizedBox(height: 4),
-                        CustomTextField(hint: '0001', controller: _idController),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Name"),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: CustomTextField(hint: 'First', controller: _firstNameController)),
-                            const SizedBox(width: 8),
-                            SizedBox(width: 60, child: CustomTextField(hint: 'M.I.', controller: _middleInitialController)),
-                            const SizedBox(width: 8),
-                            Expanded(child: CustomTextField(hint: 'Last', controller: _lastNameController)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Row 2: Email + Phone
+              
+            actionsAlignment: MainAxisAlignment.center, 
+            actions: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Email"),
-                        const SizedBox(height: 4),
-                        CustomTextField(hint: 'Enter email', controller: _emailController),
-                      ],
-                    ),
+                  CustomButton(
+                    label: 'Cancel',
+                    backgroundColor: Colors.black,
+                    textColor: Colors.white,
+                    borderColor: Colors.black,
+                    width: 150,
+                    height: 45,
+                    onPressed: () async {
+                      Navigator.pop(context);
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Phone Number"),
-                        const SizedBox(height: 4),
-                        CustomTextField(hint: 'Enter phone number', controller: _phoneController),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Row 3: Role + Schedule + Time
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Role"),
-                        const SizedBox(height: 4),
-                        DropdownButtonFormField<String>(
-                          value: 'Staff',
-                          items: const [
-                            DropdownMenuItem(value: 'Staff', child: Text('Staff')),
-                            DropdownMenuItem(value: 'Manager', child: Text('Manager')),
-                            DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                          ],
-                          onChanged: (value) {
-                            _userTypeController.text = value ?? '';
-                          },
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Schedule Staff"),
-                        const SizedBox(height: 4),
-                        TextField(
-                          controller: _scheduleController,
-                          decoration: InputDecoration(
-                            hintText: 'Select date',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            suffixIcon: const Icon(Icons.calendar_today),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Time"),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(child: CustomTextField(hint: 'From', controller: _statusController)),
-                            const SizedBox(width: 8),
-                            Expanded(child: CustomTextField(hint: 'To', controller: _activityController)),
-                          ],
-                        ),
-                      ],
-                    ),
+                  const SizedBox(width: 20), // spacing between buttons
+                  CustomButton(
+                    label: 'Add Staff',
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    borderColor: Colors.green,
+                    width: 150,
+                    height: 45,
+                    onPressed: () async {
+                      setState(() {
+                        staffList.add({
+                          'id': 'STF-${(staffList.length + 1).toString().padLeft(3, '0')}',
+                          'firstName': _firstNameController.text.trim(),
+                          'middleInitial': _middleInitialController.text.trim(),
+                          'lastName': _lastNameController.text.trim(),
+                          'email': _emailController.text.trim().isEmpty
+                              ? 'no-email@example.com'
+                              : _emailController.text.trim(),
+                          'phone': _phoneController.text.trim().isEmpty
+                              ? 'N/A'
+                              : _phoneController.text.trim(),
+                          'userType': _userTypeController.text.trim().isEmpty
+                              ? 'Staff'
+                              : _userTypeController.text.trim(),
+                          'workSchedule': _scheduleController.text.trim(),
+                          'timeFrom': _timeFromController.text.trim(),
+                          'timeTo': _timeToController.text.trim(),
+                        });
+                      });
+                      Navigator.pop(context);
+                    },
                   ),
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-      actionsAlignment: MainAxisAlignment.center,
-                
-        actions: [
-          CustomButton(
-            label: 'Add Staff',
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
-            borderColor: Colors.green,
-            width: 160,
-            height: 50,
-            onPressed: () async {
-              setState(() {
-                staffList.add({
-                  'id':
-                      'STF-${(staffList.length + 1).toString().padLeft(3, '0')}',
-                  'firstName': _firstNameController.text.trim(),
-                  'middleInitial': _middleInitialController.text.trim(),
-                  'lastName': _lastNameController.text.trim(),
-                  'email': 'no-email@example.com',
-                  'phone': 'N/A',
-                  'userType': 'Staff',
-                  'schedule': _scheduleController.text.trim(),
-                });
-              });
-              if (mounted) Navigator.pop(context);
-            },
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   void _showEditForm(Map<String, dynamic> staff) {
-    _idController.text = staff['id'];
-    _lastNameController.text = staff['lastName'];
-    _firstNameController.text = staff['firstName'];
-    _middleInitialController.text = staff['middleInitial'];
-    _userTypeController.text = staff['role'];
-    _statusController.text = staff['status'];
-    _activityController.text = staff['activity'];
-    _hoursController.text = staff['hours'];
-    _emailController.text = staff['email'];
-    _phoneController.text = staff['phone'];
-    _scheduleController.text = staff['schedule'];
+  // Pre-fill controllers
+  _idController.text = staff['id'] ?? '';
+  _lastNameController.text = staff['lastName'] ?? '';
+  _firstNameController.text = staff['firstName'] ?? '';
+  _middleInitialController.text = staff['middleInitial'] ?? '';
+  _emailController.text = staff['email'] ?? '';
+  _phoneController.text = staff['phone'] ?? '';
+  _userTypeController.text = staff['userType'] ?? '';
+  _scheduleController.text = staff['workSchedule'] ?? '';
+  _timeFromController.text = staff['timeFrom'] ?? '';
+  _timeToController.text = staff['timeTo'] ?? '';
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Edit Staff'),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+  showDialog(
+    context: context,
+    builder: (_) => StatefulBuilder(
+      builder: (context, setState) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: Colors.grey, width: 1.5),
+          ),
+          titlePadding: const EdgeInsets.only(top: 20, left: 20, right: 20),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CustomTextField(hint: 'Staff ID', controller: _idController),
-                CustomTextField(hint: 'Last Name', controller: _lastNameController),
-                CustomTextField(hint: 'First Name', controller: _firstNameController),
-                CustomTextField(hint: 'Middle Initial', controller: _middleInitialController),
-                CustomTextField(hint: 'Email', controller: _emailController),
-                CustomTextField(hint: 'Phone Number', controller: _phoneController),
-                CustomTextField(hint: 'Type', controller: _userTypeController),
-                CustomTextField(hint: 'Status', controller: _statusController),
-                CustomTextField(hint: 'Recent Activity', controller: _activityController),
-                CustomTextField(hint: 'Total Hours', controller: _hoursController),
-                CustomTextField(hint: 'Work Schedule', controller: _scheduleController),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Edit Staff',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
             ],
           ),
-        ),
-        actions: [
-          CustomButton(
-            label: 'Cancel',
-            backgroundColor: Colors.white,
-            textColor: Colors.black,
-            borderColor: Colors.black,
-            width: 100,
-            height: 40,
-            onPressed: () async => Navigator.pop(context),
+          content: SizedBox(
+            width: 700,
+            height: 300,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Row: Staff ID + Last + First + MI
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Staff ID", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: '0001', controller: _idController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Last Name", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: 'Last Name', controller: _lastNameController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("First Name", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: 'First Name', controller: _firstNameController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 70,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("M.I.", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: 'M.I.', controller: _middleInitialController),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Row: Email + Phone
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Email", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: 'Enter email', controller: _emailController),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Phone Number", style: TextStyle(fontWeight: FontWeight.bold)),
+                              _compactTextField(hint: 'Enter phone number', controller: _phoneController),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Row: Role + Schedule + Time
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Role
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Role", style: TextStyle(fontWeight: FontWeight.bold)),
+                              DropdownButtonFormField<String>(
+                                value: _userTypeController.text.isEmpty ? null : _userTypeController.text,
+                                items: const [
+                                  DropdownMenuItem(value: 'Staff', child: Text('Staff')),
+                                  DropdownMenuItem(value: 'Manager', child: Text('Manager')),
+                                  DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                                ],
+                                onChanged: (value) => _userTypeController.text = value ?? '',
+                                decoration: InputDecoration(
+                                  hintText: 'Select Role',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Schedule Staff dropdown
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Schedule Staff", style: TextStyle(fontWeight: FontWeight.bold)),
+                              DropdownButtonFormField<String>(
+                                value: _scheduleController.text.isEmpty ? null : _scheduleController.text,
+                                items: const [
+                                  DropdownMenuItem(value: 'Mon-Fri', child: Text('Mon–Fri')),
+                                  DropdownMenuItem(value: 'Weekends', child: Text('Weekends')),
+                                  DropdownMenuItem(value: 'Whole Week', child: Text('Whole Week')),
+                                  DropdownMenuItem(value: 'Custom', child: Text('Custom')),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _scheduleController.text = value ?? '';
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  hintText: 'Select Schedule',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Time From / To
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Time", style: TextStyle(fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _timeFromController,
+                                      readOnly: true,
+                                      decoration: const InputDecoration(hintText: 'From'),
+                                      onTap: () async {
+                                        final picked = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                        );
+                                        if (picked != null) {
+                                          _timeFromController.text = picked.format(context);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _timeToController,
+                                      readOnly: true,
+                                      decoration: const InputDecoration(hintText: 'To'),
+                                      onTap: () async {
+                                        final picked = await showTimePicker(
+                                          context: context,
+                                          initialTime: TimeOfDay.now(),
+                                        );
+                                        if (picked != null) {
+                                          _timeToController.text = picked.format(context);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          CustomButton(
-            label: 'Update',
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-            borderColor: Colors.black,
-            width: 100,
-            height: 40,
-            onPressed: () async {
-              setState(() {
-                staff['id'] = _idController.text;
-                staff['lastName'] = _lastNameController.text;
-                staff['firstName'] = _firstNameController.text;
-                staff['middleInitial'] = _middleInitialController.text;
-                staff['role'] = _userTypeController.text;
-                staff['status'] = _statusController.text;
-                staff['activity'] = _activityController.text;
-                staff['hours'] = _hoursController.text;
-                staff['email'] = _emailController.text;
-                staff['phone'] = _phoneController.text;
-                staff['schedule'] = _scheduleController.text;
-              });
-              if (mounted) Navigator.pop(context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CustomButton(
+                  label: 'Cancel',
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  borderColor: Colors.black,
+                  width: 150,
+                  height: 45,
+                  onPressed: () async {
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(width: 20), // spacing between buttons
+                CustomButton(
+                  label: 'Save',
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                  borderColor: Colors.green,
+                  width: 150,
+                  height: 45,
+                  onPressed: () async {
+                    setState(() {
+                      staff['id'] = _idController.text.trim();
+                      staff['firstName'] = _firstNameController.text.trim();
+                      staff['middleInitial'] = _middleInitialController.text.trim();
+                      staff['lastName'] = _lastNameController.text.trim();
+                      staff['email'] = _emailController.text.trim();
+                      staff['phone'] = _phoneController.text.trim();
+                      staff['userType'] = _userTypeController.text.trim();
+
+                      // ✅ schedule fields
+                      staff['workSchedule'] = _scheduleController.text.trim();
+                      staff['timeFrom'] = _timeFromController.text.trim();
+                      staff['timeTo'] = _timeToController.text.trim();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
 
   void _showStaffDetails(Map<String, dynamic> staff) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Staff Details - ${staff['lastName']}, ${staff['firstName']} ${staff['middleInitial']}'),
-        content: Column(
+  showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.grey, width: 1.2),
+        ),
+        title: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ID: ${staff['id']}'),
-              Text('Name: ${staff['lastName']}, ${staff['firstName']} ${staff['middleInitial']}'),
-              Text('Email: ${staff['email']}'),
-              Text('Phone: ${staff['phone']}'),
-              Text('Role: ${staff['role']}'),
-              Text('Status: ${staff['status']}'),
-              Text('Recent Activity: ${staff['activity']}'),
-              Text('Total Hours: ${staff['hours']}'),
-              Text('Work Schedule: ${staff['schedule']}'),
+          children: const [
+            Text(
+              'Staff Details',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16), 
           ],
         ),
+        content: SizedBox(
+          width: 500,   // wider
+          height: 400,  // shorter
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow("ID", staff['id'] ?? 'N/A'),
+                _buildDetailRow("Name",
+                    "${staff['lastName'] ?? ''}, ${staff['firstName'] ?? ''} ${staff['middleInitial'] ?? ''}"),
+                _buildDetailRow("Email", staff['email'] ?? 'No email'),
+                _buildDetailRow("Phone", staff['phone'] ?? 'N/A'),
+                _buildDetailRow("Role", staff['userType'] ?? 'Staff'),
+                _buildDetailRow("Status", staff['status'] ?? 'Unknown'),
+                _buildDetailRow("Recent Activity", staff['activity'] ?? 'None'),
+                _buildDetailRow("Total Hours", staff['hours']?.toString() ?? '0'),
+
+                // ✅ Work Schedule
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12), 
+                        child: const SizedBox(
+                          width: 130,
+                          child: Text(
+                            "Work Schedule:",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 100, maxWidth: 250),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade400, width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(staff['workSchedule'] ?? 'Not set'),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text("From: ${staff['timeFrom'] ?? '--:--'}"),
+                                  const SizedBox(width: 10),
+                                  Text("To: ${staff['timeTo'] ?? '--:--'}"),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.end,
         actions: [
           CustomButton(
             label: 'Close',
@@ -749,11 +1212,49 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             textColor: Colors.white,
             borderColor: Colors.black,
             width: 100,
-            height: 40,
-            onPressed: () async => Navigator.pop(context),
+            height: 38,
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+            },
           ),
         ],
-      ),
-    );
-  }
+      );
+    },
+  );
+}
+
+// Helper widget for clean label-value rows
+  Widget _buildDetailRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12), 
+          child: SizedBox(
+            width: 130,
+            child: Text(
+              "$label:",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6), // closer spacing to box
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 80, maxWidth: 250),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade400, width: 1),
+            ),
+            child: Text(value),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

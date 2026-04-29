@@ -83,7 +83,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const SizedBox(
-                            height: 60,
+                            height: 70,
                           ), // space for the avatar to overlap
                           // Manager ID field
                           CustomTextField(
@@ -101,6 +101,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                             isPassword: true,
                             showToggle: true,
                           ),
+                          const SizedBox(height: 10),
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -122,12 +123,12 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 76),
+                          const SizedBox(height: 30),
 
                           // Sign In button
                           CustomButton(
                             label: "Sign In",
-                            height: 80,
+                            height: 75,
                             width: double.infinity,
                             backgroundColor: Colors.grey.shade800,
                             textColor: Colors.white,
@@ -154,7 +155,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                               }
                             },
                           ),
-                          const SizedBox(height: 25),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),

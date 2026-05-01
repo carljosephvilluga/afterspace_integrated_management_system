@@ -4,7 +4,7 @@ import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:aims/services/aims_api_client.dart';
-import 'package:aims/widgets/forms/user_form.dart';
+import 'package:aims/screens/list_of_users/user_form.dart';
 import 'package:aims/screens/list_of_users/checkIn.dart';
 import 'package:aims/screens/list_of_users/checkOut.dart';
 import 'package:aims/screens/list_of_users/payment.dart';

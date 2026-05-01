@@ -54,7 +54,7 @@ class CheckOut extends StatelessWidget {
           padding: const EdgeInsets.all(40.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Confirm Check-out',
@@ -66,50 +66,42 @@ class CheckOut extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              _buildCenteredDetailRow(Icons.book, 'Booking ID:', bookingId),
+              _checkOutDetail(Icons.book, 'Booking ID:', bookingId),
               const SizedBox(height: 12),
-              _buildCenteredDetailRow(
-                Icons.person_outline,
-                'Customer:',
-                customerName,
-              ),
+              _checkOutDetail(Icons.person_outline, 'Customer:', customerName),
               const SizedBox(height: 12),
-              _buildCenteredDetailRow(
-                Icons.chair_alt,
-                'Space used:',
-                spaceUsed,
-              ),
+              _checkOutDetail(Icons.chair_alt, 'Space used:', spaceUsed),
               const SizedBox(height: 24),
-              _buildCenteredDetailRow(
+              _checkOutDetail(
                 Icons.access_time,
                 'Time in:',
                 _formatTime(timeIn),
               ),
               const SizedBox(height: 12),
-              _buildCenteredDetailRow(
+              _checkOutDetail(
                 Icons.access_time,
                 'Time out:',
                 _formatTime(timeOut),
               ),
               const SizedBox(height: 12),
-              _buildCenteredDetailRow(
+              _checkOutDetail(
                 Icons.hourglass_bottom,
                 'Duration:',
                 _calculateDuration(timeIn, timeOut),
               ),
               const SizedBox(height: 12),
-              _buildCenteredDetailRow(
+              _checkOutDetail(
                 Icons.payments_outlined,
                 'Hourly rate:',
                 SpacePricingStore.formatCurrency(
                   SpacePricingStore.hourlyRateForSpace(spaceUsed),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                  style: const TextStyle(fontSize: 25, color: Colors.black),
                   children: [
                     const TextSpan(
                       text: 'TOTAL: ',
@@ -142,33 +134,35 @@ class CheckOut extends StatelessWidget {
     );
   }
 
-  Widget _buildCenteredDetailRow(IconData icon, String label, String value) {
+  Widget _checkOutDetail(IconData icon, String label, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(icon, size: 18, color: Colors.black54),
-        const SizedBox(width: 14),
+        // Left side: Icon + Label
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: Colors.black54),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        // Right side: Value
         Flexible(
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: const TextStyle(fontSize: 14, color: Colors.black),
-              children: [
-                TextSpan(
-                  text: '$label ',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.normal,
-                    color: Colors.black87,
-                  ),
-                ),
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
           ),
         ),

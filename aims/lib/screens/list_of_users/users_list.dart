@@ -119,11 +119,13 @@ class _ActiveVisit {
 
 class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   static const double _desktopFrameWidth = 1560;
-  static const Color _pageBackground = Color(0xFFF4F8FA);
-  static const Color _panelColor = Colors.white;
-  static const Color _accentColor = Color(0xFF76ACBD);
-  static const Color _darkText = Color(0xFF22313A);
-  static const Color _mutedText = Color(0xFF71808A);
+  static const Color _pageBackground = Color(0xFFDDECEF);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _tanSoft = Color(0xFFEBD9CA);
+  static const Color _cardWhite = Color(0xF7FFFFFF);
+  static const Color _darkText = Color(0xFF23323A);
+  static const Color _mutedText = Color(0xFF6F7E87);
   static const Color _successColor = Color(0xFF2E8B57);
   static const Color _dangerColor = Color(0xFFC95656);
   static const List<String> _filterOptions = [
@@ -306,93 +308,53 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildPageHeader(context),
-                                const SizedBox(height: 16),
-                                _buildSearchSection(filteredUsers.length),
-                                if (_isLoadingUsers)
-                                  const Padding(
-                                    padding: EdgeInsets.only(top: 12),
-                                    child: LinearProgressIndicator(
-                                      minHeight: 3,
-                                    ),
-                                  ),
-                                const SizedBox(height: 16),
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: _panelColor,
-                                      borderRadius: BorderRadius.circular(20),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x12000000),
-                                          blurRadius: 20,
-                                          offset: Offset(0, 8),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 10),
+                                    _buildPageHero(context),
+                                    const SizedBox(height: 18),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
                                       children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFE8F1F4),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: const TabBar(
-                                              indicatorSize:
-                                                  TabBarIndicatorSize.tab,
-                                              indicator: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(16),
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Color(0x11000000),
-                                                    blurRadius: 4,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              labelColor: _darkText,
-                                              unselectedLabelColor: _mutedText,
-                                              dividerColor: Colors.transparent,
-                                              tabs: [
-                                                Tab(text: 'All Users'),
-                                                Tab(text: 'Active User'),
-                                                Tab(text: 'Inactive Users'),
-                                              ],
-                                            ),
-                                          ),
+                                        _buildInfoChip(
+                                          label: 'Total Users',
+                                          value: '${_users.length}',
                                         ),
-                                        Expanded(
-                                          child: TabBarView(
-                                            children: [
-                                              _buildUserList(
-                                                filteredUsers,
-                                                'No users found.',
-                                              ),
-                                              _buildUserList(
-                                                activeUsers,
-                                                'No active users found.',
-                                              ),
-                                              _buildUserList(
-                                                inactiveUsers,
-                                                'No inactive users found.',
-                                              ),
-                                            ],
-                                          ),
+                                        _buildInfoChip(
+                                          label: 'Active Users',
+                                          value:
+                                              '${_users.where((user) => user.isActive).length}',
+                                        ),
+                                        _buildInfoChip(
+                                          label: 'Filtered Results',
+                                          value: '${filteredUsers.length}',
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ),
-                              ],
+                                    const SizedBox(height: 24),
+                                    _buildSearchSection(filteredUsers.length),
+                                    if (_isLoadingUsers)
+                                      const Padding(
+                                        padding: EdgeInsets.only(top: 12),
+                                        child: LinearProgressIndicator(
+                                          minHeight: 3,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 18),
+                                    Expanded(
+                                      child: _buildUserDirectorySection(
+                                        filteredUsers: filteredUsers,
+                                        activeUsers: activeUsers,
+                                        inactiveUsers: inactiveUsers,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ),
                         ),
@@ -442,96 +404,159 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     );
   }
 
-  Widget _buildPageHeader(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 720;
+  Widget _buildPageHero(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 720;
+          final titleBlock = Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: _panelBlue,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.groups_outlined,
+                  color: _headerBlue,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'User Management',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: _darkText,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Add users, review visits, and manage check-in or checkout activity.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _mutedText,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
 
-        return isCompact
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'User Management',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: _darkText,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Staff can add, edit, delete, search, and review user history.',
-                    style: TextStyle(fontSize: 14, color: _mutedText),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      label: 'Add User',
-                      backgroundColor: _accentColor,
-                      borderColor: _accentColor,
-                      onPressed: () async {
-                        await _openAddUserForm(context);
-                      },
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'User Management',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: _darkText,
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Staff can add, edit, delete, search, and review user history.',
-                          style: TextStyle(fontSize: 14, color: _mutedText),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 160,
-                    child: CustomButton(
-                      label: 'Add User',
-                      backgroundColor: _accentColor,
-                      borderColor: _accentColor,
-                      onPressed: () async {
-                        await _openAddUserForm(context);
-                      },
-                    ),
-                  ),
-                ],
-              );
-      },
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleBlock,
+                const SizedBox(height: 14),
+                _buildAddUserButton(context, fullWidth: true),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: titleBlock),
+              const SizedBox(width: 16),
+              _buildAddUserButton(context),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAddUserButton(BuildContext context, {bool fullWidth = false}) {
+    return SizedBox(
+      width: fullWidth ? double.infinity : 190,
+      height: 50,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          await _openAddUserForm(context);
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _tanSoft,
+          foregroundColor: _darkText,
+          elevation: 0,
+          side: const BorderSide(color: Color(0x2A23323A)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+        label: const Text('Add User'),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip({required String label, required String value}) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 160),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: _headerBlue,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _darkText,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSearchSection(int resultCount) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _panelColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.54),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,7 +568,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                   'Search Users',
                   style: TextStyle(
                     fontSize: 17,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: _darkText,
                   ),
                 ),
@@ -564,7 +589,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
               final filterWidth = isCompact ? double.infinity : 220.0;
               final inputWidth = isCompact
                   ? double.infinity
-                  : constraints.maxWidth - 220 - 164 - 24;
+                  : constraints.maxWidth - 220 - 12;
 
               return Wrap(
                 spacing: 12,
@@ -599,20 +624,30 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
             spacing: 14,
             runSpacing: 10,
             children: [
-              SizedBox(
-                width: 130,
-                child: CustomButton(
-                  label: 'Clear',
-                  backgroundColor: Colors.white,
-                  textColor: _darkText,
-                  borderColor: _darkText,
-                  onPressed: () async {
-                    _searchController.clear();
-                    setState(() {
-                      _selectedFilter = 'Last Name';
-                      _selectedDropdownValue = 'All';
-                    });
-                  },
+              OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _selectedFilter = 'Last Name';
+                    _selectedDropdownValue = 'All';
+                  });
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _darkText,
+                  side: const BorderSide(color: Color(0x2A23323A)),
+                  backgroundColor: Colors.white.withValues(alpha: 0.64),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 13,
+                  ),
+                ),
+                icon: const Icon(Icons.clear_rounded, size: 18),
+                label: const Text(
+                  'Clear',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -660,19 +695,31 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.white.withValues(alpha: 0.76),
+        labelStyle: const TextStyle(
+          color: _mutedText,
+          fontWeight: FontWeight.w600,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 20,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.85)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.85)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _headerBlue),
         ),
       ),
       items: items
@@ -680,6 +727,122 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
             (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
           )
           .toList(),
+    );
+  }
+
+  Widget _buildUserDirectorySection({
+    required List<_StaffUser> filteredUsers,
+    required List<_StaffUser> activeUsers,
+    required List<_StaffUser> inactiveUsers,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _panelBlue,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 5,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: _headerBlue,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'User Directory',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: _darkText,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Review membership details, activity state, and visit history.',
+                      style: TextStyle(fontSize: 12, color: _mutedText),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _tanSoft,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0x2A23323A)),
+                      ),
+                      child: const TabBar(
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                        labelColor: _darkText,
+                        unselectedLabelColor: _mutedText,
+                        dividerColor: Colors.transparent,
+                        labelStyle: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        tabs: [
+                          Tab(text: 'All Users'),
+                          Tab(text: 'Active Users'),
+                          Tab(text: 'Inactive Users'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildUserList(filteredUsers, 'No users found.'),
+                        _buildUserList(activeUsers, 'No active users found.'),
+                        _buildUserList(
+                          inactiveUsers,
+                          'No inactive users found.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -694,9 +857,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       itemCount: users.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final user = users[index];
 
@@ -709,19 +872,19 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
             padding: const EdgeInsets.only(right: 24),
             decoration: BoxDecoration(
               color: _dangerColor,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.delete_outline, color: Colors.white),
           ),
           child: InkWell(
             onTap: () => _openEditUserForm(context, user),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FBFC),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFD8E4E8)),
+                color: Colors.white.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,7 +905,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${user.id} • ${user.email}',
+                              '${user.id} - ${user.email}',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: _mutedText,
@@ -756,6 +919,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                           ? ElevatedButton.icon(
                               onPressed: () async {
                                 await _syncSpacePricing();
+                                if (!context.mounted) return;
                                 final visit = _activeVisitFor(user);
                                 final totalAmount =
                                     SpacePricingStore.totalForVisit(
@@ -795,6 +959,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                 backgroundColor: _dangerColor,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             )
                           // Inactive users can check back in.
@@ -871,13 +1038,16 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                               icon: const Icon(Icons.login),
                               label: const Text("Check-In"),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _successColor,
+                                backgroundColor: _headerBlue,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                             ),
 
-                      const SizedBox(width: 100),
+                      const SizedBox(width: 14),
 
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -886,8 +1056,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: user.isActive
-                              ? _successColor.withOpacity(0.12)
-                              : _dangerColor.withOpacity(0.12),
+                              ? _successColor.withValues(alpha: 0.12)
+                              : _dangerColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -922,11 +1092,13 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                         onPressed: () => _openHistoryScreen(context, user),
                         icon: const Icon(Icons.history_rounded),
                         label: const Text('User History'),
+                        style: _userActionButtonStyle(),
                       ),
                       OutlinedButton.icon(
                         onPressed: () => _openEditUserForm(context, user),
                         icon: const Icon(Icons.edit_outlined),
                         label: const Text('Edit User'),
+                        style: _userActionButtonStyle(),
                       ),
                       OutlinedButton.icon(
                         onPressed: () async {
@@ -934,9 +1106,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                         },
                         icon: const Icon(Icons.delete_outline),
                         label: const Text('Delete User'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _dangerColor,
-                        ),
+                        style: _userActionButtonStyle(color: _dangerColor),
                       ),
                     ],
                   ),
@@ -953,8 +1123,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF3F6),
+        color: _tanSoft.withValues(alpha: 0.58),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
       ),
       child: Text(
         label,
@@ -964,6 +1135,23 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
           color: _darkText,
         ),
       ),
+    );
+  }
+
+  ButtonStyle _userActionButtonStyle({Color color = _headerBlue}) {
+    return OutlinedButton.styleFrom(
+      foregroundColor: color,
+      side: BorderSide(
+        color: color == _dangerColor
+            ? const Color(0xFFF3C7C7)
+            : Colors.white.withValues(alpha: 0.95),
+      ),
+      backgroundColor: color == _dangerColor
+          ? const Color(0xFFFBEAEA)
+          : Colors.white.withValues(alpha: 0.7),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700),
     );
   }
 
@@ -1194,6 +1382,11 @@ class _UserFormScreen extends StatefulWidget {
 }
 
 class _UserFormScreenState extends State<_UserFormScreen> {
+  static const Color _pageBackground = Color(0xFFDDECEF);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _lastNameController;
   late final TextEditingController _firstNameController;
@@ -1232,10 +1425,10 @@ class _UserFormScreenState extends State<_UserFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEdit ? 'Edit User' : 'Add User'),
-        backgroundColor: const Color(0xFF76ACBD),
+        backgroundColor: _headerBlue,
         foregroundColor: Colors.white,
       ),
-      backgroundColor: const Color(0xFFF4F8FA),
+      backgroundColor: _pageBackground,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -1244,13 +1437,14 @@ class _UserFormScreenState extends State<_UserFormScreen> {
             child: Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: const Color(0xF7FFFFFF),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x12000000),
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
+                    color: Color(0x10000000),
+                    blurRadius: 18,
+                    offset: Offset(0, 8),
                   ),
                 ],
               ),
@@ -1263,7 +1457,10 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                       widget.isEdit
                           ? 'Update the selected user information.'
                           : 'Enter the new staff-accessible user details.',
-                      style: const TextStyle(color: Color(0xFF71808A)),
+                      style: const TextStyle(
+                        color: _textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 18),
                     CustomTextField(
@@ -1293,7 +1490,7 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                         const SizedBox(height: 14),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _selectedUserType,
+                            initialValue: _selectedUserType,
                             decoration: _inputDecoration('User Type'),
                             items: const [
                               DropdownMenuItem(
@@ -1329,7 +1526,7 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                         width: 300,
 
                         child: DropdownButtonFormField<String>(
-                          value: _selectedMembershipType,
+                          initialValue: _selectedMembershipType,
                           decoration: _inputDecoration('Membership Type'),
                           items: const [
                             DropdownMenuItem(
@@ -1365,8 +1562,8 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                           child: CustomButton(
                             label: 'Cancel',
                             backgroundColor: Colors.white,
-                            textColor: const Color(0xFF22313A),
-                            borderColor: const Color(0xFF22313A),
+                            textColor: _textPrimary,
+                            borderColor: const Color(0xFFB7C4CB),
                             onPressed: () async {
                               Navigator.pop(context);
                             },
@@ -1378,8 +1575,8 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                             label: widget.isEdit
                                 ? 'Save Changes'
                                 : 'Create User',
-                            backgroundColor: const Color(0xFF76ACBD),
-                            borderColor: const Color(0xFF76ACBD),
+                            backgroundColor: _textPrimary,
+                            borderColor: _textPrimary,
                             onPressed: () async {
                               if (!_formKey.currentState!.validate()) return;
                               Navigator.pop(
@@ -1414,11 +1611,23 @@ class _UserFormScreenState extends State<_UserFormScreen> {
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.white.withValues(alpha: 0.78),
+      labelStyle: const TextStyle(
+        color: _textMuted,
+        fontWeight: FontWeight.w600,
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.85)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.85)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _headerBlue),
       ),
     );
   }
@@ -1444,6 +1653,12 @@ class _UserFormScreenState extends State<_UserFormScreen> {
 class _UserHistoryScreen extends StatelessWidget {
   const _UserHistoryScreen({required this.userName, required this.history});
 
+  static const Color _pageBackground = Color(0xFFDDECEF);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+
   final String userName;
   final List<String> history;
 
@@ -1452,37 +1667,39 @@ class _UserHistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('$userName History'),
-        backgroundColor: const Color(0xFF76ACBD),
+        backgroundColor: _headerBlue,
         foregroundColor: Colors.white,
       ),
-      backgroundColor: const Color(0xFFF4F8FA),
+      backgroundColor: _pageBackground,
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            color: _panelBlue,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
           ),
           child: history.isEmpty
               ? const Center(
                   child: Text(
                     'No history available for this user.',
-                    style: TextStyle(color: Color(0xFF71808A)),
+                    style: TextStyle(color: _textMuted),
                   ),
                 )
               : ListView.separated(
                   itemCount: history.length,
-                  separatorBuilder: (_, __) => const Divider(height: 18),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 18),
                   itemBuilder: (context, index) {
                     final entry = history[history.length - index - 1];
                     return ListTile(
                       leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFE8F1F4),
+                        backgroundColor: Color(0xFFEBD9CA),
                         child: Icon(
                           Icons.history_toggle_off_rounded,
-                          color: Color(0xFF22313A),
+                          color: _textPrimary,
                         ),
                       ),
                       title: Text(entry),

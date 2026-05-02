@@ -14,6 +14,14 @@ class AddUser extends StatefulWidget {
 }
 
 class _AddUserState extends State<AddUser> {
+  static const Color _pageBackground = Color(0xFFDDECEF);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _tanSoft = Color(0xFFEBD9CA);
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+  static const Color _cardWhite = Color(0xF7FFFFFF);
+
   final _formKey = GlobalKey<FormState>();
 
   // Controllers for text fields
@@ -26,6 +34,16 @@ class _AddUserState extends State<AddUser> {
 
   String selectedType = "";
   String selectedMembership = "";
+
+  @override
+  void dispose() {
+    lastNameController.dispose();
+    firstNameController.dispose();
+    middleInitialNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    super.dispose();
+  }
 
   // Reusable chip widget
   Widget _selectionChip(
@@ -40,16 +58,22 @@ class _AddUserState extends State<AddUser> {
       ),
       selected: isSelected,
       onSelected: (_) => onTap(),
-      selectedColor: Colors.black,
-      backgroundColor: const Color(0xFFB9DCE2),
-      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+      selectedColor: _headerBlue,
+      backgroundColor: _tanSoft.withValues(alpha: 0.75),
+      side: BorderSide(
+        color: isSelected ? _headerBlue : Colors.white.withValues(alpha: 0.8),
+      ),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : _textPrimary,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _pageBackground,
       body: Center(
         child: Form(
           key: _formKey,
@@ -57,18 +81,51 @@ class _AddUserState extends State<AddUser> {
             width: 900,
             padding: const EdgeInsets.all(35),
             decoration: BoxDecoration(
-              color: const Color(0xFFD1EEF2),
-              borderRadius: BorderRadius.circular(9),
+              color: _cardWhite,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x10000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
+                ),
+              ],
             ),
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   // Header
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: _panelBlue,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.person_add_alt_1_rounded,
+                      color: _headerBlue,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   const Text(
                     "Add a New User",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: _textPrimary,
+                    ),
                   ),
-                  const Text("Fill out the details to add a new user."),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Fill out the details to add a new user.",
+                    style: TextStyle(
+                      color: _textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 40),
 
                   Row(
@@ -270,8 +327,8 @@ class _AddUserState extends State<AddUser> {
                       CustomButton(
                         label: "Cancel",
                         backgroundColor: Colors.white,
-                        textColor: Colors.black,
-                        borderColor: Colors.black,
+                        textColor: _textPrimary,
+                        borderColor: const Color(0xFFB7C4CB),
                         width: 200,
                         height: 50,
                         onPressed: () async {
@@ -282,9 +339,9 @@ class _AddUserState extends State<AddUser> {
                       const SizedBox(width: 20),
                       CustomButton(
                         label: "Save",
-                        backgroundColor: Colors.black,
+                        backgroundColor: _textPrimary,
                         textColor: Colors.white,
-                        borderColor: Colors.black,
+                        borderColor: _textPrimary,
                         width: 200,
                         height: 50,
                         onPressed: () async {

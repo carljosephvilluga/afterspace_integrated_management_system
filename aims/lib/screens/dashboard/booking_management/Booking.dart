@@ -29,10 +29,10 @@ class _AddReservationCardState extends State<AddReservationCard> {
   final TextEditingController _customerController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
 
-  static const Color _panel = Color(0xFFD8C0AC);
-  static const Color _surface = Color(0xFFFFF7EF);
-  static const Color _text = Color(0xFF22313A);
-  static const Color _muted = Color(0xFF5B6470);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _tanSoft = Color(0xFFEBD9CA);
+  static const Color _text = Color(0xFF23323A);
+  static const Color _muted = Color(0xFF6F7E87);
   static const Color _danger = Color(0xFFC95656);
 
   @override
@@ -65,15 +65,16 @@ class _AddReservationCardState extends State<AddReservationCard> {
   DateTime get _draftDate => DateTime(_year, _month, _day);
 
   ReservationDraft get _draft => ReservationDraft(
-        date: _draftDate,
-        startHour: _fromHour,
-        endHour: _toHour,
-        spaceType: _spaceType,
-        customerName: _customerController.text,
-        contactDetails: _contactController.text,
-      );
+    date: _draftDate,
+    startHour: _fromHour,
+    endHour: _toHour,
+    spaceType: _spaceType,
+    customerName: _customerController.text,
+    contactDetails: _contactController.text,
+  );
 
-  String? get _errorText => availabilityErrorForDraft(widget.reservations, _draft);
+  String? get _errorText =>
+      availabilityErrorForDraft(widget.reservations, _draft);
 
   List<int> get _daysInMonth {
     final lastDay = DateTime(_year, _month + 1, 0).day;
@@ -92,21 +93,37 @@ class _AddReservationCardState extends State<AddReservationCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: _panel,
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       padding: const EdgeInsets.all(18),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Add Reservation',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: _text,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: _headerBlue,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Add Reservation',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: _text,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -116,7 +133,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
             const SizedBox(height: 12),
             const Text(
               'Date',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _text),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
@@ -148,7 +169,12 @@ class _AddReservationCardState extends State<AddReservationCard> {
                   child: _dropdownShell(
                     value: _day,
                     items: _daysInMonth
-                        .map((day) => DropdownMenuItem<int>(value: day, child: Text('$day')))
+                        .map(
+                          (day) => DropdownMenuItem<int>(
+                            value: day,
+                            child: Text('$day'),
+                          ),
+                        )
                         .toList(),
                     onChanged: (value) {
                       if (value == null) return;
@@ -162,7 +188,10 @@ class _AddReservationCardState extends State<AddReservationCard> {
                   child: _dropdownShell(
                     value: _year,
                     items: bookingYears().map((year) {
-                      return DropdownMenuItem<int>(value: year, child: Text('$year'));
+                      return DropdownMenuItem<int>(
+                        value: year,
+                        child: Text('$year'),
+                      );
                     }).toList(),
                     onChanged: (value) {
                       if (value == null) return;
@@ -181,7 +210,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
             const SizedBox(height: 14),
             const Text(
               'Time',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _text),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
@@ -217,7 +250,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
             const SizedBox(height: 14),
             const Text(
               'Space Type',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _text),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
             ),
             const SizedBox(height: 6),
             _dropdownShell(
@@ -236,7 +273,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
             const SizedBox(height: 14),
             const Text(
               'Customer Name',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _text),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
             ),
             const SizedBox(height: 6),
             _textField(
@@ -247,7 +288,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
             const SizedBox(height: 14),
             const Text(
               'Contact Details',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _text),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
             ),
             const SizedBox(height: 6),
             _textField(
@@ -261,12 +306,14 @@ class _AddReservationCardState extends State<AddReservationCard> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: errorText == null ? _surface : const Color(0xFFFFE6E1),
+                color: errorText == null
+                    ? _tanSoft.withValues(alpha: 0.58)
+                    : const Color(0xFFFFE6E1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: errorText == null
-                      ? Colors.white.withOpacity(0.5)
-                      : _danger.withOpacity(0.3),
+                      ? Colors.white.withValues(alpha: 0.75)
+                      : _danger.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -292,10 +339,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF7EEDB),
+                  backgroundColor: _tanSoft,
                   foregroundColor: _text,
                   disabledBackgroundColor: const Color(0xFFE2D7CA),
                   elevation: 0,
+                  side: const BorderSide(color: Color(0x2A23323A)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -321,8 +369,9 @@ class _AddReservationCardState extends State<AddReservationCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.92),
+        color: Colors.white.withValues(alpha: 0.76),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -341,21 +390,34 @@ class _AddReservationCardState extends State<AddReservationCard> {
     required ValueChanged<int?> onChanged,
   }) {
     final values = label == 'From'
-        ? bookingTimeOptions().where((hour) => hour < bookingClosingHour).toList()
-        : bookingTimeOptions().where((hour) => hour > bookingOpeningHour).toList();
+        ? bookingTimeOptions()
+              .where((hour) => hour < bookingClosingHour)
+              .toList()
+        : bookingTimeOptions()
+              .where((hour) => hour > bookingOpeningHour)
+              .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _muted),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: _muted,
+          ),
         ),
         const SizedBox(height: 4),
         _dropdownShell(
           value: value,
           items: values
-              .map((hour) => DropdownMenuItem<int>(value: hour, child: Text(formatHour(hour))))
+              .map(
+                (hour) => DropdownMenuItem<int>(
+                  value: hour,
+                  child: Text(formatHour(hour)),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -375,10 +437,18 @@ class _AddReservationCardState extends State<AddReservationCard> {
         hintText: hintText,
         isDense: true,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.92),
+        fillColor: Colors.white.withValues(alpha: 0.76),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _headerBlue),
         ),
       ),
     );

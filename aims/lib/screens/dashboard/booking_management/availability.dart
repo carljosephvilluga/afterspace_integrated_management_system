@@ -23,7 +23,11 @@ class _StaffBookingManagementScreenState
     extends State<StaffBookingManagementScreen> {
   static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
-  static const Color _surfaceBlue = Color(0xFFCDECF3);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+  static const Color _cardWhite = Color(0xF7FFFFFF);
 
   bool isSidebarOpen = true;
   String selectedMenu = 'Calendar';
@@ -95,16 +99,29 @@ class _StaffBookingManagementScreenState
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: 6),
-                              const Text(
-                                'Calendar and Booking Management',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF111111),
-                                ),
+                              _buildPageHero(),
+                              const SizedBox(height: 18),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  _buildInfoChip(
+                                    label: 'Total Bookings',
+                                    value: '${_reservations.length}',
+                                  ),
+                                  _buildInfoChip(
+                                    label: 'Today',
+                                    value:
+                                        '${reservationsForToday(_reservations).length}',
+                                  ),
+                                  _buildInfoChip(
+                                    label: 'Selected Day',
+                                    value:
+                                        '${_reservations.where((reservation) => isSameDate(reservation.start, _selectedDay)).length}',
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 18),
                               if (_isLoadingReservations)
                                 const Padding(
                                   padding: EdgeInsets.only(bottom: 12),
@@ -112,8 +129,18 @@ class _StaffBookingManagementScreenState
                                 ),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: _surfaceBlue,
-                                  borderRadius: BorderRadius.circular(24),
+                                  color: _panelBlue,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x12000000),
+                                      blurRadius: 16,
+                                      offset: Offset(0, 6),
+                                    ),
+                                  ],
                                 ),
                                 padding: const EdgeInsets.all(18),
                                 child: LayoutBuilder(
@@ -249,6 +276,103 @@ class _StaffBookingManagementScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPageHero() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: _panelBlue,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.calendar_today_outlined,
+              color: _headerBlue,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Calendar and Booking Management',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: _textPrimary,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Create reservations, scan availability, and manage today\'s booking activity.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _textMuted,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoChip({required String label, required String value}) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 160),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: _headerBlue,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -504,9 +628,11 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
   bool _boardRoomExpanded = false;
   bool _openSpaceExpanded = false;
 
-  static const Color _panelBlue = Color(0xFFCFEFF5);
-  static const Color _cardTan = Color(0xFFD8C0AC);
-  static const Color _text = Color(0xFF22313A);
+  static const Color _panelBlue = Color(0xF7FFFFFF);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _tanSoft = Color(0xFFEBD9CA);
+  static const Color _text = Color(0xFF23323A);
+  static const Color _muted = Color(0xFF6F7E87);
 
   @override
   Widget build(BuildContext context) {
@@ -539,7 +665,8 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
     return Container(
       decoration: BoxDecoration(
         color: _panelBlue,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -556,7 +683,7 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
           const SizedBox(height: 6),
           Text(
             formatMonthDayYear(widget.selectedDay),
-            style: const TextStyle(fontSize: 12, color: Color(0xFF71808A)),
+            style: const TextStyle(fontSize: 12, color: _muted),
           ),
           const SizedBox(height: 12),
           _availabilityCard(
@@ -624,21 +751,22 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _cardTan,
-          borderRadius: BorderRadius.circular(16),
+          color: _tanSoft.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: _text, size: 18),
+                Icon(icon, color: _headerBlue, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -662,7 +790,7 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
             const SizedBox(height: 8),
             Text(
               summaryText,
-              style: const TextStyle(fontSize: 12, height: 1.45, color: _text),
+              style: const TextStyle(fontSize: 12, height: 1.45, color: _muted),
             ),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 180),

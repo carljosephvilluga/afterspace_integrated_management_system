@@ -28,11 +28,11 @@ class BookingCalendarCard extends StatelessWidget {
   final VoidCallback onNextMonth;
   final ValueChanged<DateTime?> onDayHovered;
 
-  static const Color _panel = Colors.white;
-  static const Color _text = Color(0xFF22313A);
-  static const Color _muted = Color(0xFF71808A);
-  static const Color _accent = Color(0xFFC49672);
-  static const Color _accentSoft = Color(0xFFF1E4D8);
+  static const Color _panel = Color(0xF7FFFFFF);
+  static const Color _text = Color(0xFF23323A);
+  static const Color _muted = Color(0xFF6F7E87);
+  static const Color _accent = Color(0xFF80AEC1);
+  static const Color _accentSoft = Color(0xFFEBD9CA);
   static const Color _danger = Color(0xFFC95656);
 
   List<BookingReservation> _bookingsFor(DateTime day) {
@@ -41,14 +41,19 @@ class BookingCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hoveredBookings =
-        hoveredDay == null ? const <BookingReservation>[] : _bookingsFor(hoveredDay!);
-    final selectedWindows = availabilityWindowsForDay(reservations, selectedDay);
+    final hoveredBookings = hoveredDay == null
+        ? const <BookingReservation>[]
+        : _bookingsFor(hoveredDay!);
+    final selectedWindows = availabilityWindowsForDay(
+      reservations,
+      selectedDay,
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: _panel,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x11000000),
@@ -71,7 +76,10 @@ class BookingCalendarCard extends StatelessWidget {
                     child: DropdownButton<int>(
                       value: focusedDay.month,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
                       items: List.generate(
                         bookingMonthLabels.length,
                         (index) => DropdownMenuItem<int>(
@@ -95,7 +103,10 @@ class BookingCalendarCard extends StatelessWidget {
                     child: DropdownButton<int>(
                       value: focusedDay.year,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
                       items: bookingYears().map((year) {
                         return DropdownMenuItem<int>(
                           value: year,
@@ -197,12 +208,17 @@ class BookingCalendarCard extends StatelessWidget {
                   !window.boardRoomAvailable && window.openSeatsLeft <= 0;
               return Container(
                 width: 148,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: isBlocked ? const Color(0xFFF8E1E1) : _accentSoft,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isBlocked ? _danger.withOpacity(0.3) : _accent.withOpacity(0.2),
+                    color: isBlocked
+                        ? _danger.withValues(alpha: 0.3)
+                        : Colors.white.withValues(alpha: 0.75),
                   ),
                 ),
                 child: Column(
@@ -223,7 +239,9 @@ class BookingCalendarCard extends StatelessWidget {
                           : 'Board Room reserved',
                       style: TextStyle(
                         fontSize: 11,
-                        color: window.boardRoomAvailable ? const Color(0xFF2E8B57) : _danger,
+                        color: window.boardRoomAvailable
+                            ? const Color(0xFF2E8B57)
+                            : _danger,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -246,6 +264,7 @@ class BookingCalendarCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFF6F1EB),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
             ),
             child: hoveredBookings.isEmpty
                 ? const Text(
@@ -264,15 +283,20 @@ class BookingCalendarCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...hoveredBookings.take(3).map(
-                        (booking) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            '${formatTimeRange(booking.start, booking.end)} • ${booking.customerName} • ${booking.spaceType.label}',
-                            style: const TextStyle(fontSize: 11, color: _muted),
+                      ...hoveredBookings
+                          .take(3)
+                          .map(
+                            (booking) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                '${formatTimeRange(booking.start, booking.end)} - ${booking.customerName} - ${booking.spaceType.label}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _muted,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
           ),
@@ -285,8 +309,9 @@ class BookingCalendarCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
+        color: Colors.white.withValues(alpha: 0.76),
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       child: child,
     );
@@ -300,8 +325,9 @@ class BookingCalendarCard extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F7F7),
+          color: _accentSoft.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0x2A23323A)),
         ),
         child: Icon(icon, color: _text),
       ),
@@ -321,7 +347,8 @@ class BookingCalendarCard extends StatelessWidget {
       bookingOpeningHour,
       bookingClosingHour,
     );
-    final bookedOutOpenSpace = openSeatsLeftForRange(
+    final bookedOutOpenSpace =
+        openSeatsLeftForRange(
           reservations,
           day,
           bookingOpeningHour,
@@ -333,17 +360,17 @@ class BookingCalendarCard extends StatelessWidget {
     final bgColor = isSelected
         ? _accent
         : isToday
-            ? _accentSoft
-            : fullyBooked
-                ? const Color(0xFFF9E0E0)
-                : Colors.transparent;
+        ? _accentSoft
+        : fullyBooked
+        ? const Color(0xFFF9E0E0)
+        : Colors.transparent;
     final textColor = isOutside
         ? const Color(0xFFC4CBD0)
         : isSelected
-            ? Colors.white
-            : fullyBooked
-                ? _danger
-                : _text;
+        ? Colors.white
+        : fullyBooked
+        ? _danger
+        : _text;
 
     return MouseRegion(
       onEnter: (_) => onDayHovered(day),
@@ -363,8 +390,8 @@ class BookingCalendarCard extends StatelessWidget {
                 color: isSelected
                     ? _accent
                     : isToday
-                        ? _accent.withOpacity(0.35)
-                        : Colors.transparent,
+                    ? _accent.withValues(alpha: 0.35)
+                    : Colors.transparent,
               ),
             ),
             child: Center(

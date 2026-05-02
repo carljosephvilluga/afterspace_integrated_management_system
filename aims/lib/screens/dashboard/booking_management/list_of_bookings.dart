@@ -23,10 +23,12 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
   String _statusFilter = 'All';
   final TextEditingController _customerController = TextEditingController();
 
-  static const Color _panelBlue = Color(0xFFCFEFF5);
-  static const Color _cardTan = Color(0xFFD8C0AC);
-  static const Color _text = Color(0xFF22313A);
-  static const Color _muted = Color(0xFF71808A);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+  static const Color _tan = Color(0xFFD7B59E);
+  static const Color _tanSoft = Color(0xFFEBD9CA);
+  static const Color _text = Color(0xFF23323A);
+  static const Color _muted = Color(0xFF6F7E87);
   static const Color _danger = Color(0xFFC95656);
 
   @override
@@ -39,14 +41,17 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     final query = _customerController.text.trim().toLowerCase();
     return widget.reservations.where((reservation) {
       final matchesDate =
-          _selectedDate == null || isSameDate(reservation.start, _selectedDate!);
-      final matchesSpace = _spaceFilter == 'All' || reservation.spaceType.label == _spaceFilter;
-      final matchesStatus = _statusFilter == 'All' || reservation.status.label == _statusFilter;
+          _selectedDate == null ||
+          isSameDate(reservation.start, _selectedDate!);
+      final matchesSpace =
+          _spaceFilter == 'All' || reservation.spaceType.label == _spaceFilter;
+      final matchesStatus =
+          _statusFilter == 'All' || reservation.status.label == _statusFilter;
       final matchesCustomer =
-          query.isEmpty || reservation.customerName.toLowerCase().contains(query);
+          query.isEmpty ||
+          reservation.customerName.toLowerCase().contains(query);
       return matchesDate && matchesSpace && matchesStatus && matchesCustomer;
-    }).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    }).toList()..sort((a, b) => a.start.compareTo(b.start));
   }
 
   @override
@@ -56,7 +61,15 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     return Container(
       decoration: BoxDecoration(
         color: _panelBlue,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
@@ -87,8 +100,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     return Container(
       height: 180,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -115,14 +129,23 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
                   )
                 : ListView.separated(
                     itemCount: rows.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final reservation = rows[index];
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: index.isEven ? const Color(0xFFF4E8DB) : const Color(0xFFF9F5F1),
+                          color: index.isEven
+                              ? Colors.white.withValues(alpha: 0.34)
+                              : Colors.white.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.55),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -140,7 +163,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
                                   const SizedBox(width: 8),
                                   _smallAction(
                                     label: 'Check-in',
-                                    onTap: reservation.status == BookingStatus.reserved
+                                    onTap:
+                                        reservation.status ==
+                                            BookingStatus.reserved
                                         ? () => widget.onCheckIn(reservation)
                                         : null,
                                   ),
@@ -148,7 +173,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
                                   _smallAction(
                                     label: 'Cancel',
                                     foreground: _danger,
-                                    onTap: reservation.status != BookingStatus.cancelled
+                                    onTap:
+                                        reservation.status !=
+                                            BookingStatus.cancelled
                                         ? () => widget.onCancel(reservation)
                                         : null,
                                   ),
@@ -169,8 +196,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
   Widget _buildFilters() {
     return Container(
       decoration: BoxDecoration(
-        color: _cardTan,
-        borderRadius: BorderRadius.circular(16),
+        color: _tanSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x2A23323A)),
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -178,14 +206,21 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
         children: [
           const Text(
             'Filters',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _text,
+            ),
           ),
           const SizedBox(height: 8),
           const Text('Date', style: TextStyle(fontSize: 11, color: _text)),
           const SizedBox(height: 4),
           _datePickerButton(),
           const SizedBox(height: 10),
-          const Text('Space Type', style: TextStyle(fontSize: 11, color: _text)),
+          const Text(
+            'Space Type',
+            style: TextStyle(fontSize: 11, color: _text),
+          ),
           const SizedBox(height: 4),
           _dropdown(
             value: _spaceFilter,
@@ -196,7 +231,10 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
             },
           ),
           const SizedBox(height: 10),
-          const Text('Reservation Status', style: TextStyle(fontSize: 11, color: _text)),
+          const Text(
+            'Reservation Status',
+            style: TextStyle(fontSize: 11, color: _text),
+          ),
           const SizedBox(height: 4),
           _dropdown(
             value: _statusFilter,
@@ -215,10 +253,12 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
             decoration: InputDecoration(
               isDense: true,
               filled: true,
-              fillColor: Colors.white.withOpacity(0.95),
+              fillColor: Colors.white.withValues(alpha: 0.76),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
               ),
             ),
           ),
@@ -236,7 +276,8 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: _text,
-                side: const BorderSide(color: Colors.white70),
+                side: const BorderSide(color: Color(0x2A23323A)),
+                backgroundColor: Colors.white.withValues(alpha: 0.64),
               ),
               child: const Text('Clear Filters'),
             ),
@@ -259,7 +300,7 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F1ED),
+        color: _tan,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -272,7 +313,7 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: _muted,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -300,7 +341,7 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: status.color.withOpacity(0.15),
+        color: status.color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -317,7 +358,7 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
   Widget _smallAction({
     required String label,
     required VoidCallback? onTap,
-    Color foreground = _text,
+    Color foreground = _headerBlue,
   }) {
     return InkWell(
       onTap: onTap,
@@ -325,7 +366,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: onTap == null ? const Color(0xFFE2E2E2) : Colors.white,
+          color: onTap == null
+              ? const Color(0xFFE2E2E2)
+              : Colors.white.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -348,8 +391,9 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withValues(alpha: 0.76),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -374,6 +418,7 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
           lastDate: DateTime(2035, 12, 31),
         );
         if (picked != null) {
+          if (!context.mounted) return;
           setState(() => _selectedDate = picked);
         }
       },
@@ -382,11 +427,14 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
+          color: Colors.white.withValues(alpha: 0.76),
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
         ),
         child: Text(
-          _selectedDate == null ? 'Any date' : formatMonthDayYear(_selectedDate!),
+          _selectedDate == null
+              ? 'Any date'
+              : formatMonthDayYear(_selectedDate!),
           style: const TextStyle(fontSize: 13, color: _text),
         ),
       ),

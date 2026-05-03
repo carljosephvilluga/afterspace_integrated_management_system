@@ -23,17 +23,14 @@ class ReservationListItem extends StatelessWidget {
     return Row(
       children: [
         CircleAvatar(
-          radius: 16,
-          backgroundColor: const Color(0xFFD9C0AD),
+          radius: 22,
+          backgroundColor: Colors.white.withValues(alpha: 0.75),
           child: Text(
             name.substring(0, 1),
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,19 +38,13 @@ class ReservationListItem extends StatelessWidget {
               Text(
                 name,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: textColor,
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: mutedColor,
-                ),
-              ),
+              Text(email, style: TextStyle(fontSize: 12, color: mutedColor)),
             ],
           ),
         ),
@@ -63,19 +54,13 @@ class ReservationListItem extends StatelessWidget {
             Text(
               time,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: textColor,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              duration,
-              style: TextStyle(
-                fontSize: 10,
-                color: mutedColor,
-              ),
-            ),
+            const SizedBox(height: 2),
+            Text(duration, style: TextStyle(fontSize: 12, color: mutedColor)),
           ],
         ),
       ],

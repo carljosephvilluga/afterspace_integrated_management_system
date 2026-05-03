@@ -17,7 +17,7 @@ class TransactionStatusCell extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.2),
+            color: statusColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -77,13 +77,7 @@ class TransactionTitleCell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 10,
-            color: mutedColor,
-          ),
-        ),
+        Text(subtitle, style: TextStyle(fontSize: 10, color: mutedColor)),
       ],
     );
   }
@@ -118,13 +112,7 @@ class TransactionAmountCell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          date,
-          style: TextStyle(
-            fontSize: 10,
-            color: mutedColor,
-          ),
-        ),
+        Text(date, style: TextStyle(fontSize: 10, color: mutedColor)),
       ],
     );
   }

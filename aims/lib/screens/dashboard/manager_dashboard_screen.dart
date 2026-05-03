@@ -193,7 +193,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                       if (isSidebarOpen) _buildSidebar(),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                           child: selectedMenu == 'Dashboard'
                               ? _buildDashboardContent()
                               : _buildPlaceholder(selectedMenu),
@@ -350,7 +350,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
 
   Widget _buildSalesPanel() {
     return _buildPanel(
-      title: 'Sales\nReport',
+      title: 'Sales Report',
       action: Wrap(
         spacing: 6,
         runSpacing: 6,
@@ -362,12 +362,13 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           const SizedBox(width: 10),
           InkWell(
             onTap: _isExportingPdf ? null : _handleExportPdf,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(999),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: _buttonTan,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0x2A23323A)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -599,10 +600,10 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                 .map(
                   (tx) => Expanded(
                     child: Container(
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Color(0x166C7B84)),
-                        ),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.36),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         children: [
@@ -669,19 +670,20 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           selectedRange = range;
         });
       },
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? _buttonTan : _buttonTan.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(4),
+          color: isSelected ? _buttonTan : Colors.white.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x2A23323A)),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: isSelected ? _textPrimary : Colors.white.withOpacity(0.78),
+            color: isSelected ? _textPrimary : _textMuted,
           ),
         ),
       ),
@@ -709,7 +711,8 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: _buttonTan,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x2A23323A)),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,

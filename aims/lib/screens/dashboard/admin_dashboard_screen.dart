@@ -55,10 +55,10 @@ class _SalesReportData {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   static const double _desktopFrameWidth = 1560;
   static const Color _pageBackground = Color(0xFFDDECEF);
-  static const Color _surfaceBlue = Color(0xFFC6E8EE);
+  static const Color _surfaceBlue = Color(0xFFC7E8EE);
   static const Color _buttonTan = Color(0xFFD7B59E);
   static const Color _textPrimary = Color(0xFF23323A);
-  static const Color _textMuted = Color(0xFF6C7B84);
+  static const Color _textMuted = Color(0xFF7D8A93);
 
   static const Map<_SalesRange, _SalesReportData> _salesData = {
     _SalesRange.daily: _SalesReportData(
@@ -458,7 +458,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       if (isSidebarOpen) _buildSidebar(),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                           child: selectedMenu == 'Dashboard'
                               ? _buildDashboardContent()
                               : _buildManageStaffContent(),
@@ -771,12 +771,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 10),
           InkWell(
             onTap: _isExportingPdf ? null : _handleExportPdf,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(999),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: _buttonTan,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0x2A23323A)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -863,7 +864,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _selectedSalesRange = range;
         });
       },
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(999),
       child: _buildToggleButton(label, selected),
     );
   }
@@ -873,7 +874,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -906,11 +907,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required Color changeColor,
   }) {
     return Container(
-      height: 96,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: _surfaceBlue,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -918,48 +918,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 9,
+              fontSize: 12,
               color: _textMuted,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.4,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
-          const Spacer(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: _textPrimary,
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: _textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  change,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: changeColor,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Text(
-                      change,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: changeColor,
-                      ),
-                    ),
-                    Icon(
-                      change.startsWith('-')
-                          ? Icons.arrow_downward_rounded
-                          : Icons.arrow_upward_rounded,
-                      size: 12,
-                      color: changeColor,
-                    ),
-                  ],
+                const SizedBox(width: 4),
+                Icon(
+                  change.startsWith('-')
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  size: 12,
+                  color: changeColor,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -971,14 +972,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       duration: const Duration(milliseconds: 180),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
       decoration: BoxDecoration(
-        color: selected ? _buttonTan : _buttonTan.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(4),
+        color: selected ? _buttonTan : Colors.white.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x2A23323A)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: selected ? _textPrimary : Colors.white.withValues(alpha: 0.75),
-          fontSize: 10,
+          color: selected ? _textPrimary : _textMuted,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -992,10 +994,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: _surfaceBlue,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1005,19 +1007,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (title.isNotEmpty)
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _textPrimary,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _textPrimary,
+                      ),
                     ),
-                  ),
-                const Spacer(),
+                  )
+                else
+                  const Spacer(),
                 ?action,
               ],
             ),
-          if (title.isNotEmpty || action != null) const SizedBox(height: 10),
+          if (title.isNotEmpty || action != null) const SizedBox(height: 16),
           Expanded(child: child),
         ],
       ),

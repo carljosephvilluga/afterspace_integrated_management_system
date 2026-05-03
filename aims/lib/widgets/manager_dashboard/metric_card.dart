@@ -25,11 +25,10 @@ class ManagerMetricCard extends StatelessWidget {
         : const Color(0xFF34B86B);
 
     return Container(
-      height: 84,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,44 +36,49 @@ class ManagerMetricCard extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 8,
+              fontSize: 12,
               color: mutedColor,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.4,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
           ),
-          const Spacer(),
-          Row(
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Text(
-                    change,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: trendColor,
-                    ),
-                  ),
-                  Icon(
-                    change.startsWith('-')
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
-                    size: 12,
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  change,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                     color: trendColor,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  change.startsWith('-')
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
+                  size: 12,
+                  color: trendColor,
+                ),
+              ],
+            ),
           ),
         ],
       ),

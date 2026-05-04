@@ -75,10 +75,14 @@ class _SalesReportLineChartState extends State<SalesReportLineChart> {
 
   String get _tooltipValue {
     if (_selectedIndex < widget.tooltipValues.length) {
-      return widget.tooltipValues[_selectedIndex];
+      return _withPesoSymbol(widget.tooltipValues[_selectedIndex]);
     }
 
-    return _selectedAreaSpot.y.toStringAsFixed(1);
+    return '₱${_selectedAreaSpot.y.toStringAsFixed(1)}';
+  }
+
+  String _withPesoSymbol(String value) {
+    return value.replaceAll(r'$', '₱');
   }
 
   void _updateSelectedIndex(double dx, double width) {
@@ -108,8 +112,10 @@ class _SalesReportLineChartState extends State<SalesReportLineChart> {
             ? 0.0
             : _selectedIndex / (widget.labels.length - 1);
         final pointLeft = selectedProgress * chartWidth;
-        final tooltipLeft =
-            (pointLeft - (tooltipWidth / 2)).clamp(0.0, chartWidth - tooltipWidth);
+        final tooltipLeft = (pointLeft - (tooltipWidth / 2)).clamp(
+          0.0,
+          chartWidth - tooltipWidth,
+        );
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,

@@ -566,7 +566,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           return _buildPanel(
             title: 'Recent Transactions',
             subtitle: 'Live transactions from backend.',
-            action: _buildTransactionsAction(),
+            action: _buildTransactionsAction(transactions),
             child: _buildCenteredPanelMessage('Loading transactions...'),
           );
         }
@@ -575,7 +575,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           return _buildPanel(
             title: 'Recent Transactions',
             subtitle: 'Live transactions from backend.',
-            action: _buildTransactionsAction(),
+            action: _buildTransactionsAction(transactions),
             child: _buildCenteredPanelMessage(
               'Unable to load transactions from backend.',
             ),
@@ -586,7 +586,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           return _buildPanel(
             title: 'Recent Transactions',
             subtitle: 'Live transactions from backend.',
-            action: _buildTransactionsAction(),
+            action: _buildTransactionsAction(transactions),
             child: _buildCenteredPanelMessage('No transactions found yet.'),
           );
         }
@@ -594,66 +594,19 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
         return _buildPanel(
           title: 'Recent Transactions',
           subtitle: 'Live transactions from backend.',
-          action: _buildTransactionsAction(),
-          child: Column(
-            children: transactions
-                .map(
-                  (tx) => Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.36),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 2,
-                            child: TransactionStatusCell(
-                              status: tx.status,
-                              statusColor: tx.statusColor,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 3,
-                            child: TransactionTitleCell(
-                              title: tx.title,
-                              subtitle: tx.subtitle,
-                              textColor: _textPrimary,
-                              mutedColor: _textMuted,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: TransactionAmountCell(
-                              amount: tx.amount,
-                              date: tx.date,
-                              textColor: _textPrimary,
-                              mutedColor: _textMuted,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              tx.vendor,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: _textMuted,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.more_horiz_rounded,
-                            color: _textMuted,
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
+          action: _buildTransactionsAction(transactions),
+          child: Scrollbar(
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              primary: false,
+              itemCount: transactions.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final tx = transactions[index];
+
+                return _buildTransactionRow(tx);
+              },
+            ),
           ),
         );
       },
@@ -706,28 +659,195 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     );
   }
 
-  Widget _buildTransactionsAction() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: _buttonTan,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x2A23323A)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'See All Transactions',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+  Widget _buildTransactionsAction(List<_Transaction> transactions) {
+    return InkWell(
+      onTap: () => _showTransactionsFloatingPanel(transactions),
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: _buttonTan,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x2A23323A)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'See All Transactions',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: _textPrimary,
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 10,
               color: _textPrimary,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTransactionsFloatingPanel(List<_Transaction> transactions) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.22),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
           ),
-          SizedBox(width: 8),
-          Icon(Icons.arrow_forward_ios_rounded, size: 10, color: _textPrimary),
-        ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920, maxHeight: 560),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              decoration: BoxDecoration(
+                color: _surfaceBlue,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 28,
+                    offset: Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'All Transactions',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: _textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${transactions.length} transactions',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: _textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: transactions.isEmpty
+                        ? SizedBox(
+                            height: 180,
+                            child: _buildCenteredPanelMessage(
+                              'No transactions found yet.',
+                            ),
+                          )
+                        : Scrollbar(
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              primary: false,
+                              shrinkWrap: true,
+                              itemCount: transactions.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                return _buildTransactionRow(
+                                  transactions[index],
+                                  height: 54,
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.42,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTransactionRow(
+    _Transaction tx, {
+    double height = 48,
+    Color? backgroundColor,
+  }) {
+    return SizedBox(
+      height: height,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.white.withValues(alpha: 0.36),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: TransactionStatusCell(
+                status: tx.status,
+                statusColor: tx.statusColor,
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: TransactionTitleCell(
+                title: tx.title,
+                subtitle: tx.subtitle,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: TransactionAmountCell(
+                amount: tx.amount,
+                date: tx.date,
+                textColor: _textPrimary,
+                mutedColor: _textMuted,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                tx.vendor,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: _textMuted),
+              ),
+            ),
+            const Icon(Icons.more_horiz_rounded, color: _textMuted),
+            const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }

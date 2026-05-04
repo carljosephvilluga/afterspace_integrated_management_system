@@ -1,7 +1,5 @@
-import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/services/aims_api_client.dart';
 import 'package:flutter/material.dart';
-import 'package:aims/widgets/dialogs/confirm_deletion.dart';
-import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_action_button.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_section.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_table.dart';
@@ -26,36 +24,10 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF6F7E87);
 
-  final List<Map<String, dynamic>> staffList = [
-    {
-      'id': 'STF-001',
-      'firstName': 'Juan',
-      'middleInitial': 'A',
-      'lastName': 'Dela Cruz',
-      'userType': 'Manager',
-      'status': 'On Duty',
-      'email': 'juan@example.com',
-      'phone': '09123456789',
-      'workSchedule': 'Mon-Fri',
-      'timeFrom': '08:00',
-      'timeTo': '17:00',
-    },
-    {
-      'id': 'STF-002',
-      'firstName': 'Maria',
-      'middleInitial': 'B',
-      'lastName': 'Santos',
-      'userType': 'Staff',
-      'status': 'Off Duty',
-      'email': 'maria@example.com',
-      'phone': '09987654321',
-      'workSchedule': 'Weekends',
-      'timeFrom': '09:00',
-      'timeTo': '15:00',
-    },
-  ];
+  final List<Map<String, dynamic>> staffList = [];
 
-  int _staffCounter = 0;
+  bool _isLoadingStaff = false;
+  String? _staffLoadError;
 
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -64,10 +36,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _userTypeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _scheduleController = TextEditingController();
-  final TextEditingController _timeFromController = TextEditingController();
-  final TextEditingController _timeToController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
 
   String searchQuery = '';
   String selectedFilter = 'All';
@@ -75,21 +45,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize counter based on highest existing ID
-    if (staffList.isNotEmpty) {
-      // Find the highest numeric part among all IDs
-      final highest = staffList
-          .map(
-            (staff) =>
-                int.tryParse((staff['id'] as String).split('-').last) ?? 0,
-          )
-          .reduce((a, b) => a > b ? a : b);
-
-      _staffCounter = highest; // e.g. 2 if last ID is STF-002
-    } else {
-      _staffCounter = 0;
-    }
+    _statusController.text = 'Active';
+    _loadStaffAccounts();
   }
 
   @override
@@ -99,11 +56,9 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     _middleInitialController.dispose();
     _userTypeController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
-    _scheduleController.dispose();
     _lastNameController.dispose();
-    _timeFromController.dispose();
-    _timeToController.dispose();
+    _passwordController.dispose();
+    _statusController.dispose();
     super.dispose();
   }
 
@@ -149,12 +104,12 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                       value: '${staffList.length}',
                     ),
                     _buildInfoChip(
-                      label: 'On Duty',
-                      value: '${_countByStatus('On Duty')}',
+                      label: 'Active',
+                      value: '${_countByStatus('Active')}',
                     ),
                     _buildInfoChip(
-                      label: 'Off Duty',
-                      value: '${_countByStatus('Off Duty')}',
+                      label: 'Inactive',
+                      value: '${_countByStatus('Inactive')}',
                     ),
                   ],
                 ),
@@ -208,29 +163,71 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
+  Future<void> _loadStaffAccounts() async {
+    setState(() {
+      _isLoadingStaff = true;
+      _staffLoadError = null;
+    });
+
+    try {
+      final accounts = await AimsApiClient.instance.fetchStaffAccounts();
+      if (!mounted) return;
+      setState(() {
+        staffList
+          ..clear()
+          ..addAll(accounts.map(_staffAccountToMap));
+        _isLoadingStaff = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _staffLoadError = error.toString();
+        _isLoadingStaff = false;
+      });
+    }
+  }
+
+  Map<String, dynamic> _staffAccountToMap(StaffAccountRecord account) {
+    final nameParts = _splitFullName(account.fullName);
+    return {
+      'staffId': account.staffId,
+      'id': account.employeeId,
+      'fullName': account.fullName,
+      'firstName': nameParts.$1,
+      'middleInitial': '',
+      'lastName': nameParts.$2,
+      'userType': account.role,
+      'status': account.status,
+      'email': account.email,
+      'createdAt': _formatDate(account.createdAt),
+    };
+  }
+
+  (String, String) _splitFullName(String fullName) {
+    final parts = fullName.trim().split(RegExp(r'\s+'));
+    if (parts.length <= 1) {
+      return (fullName.trim(), '');
+    }
+    return (parts.first, parts.skip(1).join(' '));
+  }
+
   List<Map<String, dynamic>> _filteredStaff() {
     final normalizedSearch = searchQuery.trim().toLowerCase();
 
     return staffList.where((staff) {
-      final fullName =
-          "${staff['firstName'] ?? ''} ${staff['middleInitial'] ?? ''} ${staff['lastName'] ?? ''}"
-              .toLowerCase();
+      final fullName = _displayName(staff).toLowerCase();
 
       final id = staff['id'].toString().toLowerCase();
       final email = staff['email'].toString().toLowerCase();
       final userType = staff['userType'].toString().toLowerCase();
       final status = staff['status'].toString().toLowerCase();
-      final phone = staff['phone'].toString().toLowerCase();
-      final schedule = staff['workSchedule'].toString().toLowerCase();
       final matchesSearch =
           normalizedSearch.isEmpty ||
           fullName.contains(normalizedSearch) ||
           id.contains(normalizedSearch) ||
           email.contains(normalizedSearch) ||
           userType.contains(normalizedSearch) ||
-          status.contains(normalizedSearch) ||
-          phone.contains(normalizedSearch) ||
-          schedule.contains(normalizedSearch);
+          status.contains(normalizedSearch);
       final matchesFilter =
           selectedFilter == 'All' || staff['status'] == selectedFilter;
 
@@ -284,7 +281,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Track staff profiles, schedules, roles, and duty status for admin operations.',
+                  'Manage staff login accounts, roles, and active access for admin operations.',
                   style: TextStyle(
                     fontSize: 14,
                     color: _textMuted,
@@ -355,7 +352,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
-          hintText: 'Search staff by name, ID, role, phone, or email',
+          hintText: 'Search staff by name, employee ID, role, status, or email',
           hintStyle: const TextStyle(
             color: _textMuted,
             fontSize: 13,
@@ -402,8 +399,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           ),
           items: const [
             DropdownMenuItem(value: 'All', child: Text('All Staff')),
-            DropdownMenuItem(value: 'On Duty', child: Text('On Duty')),
-            DropdownMenuItem(value: 'Off Duty', child: Text('Off Duty')),
+            DropdownMenuItem(value: 'Active', child: Text('Active')),
+            DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
           ],
           onChanged: (value) {
             if (value == null) return;
@@ -419,39 +416,96 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   Widget _buildStaffDirectorySection(List<Map<String, dynamic>> filteredStaff) {
     return MembershipProgramSection(
       title: 'Staff Directory',
-      subtitle:
-          'Review assigned roles, schedules, contact details, and duty status.',
+      subtitle: 'Review login accounts, roles, status, and contact details.',
       backgroundColor: _panelBlue,
       textColor: _textPrimary,
-      child: filteredStaff.isEmpty
+      child: _isLoadingStaff
+          ? _buildLoadingState()
+          : _staffLoadError != null
+          ? _buildLoadError()
+          : filteredStaff.isEmpty
           ? _buildEmptyState()
-          : MembershipProgramTable(
-              headers: const [
-                'Staff',
-                'Role',
-                'Contact',
-                'Schedule',
-                'Status',
-                '',
-              ],
-              flexes: const [3, 2, 3, 3, 2, 3],
-              rows: filteredStaff.map((staff) {
-                return [
-                  '${staff['firstName'] ?? ''} ${staff['middleInitial'] ?? ''} ${staff['lastName'] ?? ''}\n${staff['id'] ?? ''}',
-                  '${staff['userType'] ?? ''}',
-                  '${staff['email'] ?? ''}\n${staff['phone'] ?? ''}',
-                  '${staff['workSchedule'] ?? ''}\n${staff['timeFrom'] ?? ''} - ${staff['timeTo'] ?? ''}',
-                  '${staff['status'] ?? ''}',
-                  'View    Edit    Delete',
-                ];
-              }).toList(),
-              headerColor: _tan,
-              primaryTextColor: _textPrimary,
-              actionTextColor: _headerBlue,
-              actionColumnIndex: 5,
-              actionBuilder: (rowIndex) =>
-                  _buildStaffTableActions(filteredStaff[rowIndex]),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final tableWidth = constraints.maxWidth < 960
+                    ? 960.0
+                    : constraints.maxWidth;
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: tableWidth,
+                    child: MembershipProgramTable(
+                      headers: const [
+                        'Staff Account',
+                        'Role',
+                        'Email',
+                        'Status',
+                        'Created',
+                        '',
+                      ],
+                      flexes: const [3, 2, 3, 2, 2, 3],
+                      rows: filteredStaff.map((staff) {
+                        return [
+                          '${_displayName(staff)}\n${staff['id'] ?? ''}',
+                          '${staff['userType'] ?? ''}',
+                          '${staff['email'] ?? ''}',
+                          '${staff['status'] ?? ''}',
+                          '${staff['createdAt'] ?? ''}',
+                          'View    Edit    Delete',
+                        ];
+                      }).toList(),
+                      headerColor: _tan,
+                      primaryTextColor: _textPrimary,
+                      actionTextColor: _headerBlue,
+                      actionColumnIndex: 5,
+                      actionBuilder: (rowIndex) =>
+                          _buildStaffTableActions(filteredStaff[rowIndex]),
+                    ),
+                  ),
+                );
+              },
             ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 44),
+      child: Center(child: CircularProgressIndicator(color: _headerBlue)),
+    );
+  }
+
+  Widget _buildLoadError() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 34),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 42, color: _textMuted),
+          const SizedBox(height: 10),
+          const Text(
+            'Unable to load staff accounts',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _staffLoadError ?? '',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _textMuted),
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _loadStaffAccounts,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -540,624 +594,397 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
-  void _confirmDeleteStaff(Map<String, dynamic> staff) {
-    showDialog(
+  Future<void> _confirmDeleteStaff(Map<String, dynamic> staff) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.18),
-      builder: (_) => ConfirmDeleteDialog(
-        staff: staff,
-        onDelete: () {
-          setState(() {
-            staffList.remove(staff);
-          });
-        },
-      ),
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text('Delete Staff Account'),
+          content: Text(
+            'Delete ${_displayName(staff)} (${staff['id']})? This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _danger,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    final staffId = staff['staffId'] is int ? staff['staffId'] as int : 0;
+    if (staffId <= 0) {
+      _showSnackBar('Missing staff account ID.', isError: true);
+      return;
+    }
+
+    try {
+      await AimsApiClient.instance.deleteStaffAccount(staffId);
+      if (!mounted) return;
+      setState(() {
+        staffList.removeWhere((item) => item['staffId'] == staffId);
+      });
+      _showSnackBar('Staff account deleted.');
+    } catch (error) {
+      if (!mounted) return;
+      _showSnackBar('Failed to delete staff account: $error', isError: true);
+    }
   }
 
   Future<void> _showAddForm() async {
-    _lastNameController.clear();
-    _firstNameController.clear();
-    _middleInitialController.clear();
-    _emailController.clear();
-    _phoneController.clear();
-    _userTypeController.clear();
-    _scheduleController.clear();
-    _timeFromController.clear();
-    _timeToController.clear();
-
-    final newId = 'STF-${(_staffCounter + 1).toString().padLeft(3, '0')}';
-
-    await showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.18),
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          width: 900,
-          padding: const EdgeInsets.all(35),
-          decoration: BoxDecoration(
-            color: const Color(0xFFD1EEF2),
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const Text(
-                  "Staff Details",
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                ),
-                const Text("Fill out the details to add a new staff member."),
-                const SizedBox(height: 40),
-
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left Column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Name",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 4,
-                                child: CustomTextField(
-                                  hint: "Last Name",
-                                  controller: _lastNameController,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 4,
-                                child: CustomTextField(
-                                  hint: "First Name",
-                                  controller: _firstNameController,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              SizedBox(
-                                width: 80,
-                                child: CustomTextField(
-                                  hint: "M.I",
-                                  controller: _middleInitialController,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            "Email",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          CustomTextField(
-                            hint: "staff@gmail.com",
-                            controller: _emailController,
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            "Phone Number",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          CustomTextField(
-                            hint: "09xxxxxxxxx",
-                            controller: _phoneController,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 60),
-
-                    // Right Column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Staff ID",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Container(
-                                width: 120,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 18,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    newId,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  "This is an Auto-generated Staff ID.",
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-                          const Text(
-                            "Role",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            initialValue: _userTypeController.text.isEmpty
-                                ? null
-                                : _userTypeController.text,
-                            hint: const Text("Select role"),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Staff',
-                                child: Text('Staff'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Manager',
-                                child: Text('Manager'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Admin',
-                                child: Text('Admin'),
-                              ),
-                            ],
-                            onChanged: (value) =>
-                                _userTypeController.text = value ?? '',
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          const Text(
-                            "Work Schedule",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            hint: const Text("Select schedule"),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Mon-Fri',
-                                child: Text('Mon-Fri'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Weekends',
-                                child: Text('Weekends'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Whole Week',
-                                child: Text('Whole Week'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Flexible',
-                                child: Text('Flexible'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _scheduleController.text = value ?? '';
-                              });
-                            },
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-                // Time Section (full width, below both columns)
-                const Text(
-                  "Time",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _timeFromController,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: "From",
-                          border: OutlineInputBorder(),
-                        ),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            if (!mounted) return;
-                            _timeFromController.text = picked.format(context);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _timeToController,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: "To",
-                          border: OutlineInputBorder(),
-                        ),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            if (!mounted) return;
-                            _timeToController.text = picked.format(context);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Specify the working hours (From / To).",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-
-                const SizedBox(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomButton(
-                      label: "Cancel",
-                      backgroundColor: Colors.white,
-                      textColor: Colors.black,
-                      borderColor: Colors.black,
-                      width: 200,
-                      height: 50,
-                      onPressed: () async {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const SizedBox(width: 20),
-                    CustomButton(
-                      label: "Add Staff",
-                      backgroundColor: Colors.black,
-                      textColor: Colors.white,
-                      borderColor: Colors.black,
-                      width: 200,
-                      height: 50,
-                      onPressed: () async {
-                        setState(() {
-                          _staffCounter++; // increment only when saving
-                          final newId =
-                              'STF-${_staffCounter.toString().padLeft(3, '0')}';
-
-                          staffList.add({
-                            'id': newId,
-                            'firstName': _firstNameController.text.trim(),
-                            'middleInitial': _middleInitialController.text
-                                .trim(),
-                            'lastName': _lastNameController.text.trim(),
-                            'email': _emailController.text.trim(),
-                            'phone': _phoneController.text.trim(),
-                            'userType': _userTypeController.text.trim().isEmpty
-                                ? 'Staff'
-                                : _userTypeController.text.trim(),
-                            'workSchedule': _scheduleController.text.trim(),
-                            'timeFrom': _timeFromController.text.trim(),
-                            'timeTo': _timeToController.text.trim(),
-                            'status': 'On Duty',
-                          });
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    if (!_isLoadingStaff) {
+      await _loadStaffAccounts();
+    }
+    _clearStaffForm();
+    await _showStaffAccountForm();
   }
 
   void _showEditForm(Map<String, dynamic> staff) {
-    // Pre-fill controllers
-    _lastNameController.text = staff['lastName'] ?? '';
-    _firstNameController.text = staff['firstName'] ?? '';
-    _middleInitialController.text = staff['middleInitial'] ?? '';
-    _emailController.text = staff['email'] ?? '';
-    _phoneController.text = staff['phone'] ?? '';
-    _userTypeController.text = staff['userType'] ?? '';
-    _scheduleController.text = staff['workSchedule'] ?? '';
-    _timeFromController.text = staff['timeFrom'] ?? '';
-    _timeToController.text = staff['timeTo'] ?? '';
+    _setFormFromStaff(staff);
+    _showStaffAccountForm(staff: staff);
+  }
 
-    showDialog(
+  Future<void> _showStaffAccountForm({Map<String, dynamic>? staff}) async {
+    final isEditing = staff != null;
+    final formKey = GlobalKey<FormState>();
+    var selectedRole = _userTypeController.text.isEmpty
+        ? 'Staff'
+        : _userTypeController.text;
+    var selectedStatus = _statusController.text.isEmpty
+        ? 'Active'
+        : _statusController.text;
+    var employeeId = isEditing
+        ? '${staff['id'] ?? ''}'
+        : _buildNextEmployeeId(selectedRole);
+    var obscurePassword = true;
+    var isSaving = false;
+
+    await showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.18),
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 720,
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Centered Header
-                Center(
-                  child: Text(
-                    "Edit Staff",
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> saveAccount() async {
+              if (isSaving || !(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+
+              setDialogState(() {
+                isSaving = true;
+              });
+
+              try {
+                final navigator = Navigator.of(dialogContext);
+                final fullName = _buildFullNameFromForm();
+                final account = isEditing
+                    ? await AimsApiClient.instance.updateStaffAccount(
+                        staffId: staff['staffId'] as int,
+                        employeeId: employeeId,
+                        fullName: fullName,
+                        email: _emailController.text.trim(),
+                        role: selectedRole,
+                        status: selectedStatus,
+                        password: _passwordController.text.trim(),
+                      )
+                    : await AimsApiClient.instance.createStaffAccount(
+                        employeeId: employeeId,
+                        fullName: fullName,
+                        email: _emailController.text.trim(),
+                        role: selectedRole,
+                        status: selectedStatus,
+                        password: _passwordController.text.trim(),
+                      );
+
+                if (!mounted) return;
+                setState(() {
+                  final mapped = _staffAccountToMap(account);
+                  if (isEditing) {
+                    final index = staffList.indexWhere(
+                      (item) => item['staffId'] == account.staffId,
+                    );
+                    if (index >= 0) {
+                      staffList[index] = mapped;
+                    }
+                  } else {
+                    staffList.insert(0, mapped);
+                  }
+                });
+                navigator.pop();
+                _showSnackBar(
+                  isEditing
+                      ? 'Staff account updated.'
+                      : 'Staff account created.',
+                );
+              } catch (error) {
+                if (!mounted) return;
+                setDialogState(() {
+                  isSaving = false;
+                });
+                _showSnackBar(
+                  'Failed to save staff account: $error',
+                  isError: true,
+                );
+              }
+            }
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 20,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 780),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                  decoration: BoxDecoration(
+                    color: _cardWhite,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x26000000),
+                        blurRadius: 28,
+                        offset: Offset(0, 16),
+                      ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: _panelBlue,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.manage_accounts_outlined,
+                                  color: _headerBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  isEditing
+                                      ? 'Edit Staff Account'
+                                      : 'Add Staff Account',
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: _textPrimary,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Close',
+                                onPressed: isSaving
+                                    ? null
+                                    : () => Navigator.of(dialogContext).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final stacked = constraints.maxWidth < 620;
+                              final fieldWidth = stacked
+                                  ? constraints.maxWidth
+                                  : (constraints.maxWidth - 12) / 2;
+
+                              return Wrap(
+                                spacing: 12,
+                                runSpacing: 14,
+                                children: [
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildReadOnlyField(
+                                      label: 'Employee ID',
+                                      value: employeeId,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDropdownField(
+                                      label: 'Role',
+                                      value: selectedRole,
+                                      items: const [
+                                        'Staff',
+                                        'Manager',
+                                        'Admin',
+                                      ],
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setDialogState(() {
+                                          selectedRole = value;
+                                          _userTypeController.text = value;
+                                          if (!isEditing) {
+                                            employeeId = _buildNextEmployeeId(
+                                              value,
+                                            );
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDialogTextField(
+                                      label: 'First Name',
+                                      controller: _firstNameController,
+                                      validator: _requiredValidator,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDialogTextField(
+                                      label: 'Last Name',
+                                      controller: _lastNameController,
+                                      validator: _requiredValidator,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDialogTextField(
+                                      label: 'Middle Initial',
+                                      controller: _middleInitialController,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDropdownField(
+                                      label: 'Status',
+                                      value: selectedStatus,
+                                      items: const ['Active', 'Inactive'],
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setDialogState(() {
+                                          selectedStatus = value;
+                                          _statusController.text = value;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDialogTextField(
+                                      label: 'Email',
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: _emailValidator,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _buildDialogTextField(
+                                      label: isEditing
+                                          ? 'New Password'
+                                          : 'Password',
+                                      hint: isEditing
+                                          ? 'Leave blank to keep current'
+                                          : 'Minimum 6 characters',
+                                      controller: _passwordController,
+                                      obscureText: obscurePassword,
+                                      validator: (value) =>
+                                          _passwordValidator(value, isEditing),
+                                      suffixIcon: IconButton(
+                                        tooltip: obscurePassword
+                                            ? 'Show password'
+                                            : 'Hide password',
+                                        icon: Icon(
+                                          obscurePassword
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                        ),
+                                        onPressed: () {
+                                          setDialogState(() {
+                                            obscurePassword = !obscurePassword;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              OutlinedButton(
+                                onPressed: isSaving
+                                    ? null
+                                    : () => Navigator.of(dialogContext).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: isSaving ? null : saveAccount,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _textPrimary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 22,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                child: isSaving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        isEditing
+                                            ? 'Save Changes'
+                                            : 'Add Staff',
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Staff ID (read-only)
-                const Text(
-                  "Staff ID",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  initialValue: staff['id'],
-                  readOnly: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Name fields row
-                const Text(
-                  "Name",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomTextField(
-                        hint: "Last Name",
-                        controller: _lastNameController,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: CustomTextField(
-                        hint: "First Name",
-                        controller: _firstNameController,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 80,
-                      child: CustomTextField(
-                        hint: "M.I",
-                        controller: _middleInitialController,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Email",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                CustomTextField(
-                  hint: "staff@gmail.com",
-                  controller: _emailController,
-                ),
-                const SizedBox(height: 20),
-
-                const Text(
-                  "Phone Number",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                CustomTextField(
-                  hint: "09xxxxxxxxx",
-                  controller: _phoneController,
-                ),
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Role",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: _userTypeController.text.isEmpty
-                      ? null
-                      : _userTypeController.text,
-                  items: const [
-                    DropdownMenuItem(value: 'Staff', child: Text('Staff')),
-                    DropdownMenuItem(value: 'Manager', child: Text('Manager')),
-                    DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                  ],
-                  onChanged: (value) => _userTypeController.text = value ?? '',
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Work Schedule",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: _scheduleController.text.isEmpty
-                      ? null
-                      : _scheduleController.text,
-                  items: const [
-                    DropdownMenuItem(value: 'Mon-Fri', child: Text('Mon-Fri')),
-                    DropdownMenuItem(
-                      value: 'Weekends',
-                      child: Text('Weekends'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Whole Week',
-                      child: Text('Whole Week'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Flexible',
-                      child: Text('Flexible'),
-                    ),
-                  ],
-                  onChanged: (value) => _scheduleController.text = value ?? '',
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Time Section
-                const Text(
-                  "Time",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _timeFromController,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: "From",
-                          border: OutlineInputBorder(),
-                        ),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            if (!mounted) return;
-                            _timeFromController.text = picked.format(context);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: _timeToController,
-                        readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: "To",
-                          border: OutlineInputBorder(),
-                        ),
-                        onTap: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (picked != null) {
-                            if (!mounted) return;
-                            _timeToController.text = picked.format(context);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Specify the working hours (From / To).",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Centered Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomButton(
-                      label: "Cancel",
-                      backgroundColor: Colors.white,
-                      textColor: Colors.black,
-                      borderColor: Colors.black,
-                      width: 140,
-                      height: 42,
-                      onPressed: () async {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const SizedBox(width: 20),
-                    CustomButton(
-                      label: "Save Changes",
-                      backgroundColor: Colors.black,
-                      textColor: Colors.white,
-                      borderColor: Colors.black,
-                      width: 160,
-                      height: 42,
-                      onPressed: () async {
-                        setState(() {
-                          staff['lastName'] = _lastNameController.text.trim();
-                          staff['firstName'] = _firstNameController.text.trim();
-                          staff['middleInitial'] = _middleInitialController.text
-                              .trim();
-                          staff['email'] = _emailController.text.trim();
-                          staff['phone'] = _phoneController.text.trim();
-                          staff['userType'] = _userTypeController.text.trim();
-                          staff['workSchedule'] = _scheduleController.text
-                              .trim();
-                          staff['timeFrom'] = _timeFromController.text.trim();
-                          staff['timeTo'] = _timeToController.text.trim();
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1178,64 +1005,32 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Centered Title
-              Center(
-                child: Text(
-                  "Staff Details",
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Indented details block
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 40,
-                  right: 40,
-                ), // move inward
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildDetailRow("Staff ID:", staff['id']),
-                    _buildDetailRow(
-                      "Full Name:",
-                      "${staff['lastName']} ${staff['firstName']} ${staff['middleInitial']}",
-                    ),
-                    _buildDetailRow("Email:", staff['email']),
-                    _buildDetailRow("Phone Number:", staff['phone']),
-                    _buildDetailRow("Role:", staff['userType']),
-                    _buildDetailRow("Status:", staff['status']),
-                    _buildDetailRow("Work Schedule:", staff['workSchedule']),
-                    _buildDetailRow(
-                      "Time:",
-                      "${staff['timeFrom']} - ${staff['timeTo']}",
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Close button aligned bottom-right
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  CustomButton(
-                    label: "Close",
-                    backgroundColor: Colors.black,
-                    textColor: Colors.white,
-                    borderColor: Colors.black,
-                    width: 120,
-                    height: 42,
-                    onPressed: () async {
-                      Navigator.pop(context);
-                    },
+                  const Expanded(
+                    child: Text(
+                      'Staff Details',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: _textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              _buildDetailRow('Employee ID', staff['id']),
+              _buildDetailRow('Full Name', _displayName(staff)),
+              _buildDetailRow('Email', staff['email']),
+              _buildDetailRow('Role', staff['userType']),
+              _buildDetailRow('Status', staff['status']),
+              _buildDetailRow('Created', staff['createdAt']),
             ],
           ),
         ),
@@ -1243,42 +1038,247 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
-  // Helper widget for consistent detail rows
   Widget _buildDetailRow(String label, String? value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Label
           SizedBox(
-            width: 140, // consistent width for labels
+            width: 120,
             child: Text(
               label,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.black87,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: _textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 12), // spacing between label and box
-          // Value box
-          Container(
-            constraints: const BoxConstraints(maxWidth: 280), // shorter box
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FBFC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE0E6EB)),
-            ),
-            child: Text(
-              value ?? '',
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FBFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE0E6EB)),
+              ),
+              child: Text(
+                value ?? '',
+                style: const TextStyle(fontSize: 13, color: _textPrimary),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDialogTextField({
+    required String label,
+    required TextEditingController controller,
+    String? hint,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _textPrimary,
+      ),
+      decoration: _dialogInputDecoration(
+        label: label,
+        hint: hint,
+        suffixIcon: suffixIcon,
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField({required String label, required String value}) {
+    return TextFormField(
+      initialValue: value,
+      readOnly: true,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        color: _textPrimary,
+      ),
+      decoration: _dialogInputDecoration(label: label),
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: items.contains(value) ? value : items.first,
+      items: items
+          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .toList(),
+      onChanged: onChanged,
+      decoration: _dialogInputDecoration(label: label),
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: _textPrimary,
+      ),
+    );
+  }
+
+  InputDecoration _dialogInputDecoration({
+    required String label,
+    String? hint,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.78),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.95)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.95)),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        borderSide: BorderSide(color: _headerBlue, width: 1.2),
+      ),
+    );
+  }
+
+  void _clearStaffForm() {
+    _lastNameController.clear();
+    _firstNameController.clear();
+    _middleInitialController.clear();
+    _emailController.clear();
+    _passwordController.clear();
+    _userTypeController.text = 'Staff';
+    _statusController.text = 'Active';
+  }
+
+  void _setFormFromStaff(Map<String, dynamic> staff) {
+    _lastNameController.text = '${staff['lastName'] ?? ''}';
+    _firstNameController.text = '${staff['firstName'] ?? ''}';
+    _middleInitialController.text = '${staff['middleInitial'] ?? ''}';
+    _emailController.text = '${staff['email'] ?? ''}';
+    _passwordController.clear();
+    _userTypeController.text = '${staff['userType'] ?? 'Staff'}';
+    _statusController.text = '${staff['status'] ?? 'Active'}';
+  }
+
+  String _buildFullNameFromForm() {
+    final first = _firstNameController.text.trim();
+    final middle = _middleInitialController.text.trim();
+    final last = _lastNameController.text.trim();
+    return [first, middle, last].where((part) => part.isNotEmpty).join(' ');
+  }
+
+  String _displayName(Map<String, dynamic> staff) {
+    final fullName = '${staff['fullName'] ?? ''}'.trim();
+    if (fullName.isNotEmpty) {
+      return fullName;
+    }
+    final first = '${staff['firstName'] ?? ''}'.trim();
+    final middle = '${staff['middleInitial'] ?? ''}'.trim();
+    final last = '${staff['lastName'] ?? ''}'.trim();
+    return [first, middle, last].where((part) => part.isNotEmpty).join(' ');
+  }
+
+  String _buildNextEmployeeId(String role) {
+    final prefix = _rolePrefix(role);
+    var highest = 0;
+    for (final staff in staffList) {
+      final id = '${staff['id'] ?? ''}'.toUpperCase();
+      final match = RegExp('^$prefix-(\\d+)\$').firstMatch(id);
+      if (match == null) continue;
+      final value = int.tryParse(match.group(1) ?? '') ?? 0;
+      if (value > highest) {
+        highest = value;
+      }
+    }
+    return '$prefix-${(highest + 1).toString().padLeft(3, '0')}';
+  }
+
+  String _rolePrefix(String role) {
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'ADMIN';
+      case 'manager':
+        return 'MGR';
+      default:
+        return 'STF';
+    }
+  }
+
+  String? _requiredValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Required';
+    }
+    return null;
+  }
+
+  String? _emailValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Required';
+    }
+    if (!trimmed.contains('@') || !trimmed.contains('.')) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+
+  String? _passwordValidator(String? value, bool isEditing) {
+    final trimmed = value?.trim() ?? '';
+    if (!isEditing && trimmed.isEmpty) {
+      return 'Required';
+    }
+    if (trimmed.isNotEmpty && trimmed.length < 6) {
+      return 'At least 6 characters';
+    }
+    return null;
+  }
+
+  String _formatDate(DateTime value) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[value.month - 1]} ${value.day}, ${value.year}';
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? _danger : _headerBlue,
       ),
     );
   }

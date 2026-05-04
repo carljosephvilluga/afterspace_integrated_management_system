@@ -150,6 +150,26 @@ class ManagerDashboardSnapshot {
   final List<DashboardTransactionItem> latestTransactions;
 }
 
+class StaffAccountRecord {
+  const StaffAccountRecord({
+    required this.staffId,
+    required this.employeeId,
+    required this.fullName,
+    required this.email,
+    required this.role,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final int staffId;
+  final String employeeId;
+  final String fullName;
+  final String email;
+  final String role;
+  final String status;
+  final DateTime createdAt;
+}
+
 class BookingRecord {
   const BookingRecord({
     required this.bookingId,
@@ -712,6 +732,79 @@ class AimsApiClient {
     );
   }
 
+  Future<List<StaffAccountRecord>> fetchStaffAccounts() async {
+    final envelope = await _send(
+      method: 'GET',
+      path: '/api/staff-accounts/',
+      withAuth: true,
+    );
+    final data = _asMap(envelope['data']);
+    return _asList(
+      data['staffAccounts'],
+    ).map((item) => _parseStaffAccountRecord(item)).toList();
+  }
+
+  Future<StaffAccountRecord> createStaffAccount({
+    required String employeeId,
+    required String fullName,
+    required String email,
+    required String role,
+    required String status,
+    required String password,
+  }) async {
+    final envelope = await _send(
+      method: 'POST',
+      path: '/api/staff-accounts/',
+      withAuth: true,
+      body: {
+        'employeeId': employeeId,
+        'fullName': fullName,
+        'email': email,
+        'role': role,
+        'status': status,
+        'password': password,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parseStaffAccountRecord(data['staffAccount']);
+  }
+
+  Future<StaffAccountRecord> updateStaffAccount({
+    required int staffId,
+    required String employeeId,
+    required String fullName,
+    required String email,
+    required String role,
+    required String status,
+    String password = '',
+  }) async {
+    final envelope = await _send(
+      method: 'PATCH',
+      path: '/api/staff-accounts/',
+      withAuth: true,
+      body: {
+        'staffId': staffId,
+        'employeeId': employeeId,
+        'fullName': fullName,
+        'email': email,
+        'role': role,
+        'status': status,
+        if (password.isNotEmpty) 'password': password,
+      },
+    );
+    final data = _asMap(envelope['data']);
+    return _parseStaffAccountRecord(data['staffAccount']);
+  }
+
+  Future<void> deleteStaffAccount(int staffId) async {
+    await _send(
+      method: 'DELETE',
+      path: '/api/staff-accounts/',
+      withAuth: true,
+      body: {'staffId': staffId},
+    );
+  }
+
   Future<PricingPromoSnapshot> fetchPricingPromoSnapshot() async {
     final envelope = await _send(
       method: 'GET',
@@ -1176,6 +1269,19 @@ class AimsApiClient {
       membershipType: _asString(map['membershipType']),
       isActive: _asBool(map['isActive']),
       history: _asList(map['history']).map((item) => _asString(item)).toList(),
+    );
+  }
+
+  StaffAccountRecord _parseStaffAccountRecord(dynamic raw) {
+    final map = _asMap(raw);
+    return StaffAccountRecord(
+      staffId: _asInt(map['staffId']),
+      employeeId: _asString(map['employeeId']),
+      fullName: _asString(map['fullName']),
+      email: _asString(map['email']),
+      role: _asString(map['role']),
+      status: _asString(map['status']),
+      createdAt: _asDateTime(map['createdAt']),
     );
   }
 

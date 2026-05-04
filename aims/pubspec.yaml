@@ -65,6 +65,9 @@ flutter:
   assets:
       - assets/images/login_bg.png
       - assets/images/role-pick-bg.png
+      - assets/images/admin_bg.png
+      - assets/images/manager_bg.png
+      - assets/images/staff_bg.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

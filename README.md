@@ -1,9 +1,10 @@
 # afterspace_integrated_management_system
 
-## Running the Flutter app with Supabase directly
+## Running the Flutter App with Supabase
 
-The Flutter app now connects to Supabase with `supabase_flutter` instead of
-calling the XAMPP/PHP API.
+The Flutter app connects directly to Supabase with `supabase_flutter`.
+XAMPP, Apache, the old PHP API, and local SQL setup files are no longer needed
+to run the system.
 
 Get the anon public key from:
 
@@ -19,11 +20,5 @@ flutter pub get
 flutter run --dart-define=SUPABASE_URL=https://yifpferiexemkghcipze.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon-public-key>
 ```
 
-The Supabase schema file is still kept in:
-
-```text
-php_backend/aims_api/setup/supabase_schema.sql
-```
-
-That schema also creates the RPC functions used by the direct Flutter client for
-staff login and staff password hashing.
+Do not put the database password or service-role key in Flutter. The app should
+only use the anon public key.

@@ -385,7 +385,8 @@ class AimsApiClient {
   );
   static const String _supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZnBmZXJpZXhlbWtnaGNpcHplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4Njg1NzMsImV4cCI6MjA5MzQ0NDU3M30.qWNTCjThFgKYabpvhWHLQetiWovoIUfdC5v3O0uuKAI',
   );
 
   bool _isInitialized = false;
@@ -395,9 +396,7 @@ class AimsApiClient {
       return;
     }
     if (_supabaseAnonKey.isEmpty) {
-      throw const AimsApiException(
-        'Missing SUPABASE_ANON_KEY. Run Flutter with --dart-define=SUPABASE_ANON_KEY=your-anon-key.',
-      );
+      throw const AimsApiException('Missing Supabase anon key.');
     }
     await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
     _isInitialized = true;

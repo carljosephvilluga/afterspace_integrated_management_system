@@ -20,6 +20,7 @@ class SalesReportPdfExporter {
     final sections = await Future.wait(
       _ranges.map((range) => _fetchRange(range)),
     );
+    final theme = await _buildPdfTheme();
 
     final pdf = pw.Document(
       title: 'AIMS Sales Report',
@@ -31,6 +32,7 @@ class SalesReportPdfExporter {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(28),
+        theme: theme,
         build: (context) {
           return [
             pw.Text(
@@ -79,6 +81,13 @@ class SalesReportPdfExporter {
 
     final filename = 'aims_sales_report_${_fileStamp(generatedAt)}.pdf';
     await Printing.sharePdf(bytes: await pdf.save(), filename: filename);
+  }
+
+  static Future<pw.ThemeData> _buildPdfTheme() async {
+    final regularFont = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+
+    return pw.ThemeData.withFont(base: regularFont, bold: boldFont);
   }
 
   static Future<_RangeExportResult> _fetchRange(

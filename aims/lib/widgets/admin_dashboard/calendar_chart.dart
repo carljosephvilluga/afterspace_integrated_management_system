@@ -16,6 +16,10 @@ class _CalendarChartState extends State<CalendarChart> {
   static const Color _textMuted = Color(0xFF7D8B93);
   static const Color _textOutside = Color(0xFFB2BEC6);
   static const Color _meetingAccent = Color(0xFF80AEC1);
+  static const double _calendarRowHeight = 27;
+  static const double _daysOfWeekHeight = 22;
+  static const double _calendarHeaderHeight = 42;
+  static const double _calendarBottomPadding = 10;
 
   late DateTime _focusedDay;
   DateTime? _selectedMeetingDay;
@@ -71,6 +75,17 @@ class _CalendarChartState extends State<CalendarChart> {
       return const [];
     }
     return _meetingSchedulesByDay[_normalizeDay(selected)] ?? const [];
+  }
+
+  int get _visibleCalendarWeeks {
+    final firstDayOfMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    final daysInMonth = DateTime(
+      _focusedDay.year,
+      _focusedDay.month + 1,
+      0,
+    ).day;
+    final leadingOutsideDays = firstDayOfMonth.weekday % 7;
+    return ((leadingOutsideDays + daysInMonth) / 7).ceil();
   }
 
   void _setFocusedMonth(DateTime nextFocus) {
@@ -433,350 +448,496 @@ class _CalendarChartState extends State<CalendarChart> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-            child: Row(
-              children: [
-                _buildArrowButton(Icons.chevron_left_rounded, _previousMonth),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildDropdownShell(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: _focusedDay.month,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                        ),
-                        isExpanded: true,
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(
-                          color: _textPrimary,
-                          fontSize: 12,
-                        ),
-                        items: List.generate(
-                          12,
-                          (index) => DropdownMenuItem(
-                            value: index + 1,
-                            child: Text(_months[index]),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          _setFocusedMonth(
-                            DateTime(_focusedDay.year, value, 1),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildDropdownShell(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: _focusedDay.year,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                        ),
-                        isExpanded: true,
-                        dropdownColor: Colors.white,
-                        style: const TextStyle(
-                          color: _textPrimary,
-                          fontSize: 12,
-                        ),
-                        items: _years
-                            .map(
-                              (year) => DropdownMenuItem(
-                                value: year,
-                                child: Text(year.toString()),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          _setFocusedMonth(
-                            DateTime(value, _focusedDay.month, 1),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _buildArrowButton(Icons.chevron_right_rounded, _nextMonth),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-              child: TableCalendar(
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2035, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) =>
-                    _isSame(_selectedMeetingDay, day),
-                headerVisible: false,
-                availableGestures: AvailableGestures.none,
-                startingDayOfWeek: StartingDayOfWeek.sunday,
-                sixWeekMonthsEnforced: false,
-                rowHeight: 27,
-                daysOfWeekHeight: 22,
-                onPageChanged: (focusedDay) {
-                  _setFocusedMonth(focusedDay);
-                },
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _focusedDay = focusedDay;
-                    _selectedMeetingDay = selectedDay;
-                  });
-                },
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, day, events) {
-                    final meetingCount =
-                        _meetingSchedulesByDay[_normalizeDay(day)]?.length ?? 0;
+  Future<void> _showScheduleFloatingPanel() async {
+    if (!widget.allowMeetingScheduling) {
+      return;
+    }
 
-                    if (meetingCount == 0) {
-                      return const SizedBox.shrink();
-                    }
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.18),
+      builder: (dialogContext) {
+        final screenSize = MediaQuery.sizeOf(dialogContext);
 
-                    return Positioned(
-                      bottom: 2,
-                      child: Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: _meetingAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    );
-                  },
-                  dowBuilder: (context, day) {
-                    const names = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-                    return Center(
-                      child: Text(
-                        names[day.weekday % 7],
-                        style: const TextStyle(
-                          color: _textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    );
-                  },
-                  defaultBuilder: (context, day, focusedDay) {
-                    if (_isSame(_selectedMeetingDay, day)) {
-                      return _selectedDay(day.day.toString());
-                    }
-
-                    return _plainDay(
-                      label: day.day.toString(),
-                      isOutside: day.month != _focusedDay.month,
-                    );
-                  },
-                  outsideBuilder: (context, day, focusedDay) {
-                    return _plainDay(
-                      label: day.day.toString(),
-                      isOutside: true,
-                    );
-                  },
-                  todayBuilder: (context, day, focusedDay) {
-                    if (_isSame(_selectedMeetingDay, day)) {
-                      return _selectedDay(day.day.toString());
-                    }
-
-                    return _plainDay(
-                      label: day.day.toString(),
-                      isOutside: day.month != _focusedDay.month,
-                    );
-                  },
-                ),
-                calendarStyle: const CalendarStyle(
-                  isTodayHighlighted: false,
-                  outsideDaysVisible: true,
-                  cellMargin: EdgeInsets.symmetric(horizontal: 1, vertical: 1),
-                  weekendTextStyle: TextStyle(
-                    color: _textPrimary,
-                    fontSize: 12,
-                  ),
-                  defaultTextStyle: TextStyle(
-                    color: _textPrimary,
-                    fontSize: 12,
-                  ),
-                  outsideTextStyle: TextStyle(
-                    color: _textOutside,
-                    fontSize: 12,
-                  ),
-                ),
-                daysOfWeekStyle: const DaysOfWeekStyle(
-                  weekdayStyle: TextStyle(
-                    color: _textMuted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  weekendStyle: TextStyle(
-                    color: _textMuted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+        return Dialog(
+          elevation: 0,
+          insetPadding: const EdgeInsets.all(20),
+          backgroundColor: Colors.transparent,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 440,
+                maxHeight: screenSize.height * 0.78,
               ),
-            ),
-          ),
-          if (widget.allowMeetingScheduling)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF5F8),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              child: Material(
+                color: const Color(0xFFEAF5F8),
+                borderRadius: BorderRadius.circular(8),
+                clipBehavior: Clip.antiAlias,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _selectedMeetingDay == null
-                                  ? 'Meeting Schedule'
-                                  : 'Meeting Schedule ${_selectedMeetingDay!.month}/${_selectedMeetingDay!.day}/${_selectedMeetingDay!.year}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _textPrimary,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Add schedule',
-                            onPressed: _isSubmittingSchedule
-                                ? null
-                                : _handleAddSchedule,
-                            icon: _isSubmittingSchedule
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.add_rounded, size: 18),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      if (_isLoadingSchedules)
-                        const Text(
-                          'Loading schedules...',
-                          style: TextStyle(fontSize: 12, color: _textMuted),
-                        )
-                      else if (_schedulesError != null)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Unable to load schedules.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.red.shade700,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _loadSchedulesForFocusedMonth,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        )
-                      else if (_selectedDayMeetings.isEmpty)
-                        const Text(
-                          'No schedule for this date yet.',
-                          style: TextStyle(fontSize: 12, color: _textMuted),
-                        )
-                      else
-                        ..._selectedDayMeetings.map(
-                          (meeting) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${_formatTime(meeting.startAt)} - ${meeting.title}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: _textPrimary,
-                                        ),
-                                      ),
-                                      if (meeting.notes.trim().isNotEmpty)
-                                        Text(
-                                          meeting.notes,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: _textMuted,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Edit',
-                                  onPressed: _isSubmittingSchedule
-                                      ? null
-                                      : () => _handleEditSchedule(meeting),
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    size: 16,
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Delete',
-                                  onPressed: _isSubmittingSchedule
-                                      ? null
-                                      : () => _handleDeleteSchedule(meeting),
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    size: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      _buildSchedulePanelHeader(dialogContext),
+                      const SizedBox(height: 10),
+                      Flexible(child: _buildSchedulePanelBody(dialogContext)),
                     ],
                   ),
                 ),
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSchedulePanelHeader(BuildContext dialogContext) {
+    final selectedDay = _selectedMeetingDay;
+    final title = selectedDay == null
+        ? 'Meeting Schedule'
+        : 'Meeting Schedule ${selectedDay.month}/${selectedDay.day}/${selectedDay.year}';
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Add schedule',
+          onPressed: _isSubmittingSchedule
+              ? null
+              : () async {
+                  Navigator.of(dialogContext).pop();
+                  await _handleAddSchedule();
+                },
+          icon: _isSubmittingSchedule
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.add_rounded, size: 20),
+        ),
+        IconButton(
+          tooltip: 'Close',
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          icon: const Icon(Icons.close_rounded, size: 20),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSchedulePanelBody(BuildContext dialogContext) {
+    if (_isLoadingSchedules) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            'Loading schedules...',
+            style: TextStyle(fontSize: 12, color: _textMuted),
+          ),
+        ),
+      );
+    }
+
+    if (_schedulesError != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Unable to load schedules.',
+              style: TextStyle(fontSize: 12, color: Colors.red.shade700),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _loadSchedulesForFocusedMonth();
+            },
+            child: const Text('Retry'),
+          ),
         ],
+      );
+    }
+
+    final meetings = _selectedDayMeetings;
+    if (meetings.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        child: Text(
+          'No schedule for this date yet.',
+          style: TextStyle(fontSize: 12, color: _textMuted),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: meetings.length,
+      separatorBuilder: (context, index) => const Divider(height: 14),
+      itemBuilder: (context, index) {
+        final meeting = meetings[index];
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_formatTime(meeting.startAt)} - ${meeting.title}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (meeting.notes.trim().isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      meeting.notes,
+                      style: const TextStyle(fontSize: 11, color: _textMuted),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Edit',
+              onPressed: _isSubmittingSchedule
+                  ? null
+                  : () async {
+                      Navigator.of(dialogContext).pop();
+                      await _handleEditSchedule(meeting);
+                    },
+              icon: const Icon(Icons.edit_outlined, size: 16),
+            ),
+            IconButton(
+              tooltip: 'Delete',
+              onPressed: _isSubmittingSchedule
+                  ? null
+                  : () async {
+                      Navigator.of(dialogContext).pop();
+                      await _handleDeleteSchedule(meeting);
+                    },
+              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rowHeight = _calendarRowHeightFor(constraints);
+        final calendarHeight =
+            _daysOfWeekHeight + (_visibleCalendarWeeks * rowHeight);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+                child: Row(
+                  children: [
+                    _buildArrowButton(
+                      Icons.chevron_left_rounded,
+                      _previousMonth,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildDropdownShell(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _focusedDay.month,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                            ),
+                            isExpanded: true,
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(
+                              color: _textPrimary,
+                              fontSize: 12,
+                            ),
+                            items: List.generate(
+                              12,
+                              (index) => DropdownMenuItem(
+                                value: index + 1,
+                                child: Text(_months[index]),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              if (value == null) {
+                                return;
+                              }
+                              _setFocusedMonth(
+                                DateTime(_focusedDay.year, value, 1),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildDropdownShell(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _focusedDay.year,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                            ),
+                            isExpanded: true,
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(
+                              color: _textPrimary,
+                              fontSize: 12,
+                            ),
+                            items: _years
+                                .map(
+                                  (year) => DropdownMenuItem(
+                                    value: year,
+                                    child: Text(year.toString()),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value == null) {
+                                return;
+                              }
+                              _setFocusedMonth(
+                                DateTime(value, _focusedDay.month, 1),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (widget.allowMeetingScheduling) ...[
+                      const SizedBox(width: 8),
+                      _buildScheduleButton(),
+                    ],
+                    const SizedBox(width: 10),
+                    _buildArrowButton(Icons.chevron_right_rounded, _nextMonth),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                child: SizedBox(
+                  height: calendarHeight,
+                  child: TableCalendar(
+                    firstDay: DateTime.utc(2020, 1, 1),
+                    lastDay: DateTime.utc(2035, 12, 31),
+                    focusedDay: _focusedDay,
+                    selectedDayPredicate: (day) =>
+                        _isSame(_selectedMeetingDay, day),
+                    headerVisible: false,
+                    availableGestures: AvailableGestures.none,
+                    startingDayOfWeek: StartingDayOfWeek.sunday,
+                    sixWeekMonthsEnforced: false,
+                    rowHeight: rowHeight,
+                    daysOfWeekHeight: _daysOfWeekHeight,
+                    onPageChanged: (focusedDay) {
+                      _setFocusedMonth(focusedDay);
+                    },
+                    onDaySelected: (selectedDay, focusedDay) {
+                      setState(() {
+                        _focusedDay = focusedDay;
+                        _selectedMeetingDay = selectedDay;
+                      });
+                    },
+                    calendarBuilders: CalendarBuilders(
+                      markerBuilder: (context, day, events) {
+                        final meetingCount =
+                            _meetingSchedulesByDay[_normalizeDay(day)]
+                                ?.length ??
+                            0;
+
+                        if (meetingCount == 0) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Positioned(
+                          bottom: 2,
+                          child: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: _meetingAccent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        );
+                      },
+                      dowBuilder: (context, day) {
+                        const names = [
+                          'Su',
+                          'Mo',
+                          'Tu',
+                          'We',
+                          'Th',
+                          'Fr',
+                          'Sa',
+                        ];
+                        return Center(
+                          child: Text(
+                            names[day.weekday % 7],
+                            style: const TextStyle(
+                              color: _textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      },
+                      defaultBuilder: (context, day, focusedDay) {
+                        if (_isSame(_selectedMeetingDay, day)) {
+                          return _selectedDay(day.day.toString());
+                        }
+
+                        return _plainDay(
+                          label: day.day.toString(),
+                          isOutside: day.month != _focusedDay.month,
+                        );
+                      },
+                      outsideBuilder: (context, day, focusedDay) {
+                        return _plainDay(
+                          label: day.day.toString(),
+                          isOutside: true,
+                        );
+                      },
+                      todayBuilder: (context, day, focusedDay) {
+                        if (_isSame(_selectedMeetingDay, day)) {
+                          return _selectedDay(day.day.toString());
+                        }
+
+                        return _plainDay(
+                          label: day.day.toString(),
+                          isOutside: day.month != _focusedDay.month,
+                        );
+                      },
+                    ),
+                    calendarStyle: const CalendarStyle(
+                      isTodayHighlighted: false,
+                      outsideDaysVisible: true,
+                      cellMargin: EdgeInsets.symmetric(
+                        horizontal: 1,
+                        vertical: 1,
+                      ),
+                      weekendTextStyle: TextStyle(
+                        color: _textPrimary,
+                        fontSize: 12,
+                      ),
+                      defaultTextStyle: TextStyle(
+                        color: _textPrimary,
+                        fontSize: 12,
+                      ),
+                      outsideTextStyle: TextStyle(
+                        color: _textOutside,
+                        fontSize: 12,
+                      ),
+                    ),
+                    daysOfWeekStyle: const DaysOfWeekStyle(
+                      weekdayStyle: TextStyle(
+                        color: _textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      weekendStyle: TextStyle(
+                        color: _textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  double _calendarRowHeightFor(BoxConstraints constraints) {
+    if (!constraints.hasBoundedHeight || !constraints.maxHeight.isFinite) {
+      return _calendarRowHeight;
+    }
+
+    final availableHeight =
+        constraints.maxHeight - _calendarHeaderHeight - _calendarBottomPadding;
+    final rowHeight =
+        (availableHeight - _daysOfWeekHeight) / _visibleCalendarWeeks;
+
+    return rowHeight.clamp(_calendarRowHeight, 42.0);
+  }
+
+  Widget _buildScheduleButton() {
+    final meetingCount = _selectedDayMeetings.length;
+
+    return Tooltip(
+      message: 'View schedules',
+      child: InkWell(
+        onTap: _showScheduleFloatingPanel,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 26,
+          height: 26,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              const Icon(
+                Icons.event_note_outlined,
+                color: _textPrimary,
+                size: 18,
+              ),
+              if (meetingCount > 0)
+                Positioned(
+                  top: -1,
+                  right: 0,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 13),
+                    height: 13,
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: _meetingAccent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      meetingCount > 9 ? '9+' : meetingCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

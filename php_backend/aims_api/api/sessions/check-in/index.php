@@ -54,17 +54,18 @@ try {
         ? (new DateTimeImmutable('now'))
         : aims_parse_datetime($checkInAt, 'checkInAt');
 
-    $insertSession = $pdo->prepare(
+    $sessionId = aims_insert_returning_id(
+        $pdo,
         <<<SQL
 INSERT INTO sessions (user_id, check_in, check_out, status)
 VALUES (:user_id, :check_in, NULL, 'Active')
-SQL
-    );
-    $insertSession->execute([
+SQL,
+        [
         ':user_id' => $userId,
         ':check_in' => $checkInTime->format('Y-m-d H:i:s'),
-    ]);
-    $sessionId = aims_int($pdo->lastInsertId());
+        ],
+        'session_id'
+    );
 
     $insertMeta = $pdo->prepare(
         <<<SQL
@@ -116,18 +117,21 @@ function append_user_history(PDO $pdo, int $userId, string $label): void
     }
     $history[] = $label . ' on ' . date('Y-m-d h:i A');
 
+    $firstNameSql = aims_first_name_sql('full_name');
+    $lastNameSql = aims_last_name_sql('full_name');
+    $profileUpsertClause = aims_upsert_clause('user_id', ['history_json']);
     $upsert = $pdo->prepare(
         <<<SQL
 INSERT INTO user_profiles (user_id, first_name, last_name, user_type, membership_type, history_json)
 VALUES (
     :user_id,
-    COALESCE((SELECT SUBSTRING_INDEX(full_name, ' ', 1) FROM users WHERE user_id = :user_id_lookup), 'User'),
-    COALESCE((SELECT TRIM(SUBSTRING(full_name, LENGTH(SUBSTRING_INDEX(full_name, ' ', 1)) + 1)) FROM users WHERE user_id = :user_id_lookup2), ''),
+    COALESCE((SELECT {$firstNameSql} FROM users WHERE user_id = :user_id_lookup), 'User'),
+    COALESCE((SELECT {$lastNameSql} FROM users WHERE user_id = :user_id_lookup2), ''),
     'Student',
     'Open Time',
     :history_json
 )
-ON DUPLICATE KEY UPDATE history_json = VALUES(history_json)
+{$profileUpsertClause}
 SQL
     );
     $upsert->execute([

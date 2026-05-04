@@ -24,6 +24,8 @@ aims_error(405, 'Method not allowed.');
 function handle_get_users(): void
 {
     $pdo = aims_pdo();
+    $firstNameSql = aims_first_name_sql('u.full_name');
+    $lastNameSql = aims_last_name_sql('u.full_name');
     $sql = <<<SQL
 SELECT
     u.user_id,
@@ -32,8 +34,8 @@ SELECT
     u.email,
     u.status,
     u.created_at,
-    COALESCE(up.first_name, SUBSTRING_INDEX(u.full_name, ' ', 1)) AS first_name,
-    COALESCE(up.last_name, TRIM(SUBSTRING(u.full_name, LENGTH(SUBSTRING_INDEX(u.full_name, ' ', 1)) + 1))) AS last_name,
+    COALESCE(up.first_name, {$firstNameSql}) AS first_name,
+    COALESCE(up.last_name, {$lastNameSql}) AS last_name,
     COALESCE(up.user_type, 'Student') AS user_type,
     COALESCE(up.membership_type, 'Open Time') AS membership_type,
     COALESCE(up.history_json, '[]') AS history_json
@@ -65,19 +67,20 @@ function handle_create_user(): void
     $pdo = aims_pdo();
     $pdo->beginTransaction();
     try {
-        $insertUser = $pdo->prepare(
+        $userId = aims_insert_returning_id(
+            $pdo,
             <<<SQL
 INSERT INTO users (full_name, contact_number, email, status)
 VALUES (:full_name, :contact_number, :email, :status)
-SQL
-        );
-        $insertUser->execute([
+SQL,
+            [
             ':full_name' => $fullName,
             ':contact_number' => $phoneNumber,
             ':email' => $email,
             ':status' => $status,
-        ]);
-        $userId = aims_int($pdo->lastInsertId());
+            ],
+            'user_id'
+        );
 
         $insertProfile = $pdo->prepare(
             <<<SQL
@@ -114,7 +117,7 @@ SQL
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        if ($error->getCode() === '23000') {
+        if (aims_is_duplicate_key($error)) {
             aims_error(409, 'Email already exists.');
         }
         aims_error(500, 'Failed to create user.');
@@ -171,6 +174,10 @@ SQL
             ':user_id' => $userId,
         ]);
 
+        $profileUpsertClause = aims_upsert_clause(
+            'user_id',
+            ['first_name', 'last_name', 'user_type', 'membership_type', 'history_json']
+        );
         $upsertProfile = $pdo->prepare(
             <<<SQL
 INSERT INTO user_profiles (
@@ -189,12 +196,7 @@ VALUES (
     :membership_type,
     :history_json
 )
-ON DUPLICATE KEY UPDATE
-    first_name = VALUES(first_name),
-    last_name = VALUES(last_name),
-    user_type = VALUES(user_type),
-    membership_type = VALUES(membership_type),
-    history_json = VALUES(history_json)
+{$profileUpsertClause}
 SQL
         );
         $upsertProfile->execute([
@@ -212,7 +214,7 @@ SQL
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        if ($error->getCode() === '23000') {
+        if (aims_is_duplicate_key($error)) {
             aims_error(409, 'Email already exists.');
         }
         aims_error(500, 'Failed to update user.');
@@ -254,6 +256,8 @@ function fetch_user_payload(int $userId): array
 function fetch_user_row(int $userId): array
 {
     $pdo = aims_pdo();
+    $firstNameSql = aims_first_name_sql('u.full_name');
+    $lastNameSql = aims_last_name_sql('u.full_name');
     $sql = <<<SQL
 SELECT
     u.user_id,
@@ -262,8 +266,8 @@ SELECT
     u.email,
     u.status,
     u.created_at,
-    COALESCE(up.first_name, SUBSTRING_INDEX(u.full_name, ' ', 1)) AS first_name,
-    COALESCE(up.last_name, TRIM(SUBSTRING(u.full_name, LENGTH(SUBSTRING_INDEX(u.full_name, ' ', 1)) + 1))) AS last_name,
+    COALESCE(up.first_name, {$firstNameSql}) AS first_name,
+    COALESCE(up.last_name, {$lastNameSql}) AS last_name,
     COALESCE(up.user_type, 'Student') AS user_type,
     COALESCE(up.membership_type, 'Open Time') AS membership_type,
     COALESCE(up.history_json, '[]') AS history_json

@@ -58,19 +58,20 @@ function handle_create_staff_account(): void
         ? generate_next_employee_id($pdo, $role)
         : $requestedEmployeeId;
 
+    $staffId = 0;
     try {
-        insert_staff_account($pdo, $employeeId, $fullName, $email, $password, $role, $status);
+        $staffId = insert_staff_account($pdo, $employeeId, $fullName, $email, $password, $role, $status);
     } catch (PDOException $error) {
-        if ($error->getCode() === '23000') {
+        if (aims_is_duplicate_key($error)) {
             if (staff_email_exists($pdo, $email)) {
                 aims_error(409, 'Email already exists.');
             }
 
             $employeeId = generate_next_employee_id($pdo, $role);
             try {
-                insert_staff_account($pdo, $employeeId, $fullName, $email, $password, $role, $status);
+                $staffId = insert_staff_account($pdo, $employeeId, $fullName, $email, $password, $role, $status);
             } catch (PDOException $retryError) {
-                if ($retryError->getCode() === '23000') {
+                if (aims_is_duplicate_key($retryError)) {
                     aims_error(409, 'Employee ID or email already exists.');
                 }
                 aims_error(500, 'Failed to create staff account.');
@@ -80,7 +81,7 @@ function handle_create_staff_account(): void
         }
     }
 
-    aims_ok(['staffAccount' => fetch_staff_account_payload(aims_int($pdo->lastInsertId()))]);
+    aims_ok(['staffAccount' => fetch_staff_account_payload($staffId)]);
 }
 
 function insert_staff_account(
@@ -91,8 +92,9 @@ function insert_staff_account(
     string $password,
     string $role,
     string $status
-): void {
-    $insert = $pdo->prepare(
+): int {
+    return aims_insert_returning_id(
+        $pdo,
         <<<SQL
 INSERT INTO staff_accounts (
     employee_id,
@@ -110,16 +112,17 @@ VALUES (
     :role,
     :status
 )
-SQL
-    );
-    $insert->execute([
+SQL,
+        [
         ':employee_id' => $employeeId,
         ':full_name' => $fullName,
         ':email' => $email,
         ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
         ':role' => $role,
         ':status' => $status,
-    ]);
+        ],
+        'staff_id'
+    );
 }
 
 function handle_update_staff_account(): void
@@ -187,7 +190,7 @@ SQL
             ]);
         }
     } catch (PDOException $error) {
-        if ($error->getCode() === '23000') {
+        if (aims_is_duplicate_key($error)) {
             aims_error(409, 'Employee ID or email already exists.');
         }
         aims_error(500, 'Failed to update staff account.');

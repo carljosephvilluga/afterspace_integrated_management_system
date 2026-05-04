@@ -101,20 +101,20 @@ function handle_create_booking(): void
     try {
         $userId = resolve_or_create_user($pdo, $customerName, $contactDetails);
 
-        $insertBooking = $pdo->prepare(
+        $bookingId = aims_insert_returning_id(
+            $pdo,
             <<<SQL
 INSERT INTO bookings (user_id, booking_date, start_time, end_time, status)
 VALUES (:user_id, :booking_date, :start_time, :end_time, 'Pending')
-SQL
-        );
-        $insertBooking->execute([
+SQL,
+            [
             ':user_id' => $userId,
             ':booking_date' => $startDate,
             ':start_time' => $startAt->format('H:i:s'),
             ':end_time' => $endAt->format('H:i:s'),
-        ]);
-
-        $bookingId = aims_int($pdo->lastInsertId());
+            ],
+            'booking_id'
+        );
 
         $insertMeta = $pdo->prepare(
             <<<SQL
@@ -164,19 +164,19 @@ function resolve_or_create_user(PDO $pdo, string $customerName, string $contactD
         return aims_int($existingContact);
     }
 
-    $insert = $pdo->prepare(
+    return aims_insert_returning_id(
+        $pdo,
         <<<SQL
 INSERT INTO users (full_name, contact_number, email, status)
 VALUES (:full_name, :contact_number, :email, 'Inactive')
-SQL
-    );
-    $insert->execute([
+SQL,
+        [
         ':full_name' => $customerName,
         ':contact_number' => $email !== null ? null : $contactDetails,
         ':email' => $email !== null ? strtolower($email) : null,
-    ]);
-
-    return aims_int($pdo->lastInsertId());
+        ],
+        'user_id'
+    );
 }
 
 function fetch_booking_by_id(int $bookingId): array

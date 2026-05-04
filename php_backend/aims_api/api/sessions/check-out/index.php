@@ -71,7 +71,8 @@ SQL
         ':session_id' => $sessionId,
     ]);
 
-    $insertTransaction = $pdo->prepare(
+    $transactionId = aims_insert_returning_id(
+        $pdo,
         <<<SQL
 INSERT INTO transactions (
     user_id,
@@ -91,9 +92,8 @@ VALUES (
     :payment_method,
     :status
 )
-SQL
-    );
-    $insertTransaction->execute([
+SQL,
+        [
         ':user_id' => $userId,
         ':session_id' => $sessionId,
         ':amount' => $amount,
@@ -101,8 +101,9 @@ SQL
         ':final_amount' => $finalAmount,
         ':payment_method' => $paymentMethod,
         ':status' => $paymentStatus,
-    ]);
-    $transactionId = aims_int($pdo->lastInsertId());
+        ],
+        'transaction_id'
+    );
 
     $remainingActiveStmt = $pdo->prepare(
         "SELECT COUNT(*) FROM sessions WHERE user_id = :user_id AND LOWER(status) = 'active'"
@@ -155,18 +156,21 @@ function append_user_history(PDO $pdo, int $userId, string $label): void
     }
     $history[] = $label . ' on ' . date('Y-m-d h:i A');
 
+    $firstNameSql = aims_first_name_sql('full_name');
+    $lastNameSql = aims_last_name_sql('full_name');
+    $profileUpsertClause = aims_upsert_clause('user_id', ['history_json']);
     $upsert = $pdo->prepare(
         <<<SQL
 INSERT INTO user_profiles (user_id, first_name, last_name, user_type, membership_type, history_json)
 VALUES (
     :user_id,
-    COALESCE((SELECT SUBSTRING_INDEX(full_name, ' ', 1) FROM users WHERE user_id = :user_id_lookup), 'User'),
-    COALESCE((SELECT TRIM(SUBSTRING(full_name, LENGTH(SUBSTRING_INDEX(full_name, ' ', 1)) + 1)) FROM users WHERE user_id = :user_id_lookup2), ''),
+    COALESCE((SELECT {$firstNameSql} FROM users WHERE user_id = :user_id_lookup), 'User'),
+    COALESCE((SELECT {$lastNameSql} FROM users WHERE user_id = :user_id_lookup2), ''),
     'Student',
     'Open Time',
     :history_json
 )
-ON DUPLICATE KEY UPDATE history_json = VALUES(history_json)
+{$profileUpsertClause}
 SQL
     );
     $upsert->execute([

@@ -39,8 +39,9 @@ function handle_get_schedules(): void
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
             aims_error(400, 'to must use YYYY-MM-DD format.');
         }
-        $where[] = 'ms.start_at < DATE_ADD(:to_at, INTERVAL 1 DAY)';
-        $params[':to_at'] = $to . ' 00:00:00';
+        $toExclusive = (new DateTimeImmutable($to))->add(new DateInterval('P1D'))->setTime(0, 0, 0);
+        $where[] = 'ms.start_at < :to_at';
+        $params[':to_at'] = $toExclusive->format('Y-m-d H:i:s');
     }
 
     $whereSql = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -97,7 +98,8 @@ function handle_create_schedule(array $currentUser): void
     }
 
     $pdo = aims_pdo();
-    $insert = $pdo->prepare(
+    $scheduleId = aims_insert_returning_id(
+        $pdo,
         <<<SQL
 INSERT INTO meeting_schedules (
     title,
@@ -113,20 +115,16 @@ VALUES (
     :end_at,
     :created_by_staff_id
 )
-SQL
+SQL,
+        [
+            ':title' => $title,
+            ':notes' => $notes !== '' ? $notes : null,
+            ':start_at' => $startAt->format('Y-m-d H:i:s'),
+            ':end_at' => $endAt->format('Y-m-d H:i:s'),
+            ':created_by_staff_id' => $creatorStaffId,
+        ],
+        'schedule_id'
     );
-    $insert->bindValue(':title', $title);
-    $insert->bindValue(':notes', $notes !== '' ? $notes : null);
-    $insert->bindValue(':start_at', $startAt->format('Y-m-d H:i:s'));
-    $insert->bindValue(':end_at', $endAt->format('Y-m-d H:i:s'));
-    if ($creatorStaffId === null) {
-        $insert->bindValue(':created_by_staff_id', null, PDO::PARAM_NULL);
-    } else {
-        $insert->bindValue(':created_by_staff_id', $creatorStaffId, PDO::PARAM_INT);
-    }
-    $insert->execute();
-
-    $scheduleId = aims_int($pdo->lastInsertId());
     aims_ok(['schedule' => fetch_schedule_payload($scheduleId)]);
 }
 

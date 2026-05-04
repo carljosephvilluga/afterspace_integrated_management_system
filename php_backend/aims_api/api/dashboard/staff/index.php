@@ -21,17 +21,25 @@ $activeSessions = aims_int(
     $pdo->query("SELECT COUNT(*) FROM sessions WHERE LOWER(status) = 'active'")->fetchColumn()
 );
 
-$weeklyActivityStmt = $pdo->query(
+$today = new DateTimeImmutable('today');
+$weekStart = $today->sub(new DateInterval('P6D'));
+$weekEnd = $today->add(new DateInterval('P1D'));
+$checkInDateSql = aims_date_sql('s.check_in');
+$weeklyActivityStmt = $pdo->prepare(
     <<<SQL
 SELECT
-    DATE(s.check_in) AS day_key,
+    {$checkInDateSql} AS day_key,
     COUNT(*) AS total
 FROM sessions s
-WHERE s.check_in >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-  AND s.check_in < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-GROUP BY DATE(s.check_in)
+WHERE s.check_in >= :week_start
+  AND s.check_in < :week_end
+GROUP BY {$checkInDateSql}
 SQL
 );
+$weeklyActivityStmt->execute([
+    ':week_start' => $weekStart->format('Y-m-d H:i:s'),
+    ':week_end' => $weekEnd->format('Y-m-d H:i:s'),
+]);
 $weeklyCountsByDay = [];
 foreach ($weeklyActivityStmt->fetchAll() ?: [] as $row) {
     $dayKey = aims_str($row['day_key'] ?? '');
@@ -42,7 +50,6 @@ foreach ($weeklyActivityStmt->fetchAll() ?: [] as $row) {
 }
 
 $weeklyActivity = [];
-$today = new DateTimeImmutable('today');
 for ($offset = 6; $offset >= 0; $offset--) {
     $day = $today->sub(new DateInterval('P' . $offset . 'D'));
     $dayKey = $day->format('Y-m-d');

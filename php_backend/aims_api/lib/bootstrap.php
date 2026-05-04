@@ -9,7 +9,7 @@ header('Access-Control-Allow-Methods: GET,POST,PATCH,DELETE,OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
@@ -27,13 +27,19 @@ function aims_pdo(): PDO
         return $pdo;
     }
 
+    $driver = aims_db_driver();
     $host = aims_config('db_host', '127.0.0.1');
-    $port = aims_config('db_port', '3306');
-    $db = aims_config('db_name', 'afterspace_db');
-    $user = aims_config('db_user', 'root');
+    $port = aims_config('db_port') ?: ($driver === 'pgsql' ? '5432' : '3306');
+    $db = aims_config('db_name') ?: ($driver === 'pgsql' ? 'postgres' : 'afterspace_db');
+    $user = aims_config('db_user') ?: ($driver === 'pgsql' ? 'postgres' : 'root');
     $pass = aims_config('db_pass', '');
 
-    $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+    if ($driver === 'pgsql') {
+        $dsn = "pgsql:host={$host};port={$port};dbname={$db};sslmode=require";
+    } else {
+        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+    }
+
     $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -41,6 +47,86 @@ function aims_pdo(): PDO
     ]);
 
     return $pdo;
+}
+
+function aims_db_driver(): string
+{
+    $driver = strtolower((string) aims_config('db_driver', 'mysql'));
+    return $driver === 'postgres' ? 'pgsql' : $driver;
+}
+
+function aims_uses_pgsql(): bool
+{
+    return aims_db_driver() === 'pgsql';
+}
+
+function aims_now_sql(): string
+{
+    return 'CURRENT_TIMESTAMP';
+}
+
+function aims_today_sql(): string
+{
+    return 'CURRENT_DATE';
+}
+
+function aims_date_sql(string $expression): string
+{
+    return aims_uses_pgsql() ? "CAST({$expression} AS DATE)" : "DATE({$expression})";
+}
+
+function aims_first_name_sql(string $expression): string
+{
+    return aims_uses_pgsql()
+        ? "split_part({$expression}, ' ', 1)"
+        : "SUBSTRING_INDEX({$expression}, ' ', 1)";
+}
+
+function aims_last_name_sql(string $expression): string
+{
+    return aims_uses_pgsql()
+        ? "TRIM(regexp_replace({$expression}, '^\\S+\\s*', ''))"
+        : "TRIM(SUBSTRING({$expression}, LENGTH(SUBSTRING_INDEX({$expression}, ' ', 1)) + 1))";
+}
+
+function aims_upsert_clause(string $conflictColumn, array $columns): string
+{
+    if (aims_uses_pgsql()) {
+        $assignments = array_map(
+            static fn(string $column): string => "{$column} = EXCLUDED.{$column}",
+            $columns
+        );
+        return "ON CONFLICT ({$conflictColumn}) DO UPDATE SET\n    " . implode(",\n    ", $assignments);
+    }
+
+    $assignments = array_map(
+        static fn(string $column): string => "{$column} = VALUES({$column})",
+        $columns
+    );
+    return "ON DUPLICATE KEY UPDATE\n    " . implode(",\n    ", $assignments);
+}
+
+function aims_insert_returning_id(PDO $pdo, string $sql, array $params, string $idColumn): int
+{
+    $insertSql = trim($sql);
+    if (aims_uses_pgsql()) {
+        $insertSql .= "\nRETURNING {$idColumn}";
+    }
+
+    $stmt = $pdo->prepare($insertSql);
+    $stmt->execute($params);
+
+    if (aims_uses_pgsql()) {
+        return aims_int($stmt->fetchColumn());
+    }
+
+    return aims_int($pdo->lastInsertId());
+}
+
+function aims_is_duplicate_key(Throwable $error): bool
+{
+    return $error instanceof PDOException
+        && in_array((string) $error->getCode(), ['23000', '23505'], true);
 }
 
 function aims_json(int $statusCode, array $payload): void
@@ -152,7 +238,7 @@ SELECT
     s.status
 FROM api_sessions sess
 INNER JOIN staff_accounts s ON s.staff_id = sess.staff_id
-WHERE sess.token = :token AND sess.expires_at > NOW()
+WHERE sess.token = :token AND sess.expires_at > CURRENT_TIMESTAMP
 LIMIT 1
 SQL;
 
@@ -183,15 +269,16 @@ function aims_issue_session_token(int $staffId): string
 {
     $token = bin2hex(random_bytes(32));
     $ttlHours = (int) aims_config('token_ttl_hours', 12);
+    $expiresAt = (new DateTimeImmutable("+{$ttlHours} hours"))->format('Y-m-d H:i:s');
 
     $sql = <<<SQL
 INSERT INTO api_sessions (token, staff_id, expires_at)
-VALUES (:token, :staff_id, DATE_ADD(NOW(), INTERVAL :ttl HOUR))
+VALUES (:token, :staff_id, :expires_at)
 SQL;
     $stmt = aims_pdo()->prepare($sql);
     $stmt->bindValue(':token', $token);
     $stmt->bindValue(':staff_id', $staffId, PDO::PARAM_INT);
-    $stmt->bindValue(':ttl', $ttlHours, PDO::PARAM_INT);
+    $stmt->bindValue(':expires_at', $expiresAt);
     $stmt->execute();
 
     return $token;
@@ -252,6 +339,11 @@ function aims_ensure_operational_tables(): void
     }
 
     $pdo = aims_pdo();
+    if (aims_uses_pgsql()) {
+        $ensured = true;
+        return;
+    }
+
     $pdo->exec(
         <<<SQL
 CREATE TABLE IF NOT EXISTS booking_meta (

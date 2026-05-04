@@ -103,6 +103,29 @@ flutter run --dart-define=AIMS_API_BASE_URL=http://10.0.2.2/aims_api
 - `PATCH /api/pricing-promos` (`kind=membership|pricing`)
 - `DELETE /api/pricing-promos` (`kind=membership|promotion`)
 
+## Supabase migration
+
+Supabase/PostgreSQL migration files are in `setup/`:
+
+- `supabase_schema.sql` creates the PostgreSQL schema and seed staff accounts.
+- `supabase_migration.md` documents the migration/import steps.
+
+To point the PHP API at a Supabase PostgreSQL database, copy `.env.example` to
+`.env` in the deployed `aims_api` folder and configure:
+
+```text
+AIMS_DB_DRIVER=pgsql
+AIMS_DB_HOST=aws-1-ap-northeast-1.pooler.supabase.com
+AIMS_DB_PORT=5432
+AIMS_DB_NAME=postgres
+AIMS_DB_USER=postgres.yifpferiexemkghcipze
+AIMS_DB_PASS=<database-password>
+```
+
+The PHP runtime must have `pdo_pgsql` enabled. The API now includes PostgreSQL
+route support; set `AIMS_DB_DRIVER=pgsql` and restart Apache before switching
+live traffic to Supabase.
+
 ## Note
 
 For local development speed, seeded passwords are stored as plain values in `password_hash`. Login accepts both plain text and hashed (`password_verify`) values. For production, hash all passwords before deployment.

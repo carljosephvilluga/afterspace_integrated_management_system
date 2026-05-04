@@ -40,7 +40,7 @@ aims_ok([
     'labels' => array_map(static fn($point) => $point['label'], $points),
     'tooltipTitles' => array_map(static fn($point) => $point['title'], $points),
     'tooltipValues' => array_map(
-        static fn($point) => '$' . number_format(aims_float($point['revenue']), 2),
+        static fn($point) => '₱' . number_format(aims_float($point['revenue']), 2),
         $points
     ),
     'areaValues' => $areaValues,

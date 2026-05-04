@@ -8,15 +8,18 @@ $user = aims_current_user(true);
 aims_require_roles($user, ['admin', 'manager']);
 
 $pdo = aims_pdo();
+$todaySql = aims_today_sql();
+$sessionCheckInDateSql = aims_date_sql('check_in');
+$transactionCreatedDateSql = aims_date_sql('created_at');
 
 $customersToday = aims_int(
     $pdo->query(
-        "SELECT COUNT(DISTINCT user_id) FROM sessions WHERE DATE(check_in) = CURDATE()"
+        "SELECT COUNT(DISTINCT user_id) FROM sessions WHERE {$sessionCheckInDateSql} = {$todaySql}"
     )->fetchColumn()
 );
 $revenueToday = aims_float(
     $pdo->query(
-        'SELECT COALESCE(SUM(final_amount), 0) FROM transactions WHERE DATE(created_at) = CURDATE()'
+        "SELECT COALESCE(SUM(final_amount), 0) FROM transactions WHERE {$transactionCreatedDateSql} = {$todaySql}"
     )->fetchColumn()
 );
 $reservedBookings = aims_int(
@@ -24,7 +27,7 @@ $reservedBookings = aims_int(
 );
 $completedPayments = aims_int(
     $pdo->query(
-        "SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'paid' AND DATE(created_at) = CURDATE()"
+        "SELECT COUNT(*) FROM transactions WHERE LOWER(status) = 'paid' AND {$transactionCreatedDateSql} = {$todaySql}"
     )->fetchColumn()
 );
 

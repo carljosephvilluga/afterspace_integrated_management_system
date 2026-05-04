@@ -179,7 +179,8 @@ function create_membership_type(array $body, array $currentUser): void
     $price = aims_require_field($body, 'price');
     $benefits = aims_require_field($body, 'benefits');
 
-    $insert = aims_pdo()->prepare(
+    $membershipTypeId = aims_insert_returning_id(
+        aims_pdo(),
         <<<SQL
 INSERT INTO membership_types (
     plan_name,
@@ -195,17 +196,16 @@ VALUES (
     :benefits,
     :created_by_staff_id
 )
-SQL
-    );
-    $insert->execute([
+SQL,
+        [
         ':plan_name' => $type,
         ':duration_label' => $duration,
         ':price_label' => $price,
         ':benefits' => $benefits,
         ':created_by_staff_id' => aims_int($currentUser['staff_id'] ?? 0) ?: null,
-    ]);
-
-    $membershipTypeId = aims_int(aims_pdo()->lastInsertId());
+        ],
+        'membership_type_id'
+    );
     aims_ok(['membershipType' => fetch_membership_type($membershipTypeId)]);
 }
 
@@ -220,7 +220,8 @@ function create_promotion(array $body, array $currentUser): void
     $endDate = parse_date_to_sql($expiry, 'expiry');
     $discountRate = parse_discount_rate($discount);
 
-    $insert = aims_pdo()->prepare(
+    $promoId = aims_insert_returning_id(
+        aims_pdo(),
         <<<SQL
 INSERT INTO promotions (
     promo_name,
@@ -236,22 +237,21 @@ VALUES (
     :promo_type,
     :discount_rate,
     :discount_label,
-    CURDATE(),
+    CURRENT_DATE,
     :end_date,
     :benefits
 )
-SQL
-    );
-    $insert->execute([
+SQL,
+        [
         ':promo_name' => $name,
         ':promo_type' => $type,
         ':discount_rate' => $discountRate,
         ':discount_label' => $discount,
         ':end_date' => $endDate,
         ':benefits' => $benefits === '' ? null : $benefits,
-    ]);
-
-    $promoId = aims_int(aims_pdo()->lastInsertId());
+        ],
+        'promo_id'
+    );
     aims_ok(['promotion' => fetch_promotion($promoId)]);
 }
 
@@ -302,6 +302,10 @@ function update_space_pricing(array $body, array $currentUser): void
         );
     }
 
+    $pricingUpsertClause = aims_upsert_clause(
+        'pricing_id',
+        ['board_room_hourly_rate', 'ordinary_space_hourly_rate', 'updated_by_staff_id']
+    );
     $upsert = aims_pdo()->prepare(
         <<<SQL
 INSERT INTO space_pricing (
@@ -316,10 +320,7 @@ VALUES (
     :ordinary_space_hourly_rate,
     :updated_by_staff_id
 )
-ON DUPLICATE KEY UPDATE
-    board_room_hourly_rate = VALUES(board_room_hourly_rate),
-    ordinary_space_hourly_rate = VALUES(ordinary_space_hourly_rate),
-    updated_by_staff_id = VALUES(updated_by_staff_id)
+{$pricingUpsertClause}
 SQL
     );
     $upsert->execute([

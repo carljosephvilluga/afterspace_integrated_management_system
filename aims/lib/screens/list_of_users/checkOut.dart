@@ -7,6 +7,7 @@ class CheckOut extends StatelessWidget {
   final String customerName;
   final String spaceUsed;
   final DateTime timeIn;
+  final DateTime timeOut;
   final double totalAmount;
   final VoidCallback onConfirm;
 
@@ -16,6 +17,7 @@ class CheckOut extends StatelessWidget {
     required this.customerName,
     required this.spaceUsed,
     required this.timeIn,
+    required this.timeOut,
     required this.totalAmount,
     required this.onConfirm,
   });
@@ -28,7 +30,9 @@ class CheckOut extends StatelessWidget {
   }
 
   String _calculateDuration(DateTime start, DateTime end) {
-    final difference = end.difference(start);
+    final difference = end.isBefore(start)
+        ? Duration.zero
+        : end.difference(start);
     final hours = difference.inHours;
     final minutes = difference.inMinutes.remainder(60);
 
@@ -43,8 +47,6 @@ class CheckOut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeOut = DateTime.now();
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,

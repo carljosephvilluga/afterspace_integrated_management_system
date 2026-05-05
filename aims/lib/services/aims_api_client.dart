@@ -207,6 +207,8 @@ class UserRecord {
     required this.membershipType,
     required this.isActive,
     required this.history,
+    this.activeSessionCheckInAt,
+    this.activeSessionSpaceUsed,
   });
 
   final int userId;
@@ -219,6 +221,8 @@ class UserRecord {
   final String membershipType;
   final bool isActive;
   final List<String> history;
+  final DateTime? activeSessionCheckInAt;
+  final String? activeSessionSpaceUsed;
 }
 
 class PricingMembershipType {
@@ -638,6 +642,7 @@ class AimsApiClient {
   Future<void> checkOutUser({
     required String userEmail,
     required double amount,
+    DateTime? checkOutAt,
     double discountApplied = 0,
     String paymentMethod = 'cash',
     String paymentStatus = 'paid',
@@ -649,6 +654,7 @@ class AimsApiClient {
       body: {
         'userEmail': userEmail,
         'amount': amount,
+        if (checkOutAt != null) 'checkOutAt': checkOutAt.toIso8601String(),
         'discountApplied': discountApplied,
         'paymentMethod': paymentMethod,
         'paymentStatus': paymentStatus,
@@ -1542,7 +1548,9 @@ class AimsApiClient {
     final paymentStatus = _asString(body['paymentStatus']).isEmpty
         ? 'paid'
         : _asString(body['paymentStatus']).toLowerCase();
-    final checkOutAt = DateTime.now();
+    final checkOutAt = _asString(body['checkOutAt']).isEmpty
+        ? DateTime.now()
+        : _asDateTime(body['checkOutAt']);
 
     await client
         .from('sessions')
@@ -1589,10 +1597,23 @@ class AimsApiClient {
   Future<Map<String, dynamic>> _handleGetUsers() async {
     final users = await _tableRows('users');
     final profiles = _byIntKey(await _tableRows('user_profiles'), 'user_id');
+    final activeSessions = await _activeSessionByUserMap();
+    final sessionMeta = await _sessionMetaByIdMap();
     final payloads =
-        users
-            .map((row) => _userPayload(row, profiles[_asInt(row['user_id'])]))
-            .toList()
+        users.map((row) {
+            final activeSession =
+                activeSessions[_asInt(row['user_id'])] ??
+                const <String, dynamic>{};
+            final activeSessionMeta =
+                sessionMeta[_asInt(activeSession['session_id'])] ??
+                const <String, dynamic>{};
+            return _userPayload(
+              row,
+              profiles[_asInt(row['user_id'])],
+              activeSession: activeSession,
+              activeSessionMeta: activeSessionMeta,
+            );
+          }).toList()
           ..sort((a, b) => _asInt(b['userId']).compareTo(_asInt(a['userId'])));
     return _ok(<String, dynamic>{'users': payloads});
   }
@@ -2546,6 +2567,23 @@ class AimsApiClient {
     );
   }
 
+  Future<Map<int, Map<String, dynamic>>> _activeSessionByUserMap() async {
+    final rows = await _tableRows('sessions');
+    final result = <int, Map<String, dynamic>>{};
+    for (final row in rows) {
+      if (_asString(row['status']).toLowerCase() != 'active') {
+        continue;
+      }
+      final userId = _asInt(row['user_id']);
+      final current = result[userId];
+      if (current == null ||
+          _asInt(row['session_id']) > _asInt(current['session_id'])) {
+        result[userId] = row;
+      }
+    }
+    return result;
+  }
+
   Future<void> _appendUserHistory(int userId, String label) async {
     final client = await _client();
     final user = await _userById(userId);
@@ -2603,15 +2641,34 @@ class AimsApiClient {
           .eq('user_id', userId)
           .maybeSingle(),
     );
-    return _userPayload(user, profile);
+    final activeSession = await _activeSessionForUser(userId);
+    final activeSessionMeta = activeSession.isEmpty
+        ? const <String, dynamic>{}
+        : _asMap(
+            await client
+                .from('session_meta')
+                .select()
+                .eq('session_id', _asInt(activeSession['session_id']))
+                .maybeSingle(),
+          );
+    return _userPayload(
+      user,
+      profile,
+      activeSession: activeSession,
+      activeSessionMeta: activeSessionMeta,
+    );
   }
 
   Map<String, dynamic> _userPayload(
     Map<String, dynamic> user,
-    Map<String, dynamic>? profile,
-  ) {
+    Map<String, dynamic>? profile, {
+    Map<String, dynamic>? activeSession,
+    Map<String, dynamic>? activeSessionMeta,
+  }) {
     final names = _splitName(_asString(user['full_name']));
     final userId = _asInt(user['user_id']);
+    final activeCheckIn = _asString(activeSession?['check_in']);
+    final activeSpaceUsed = _asString(activeSessionMeta?['space_used']);
     return <String, dynamic>{
       'userId': userId,
       'userCode': 'USR-${userId.toString().padLeft(4, '0')}',
@@ -2632,6 +2689,10 @@ class AimsApiClient {
       'isActive': _asString(user['status']).toLowerCase() == 'active',
       'history': _decodeHistory(profile?['history_json']),
       'createdAt': _asString(user['created_at']),
+      'activeSessionCheckInAt': activeCheckIn.isEmpty ? null : activeCheckIn,
+      'activeSessionSpaceUsed': activeSpaceUsed.isEmpty
+          ? null
+          : activeSpaceUsed,
     };
   }
 
@@ -3210,6 +3271,12 @@ class AimsApiClient {
       membershipType: _asString(map['membershipType']),
       isActive: _asBool(map['isActive']),
       history: _asList(map['history']).map((item) => _asString(item)).toList(),
+      activeSessionCheckInAt: _asString(map['activeSessionCheckInAt']).isEmpty
+          ? null
+          : _asDateTime(map['activeSessionCheckInAt']).toLocal(),
+      activeSessionSpaceUsed: _asString(map['activeSessionSpaceUsed']).isEmpty
+          ? null
+          : _asString(map['activeSessionSpaceUsed']),
     );
   }
 

@@ -33,6 +33,8 @@ class _StaffUser {
     required this.membershipType,
     required this.isActive,
     required this.history,
+    this.activeSessionCheckInAt,
+    this.activeSessionSpaceUsed,
   });
 
   final int backendId;
@@ -45,6 +47,8 @@ class _StaffUser {
   final String membershipType;
   final bool isActive;
   final List<String> history;
+  final DateTime? activeSessionCheckInAt;
+  final String? activeSessionSpaceUsed;
 
   String get fullName => '$firstName $lastName';
   String get statusLabel => isActive ? 'Active' : 'Inactive';
@@ -74,6 +78,8 @@ class _StaffUser {
     String? membershipType,
     bool? isActive,
     List<String>? history,
+    DateTime? activeSessionCheckInAt,
+    String? activeSessionSpaceUsed,
   }) {
     return _StaffUser(
       backendId: backendId ?? this.backendId,
@@ -86,6 +92,10 @@ class _StaffUser {
       membershipType: membershipType ?? this.membershipType,
       isActive: isActive ?? this.isActive,
       history: history ?? this.history,
+      activeSessionCheckInAt:
+          activeSessionCheckInAt ?? this.activeSessionCheckInAt,
+      activeSessionSpaceUsed:
+          activeSessionSpaceUsed ?? this.activeSessionSpaceUsed,
     );
   }
 }
@@ -179,11 +189,14 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   _ActiveVisit _defaultActiveVisitFor(_StaffUser user) {
+    final activeSpaceUsed = user.activeSessionSpaceUsed?.trim();
     return _ActiveVisit(
-      spaceUsed: user.membershipType == 'Annual'
+      spaceUsed: activeSpaceUsed != null && activeSpaceUsed.isNotEmpty
+          ? activeSpaceUsed
+          : user.membershipType == 'Annual'
           ? 'Board Room'
           : 'Ordinary Space',
-      timeIn: DateTime.now().subtract(const Duration(hours: 3)),
+      timeIn: user.activeSessionCheckInAt ?? DateTime.now(),
     );
   }
 
@@ -250,6 +263,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       membershipType: record.membershipType,
       isActive: record.isActive,
       history: record.history,
+      activeSessionCheckInAt: record.activeSessionCheckInAt,
+      activeSessionSpaceUsed: record.activeSessionSpaceUsed,
     );
   }
 
@@ -921,10 +936,12 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                 await _syncSpacePricing();
                                 if (!context.mounted) return;
                                 final visit = _activeVisitFor(user);
+                                final checkOutAt = DateTime.now();
                                 final totalAmount =
                                     SpacePricingStore.totalForVisit(
                                       spaceUsed: visit.spaceUsed,
                                       timeIn: visit.timeIn,
+                                      timeOut: checkOutAt,
                                     );
 
                                 showDialog(
@@ -934,6 +951,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                     customerName: user.fullName,
                                     spaceUsed: visit.spaceUsed,
                                     timeIn: visit.timeIn,
+                                    timeOut: checkOutAt,
                                     totalAmount: totalAmount,
                                     onConfirm: () {
                                       showDialog(
@@ -944,6 +962,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                             _completeCheckout(
                                               user: user,
                                               visit: visit,
+                                              checkOutAt: checkOutAt,
                                               totalAmount: totalAmount,
                                             );
                                           },
@@ -1020,6 +1039,8 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                   if (index != -1) {
                                     _users[index] = user.copyWith(
                                       isActive: true,
+                                      activeSessionCheckInAt: result.timeIn,
+                                      activeSessionSpaceUsed: result.spaceUsed,
                                       history: [
                                         ...user.history,
                                         _historyLabel("User checked in"),
@@ -1322,12 +1343,14 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   Future<void> _completeCheckout({
     required _StaffUser user,
     required _ActiveVisit visit,
+    required DateTime checkOutAt,
     required double totalAmount,
   }) async {
     try {
       await AimsApiClient.instance.checkOutUser(
         userEmail: user.email,
         amount: totalAmount,
+        checkOutAt: checkOutAt,
         paymentMethod: 'cash',
         paymentStatus: 'paid',
       );

@@ -164,7 +164,6 @@ class _StaffBookingManagementScreenState
                                     final bookingCalendar = BookingCalendarCard(
                                       focusedDay: _focusedDay,
                                       selectedDay: _selectedDay,
-                                      hoveredDay: _hoveredDay,
                                       reservations: _reservations,
                                       onDaySelected: (day) {
                                         setState(() {
@@ -218,11 +217,14 @@ class _StaffBookingManagementScreenState
                                         });
                                       },
                                     );
-                                    final availabilityPanel =
-                                        RealTimeAvailabilityPanel(
-                                          selectedDay: _selectedDay,
-                                          reservations: _reservations,
-                                        );
+                                    final availabilityPanel = SizedBox(
+                                      height: 430,
+                                      child: RealTimeAvailabilityPanel(
+                                        selectedDay: _selectedDay,
+                                        hoveredDay: _hoveredDay,
+                                        reservations: _reservations,
+                                      ),
+                                    );
 
                                     return stacked
                                         ? Column(
@@ -613,10 +615,12 @@ class RealTimeAvailabilityPanel extends StatefulWidget {
   const RealTimeAvailabilityPanel({
     super.key,
     required this.selectedDay,
+    required this.hoveredDay,
     required this.reservations,
   });
 
   final DateTime selectedDay;
+  final DateTime? hoveredDay;
   final List<BookingReservation> reservations;
 
   @override
@@ -633,6 +637,7 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
   static const Color _tanSoft = Color(0xFFEBD9CA);
   static const Color _text = Color(0xFF23323A);
   static const Color _muted = Color(0xFF6F7E87);
+  static const Color _danger = Color(0xFFC95656);
 
   @override
   Widget build(BuildContext context) {
@@ -661,6 +666,9 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
     final openSpaceTaken = dayWindows
         .where((window) => window.openSeatsLeft < openSpaceCapacity)
         .toList();
+    final hoveredBookings = widget.hoveredDay == null
+        ? const <BookingReservation>[]
+        : reservationsForDay(widget.reservations, widget.hoveredDay!);
 
     return Container(
       decoration: BoxDecoration(
@@ -668,58 +676,66 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Real-time Availability',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: _text,
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Real-time Availability',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: _text,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            formatMonthDayYear(widget.selectedDay),
-            style: const TextStyle(fontSize: 12, color: _muted),
-          ),
-          const SizedBox(height: 12),
-          _availabilityCard(
-            icon: BookingSpaceType.boardRoom.icon,
-            title: 'Board Room',
-            summaryText: _boardRoomSummary(boardRoomTaken),
-            expanded: _boardRoomExpanded,
-            onTap: () {
-              setState(() {
-                _boardRoomExpanded = !_boardRoomExpanded;
-              });
-            },
-            detailLines: boardRoomTaken
-                .map((window) => formatTimeRange(window.start, window.end))
-                .toList(),
-            emptyDetailText: 'No booked board room slots yet for this day.',
-          ),
-          const SizedBox(height: 10),
-          _availabilityCard(
-            icon: BookingSpaceType.openSpace.icon,
-            title: 'Open Space',
-            summaryText:
-                'Available seats now: ${openSeatsNow < 0 ? 0 : openSeatsNow}',
-            expanded: _openSpaceExpanded,
-            onTap: () {
-              setState(() {
-                _openSpaceExpanded = !_openSpaceExpanded;
-              });
-            },
-            detailLines: openSpaceTaken.map((window) {
-              final seatsTaken = openSpaceCapacity - window.openSeatsLeft;
-              return '${formatTimeRange(window.start, window.end)}  |  $seatsTaken seat${seatsTaken == 1 ? '' : 's'} taken';
-            }).toList(),
-            emptyDetailText: 'No open space slots are taken yet for this day.',
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              formatMonthDayYear(widget.selectedDay),
+              style: const TextStyle(fontSize: 12, color: _muted),
+            ),
+            const SizedBox(height: 12),
+            _availabilityCard(
+              icon: BookingSpaceType.boardRoom.icon,
+              title: 'Board Room',
+              summaryText: _boardRoomSummary(boardRoomTaken),
+              expanded: _boardRoomExpanded,
+              onTap: () {
+                setState(() {
+                  _boardRoomExpanded = !_boardRoomExpanded;
+                });
+              },
+              detailLines: boardRoomTaken
+                  .map((window) => formatTimeRange(window.start, window.end))
+                  .toList(),
+              emptyDetailText: 'No booked board room slots yet for this day.',
+            ),
+            const SizedBox(height: 10),
+            _availabilityCard(
+              icon: BookingSpaceType.openSpace.icon,
+              title: 'Open Space',
+              summaryText:
+                  'Available seats now: ${openSeatsNow < 0 ? 0 : openSeatsNow}',
+              expanded: _openSpaceExpanded,
+              onTap: () {
+                setState(() {
+                  _openSpaceExpanded = !_openSpaceExpanded;
+                });
+              },
+              detailLines: openSpaceTaken.map((window) {
+                final seatsTaken = openSpaceCapacity - window.openSeatsLeft;
+                return '${formatTimeRange(window.start, window.end)}  |  $seatsTaken seat${seatsTaken == 1 ? '' : 's'} taken';
+              }).toList(),
+              emptyDetailText:
+                  'No open space slots are taken yet for this day.',
+            ),
+            const SizedBox(height: 14),
+            _buildDailyAvailabilityWindows(dayWindows),
+            const SizedBox(height: 12),
+            _buildReservationPreview(hoveredBookings),
+          ],
+        ),
       ),
     );
   }
@@ -846,6 +862,140 @@ class _RealTimeAvailabilityPanelState extends State<RealTimeAvailabilityPanel> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDailyAvailabilityWindows(List<AvailabilityWindow> windows) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Availability for ${formatMonthDayYear(widget.selectedDay)}',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _text,
+          ),
+        ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final twoColumns = constraints.maxWidth >= 320;
+            final cardWidth = twoColumns
+                ? (constraints.maxWidth - 8) / 2
+                : constraints.maxWidth;
+
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: windows.take(8).map((window) {
+                return _availabilityWindowCard(
+                  window: window,
+                  width: cardWidth,
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _availabilityWindowCard({
+    required AvailabilityWindow window,
+    required double width,
+  }) {
+    final isBlocked = !window.boardRoomAvailable && window.openSeatsLeft <= 0;
+
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: isBlocked ? const Color(0xFFF8E1E1) : _tanSoft,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isBlocked
+                ? _danger.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: 0.75),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              window.label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: _text,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              window.boardRoomAvailable
+                  ? 'Board Room open'
+                  : 'Board Room reserved',
+              style: TextStyle(
+                fontSize: 11,
+                color: window.boardRoomAvailable
+                    ? const Color(0xFF2E8B57)
+                    : _danger,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Open Space: ${window.openSeatsLeft} seats left',
+              style: TextStyle(
+                fontSize: 11,
+                color: window.openSeatsLeft > 0 ? _muted : _danger,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReservationPreview(List<BookingReservation> hoveredBookings) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F1EB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+      ),
+      child: hoveredBookings.isEmpty
+          ? const Text(
+              'Hover over a date with bookings to preview reservations.',
+              style: TextStyle(fontSize: 12, color: _muted),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reservations on ${formatMonthDayYear(widget.hoveredDay!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...hoveredBookings
+                    .take(3)
+                    .map(
+                      (booking) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '${formatTimeRange(booking.start, booking.end)} - ${booking.customerName} - ${booking.spaceType.label}',
+                          style: const TextStyle(fontSize: 11, color: _muted),
+                        ),
+                      ),
+                    ),
+              ],
+            ),
     );
   }
 }

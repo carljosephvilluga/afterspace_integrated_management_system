@@ -7,7 +7,6 @@ class BookingCalendarCard extends StatelessWidget {
     super.key,
     required this.focusedDay,
     required this.selectedDay,
-    required this.hoveredDay,
     required this.reservations,
     required this.onDaySelected,
     required this.onMonthChanged,
@@ -19,7 +18,6 @@ class BookingCalendarCard extends StatelessWidget {
 
   final DateTime focusedDay;
   final DateTime selectedDay;
-  final DateTime? hoveredDay;
   final List<BookingReservation> reservations;
   final ValueChanged<DateTime> onDaySelected;
   final ValueChanged<int> onMonthChanged;
@@ -41,14 +39,6 @@ class BookingCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hoveredBookings = hoveredDay == null
-        ? const <BookingReservation>[]
-        : _bookingsFor(hoveredDay!);
-    final selectedWindows = availabilityWindowsForDay(
-      reservations,
-      selectedDay,
-    );
-
     return Container(
       decoration: BoxDecoration(
         color: _panel,
@@ -189,116 +179,6 @@ class BookingCalendarCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Availability for ${formatMonthDayYear(selectedDay)}',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _text,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: selectedWindows.take(8).map((window) {
-              final isBlocked =
-                  !window.boardRoomAvailable && window.openSeatsLeft <= 0;
-              return Container(
-                width: 148,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: isBlocked ? const Color(0xFFF8E1E1) : _accentSoft,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isBlocked
-                        ? _danger.withValues(alpha: 0.3)
-                        : Colors.white.withValues(alpha: 0.75),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      window.label,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _text,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      window.boardRoomAvailable
-                          ? 'Board Room open'
-                          : 'Board Room reserved',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: window.boardRoomAvailable
-                            ? const Color(0xFF2E8B57)
-                            : _danger,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Open Space: ${window.openSeatsLeft} seats left',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: window.openSeatsLeft > 0 ? _muted : _danger,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF6F1EB),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
-            ),
-            child: hoveredBookings.isEmpty
-                ? const Text(
-                    'Hover over a date with bookings to preview reservations.',
-                    style: TextStyle(fontSize: 12, color: _muted),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Reservations on ${formatMonthDayYear(hoveredDay!)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: _text,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...hoveredBookings
-                          .take(3)
-                          .map(
-                            (booking) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Text(
-                                '${formatTimeRange(booking.start, booking.end)} - ${booking.customerName} - ${booking.spaceType.label}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: _muted,
-                                ),
-                              ),
-                            ),
-                          ),
-                    ],
-                  ),
           ),
         ],
       ),

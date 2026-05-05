@@ -42,6 +42,13 @@ class _MembershipLoyaltyProgramScreenState
   List<PricingPromotion> _promotions = [];
   List<LoyaltyRewardRecord> _loyaltyRewards = [];
 
+  bool get _canCreatePricingPromos => widget.role != UserRole.staff;
+
+  bool get _canUpdateHourlyPricing => widget.role == UserRole.manager;
+
+  bool get _hasPricingActions =>
+      _canCreatePricingPromos || _canUpdateHourlyPricing;
+
   @override
   void initState() {
     super.initState();
@@ -125,74 +132,10 @@ class _MembershipLoyaltyProgramScreenState
                                       ),
                                     ),
                                   ],
-                                  const SizedBox(height: 24),
-                                  if (stackedButtons)
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        MembershipProgramActionButton(
-                                          label: 'Add Membership Type',
-                                          backgroundColor: _tanSoft,
-                                          textColor: _textPrimary,
-                                          icon: Icons.add_card_rounded,
-                                          onPressed: _openAddMembershipDialog,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        MembershipProgramActionButton(
-                                          label: 'Create Promo',
-                                          backgroundColor: _tanSoft,
-                                          textColor: _textPrimary,
-                                          icon: Icons.local_offer_outlined,
-                                          onPressed: _openCreatePromoDialog,
-                                        ),
-                                        if (widget.role ==
-                                            UserRole.manager) ...[
-                                          const SizedBox(height: 12),
-                                          MembershipProgramActionButton(
-                                            label: 'Update Hourly Rates',
-                                            backgroundColor: Colors.white,
-                                            textColor: _textPrimary,
-                                            icon: Icons.payments_outlined,
-                                            onPressed:
-                                                _openEditHourlyPricingDialog,
-                                          ),
-                                        ],
-                                      ],
-                                    )
-                                  else
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        MembershipProgramActionButton(
-                                          label: 'Add Membership Type',
-                                          backgroundColor: _tanSoft,
-                                          textColor: _textPrimary,
-                                          icon: Icons.add_card_rounded,
-                                          onPressed: _openAddMembershipDialog,
-                                        ),
-                                        const SizedBox(width: 16),
-                                        MembershipProgramActionButton(
-                                          label: 'Create Promo',
-                                          backgroundColor: _tanSoft,
-                                          textColor: _textPrimary,
-                                          icon: Icons.local_offer_outlined,
-                                          onPressed: _openCreatePromoDialog,
-                                        ),
-                                        if (widget.role ==
-                                            UserRole.manager) ...[
-                                          const SizedBox(width: 16),
-                                          MembershipProgramActionButton(
-                                            label: 'Update Hourly Rates',
-                                            backgroundColor: Colors.white,
-                                            textColor: _textPrimary,
-                                            icon: Icons.payments_outlined,
-                                            onPressed:
-                                                _openEditHourlyPricingDialog,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
+                                  if (_hasPricingActions) ...[
+                                    const SizedBox(height: 24),
+                                    _buildPricingActions(stackedButtons),
+                                  ],
                                   const SizedBox(height: 24),
                                   _buildHourlyPricingSection(),
                                   const SizedBox(height: 18),
@@ -391,10 +334,74 @@ class _MembershipLoyaltyProgramScreenState
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Widget _buildPricingActions(bool stackedButtons) {
+    final children = <Widget>[];
+
+    void addGap() {
+      if (children.isNotEmpty) {
+        children.add(
+          stackedButtons
+              ? const SizedBox(height: 12)
+              : const SizedBox(width: 16),
+        );
+      }
+    }
+
+    if (_canCreatePricingPromos) {
+      addGap();
+      children.add(
+        MembershipProgramActionButton(
+          label: 'Add Membership Type',
+          backgroundColor: _tanSoft,
+          textColor: _textPrimary,
+          icon: Icons.add_card_rounded,
+          onPressed: _openAddMembershipDialog,
+        ),
+      );
+      addGap();
+      children.add(
+        MembershipProgramActionButton(
+          label: 'Create Promo',
+          backgroundColor: _tanSoft,
+          textColor: _textPrimary,
+          icon: Icons.local_offer_outlined,
+          onPressed: _openCreatePromoDialog,
+        ),
+      );
+    }
+
+    if (_canUpdateHourlyPricing) {
+      addGap();
+      children.add(
+        MembershipProgramActionButton(
+          label: 'Update Hourly Rates',
+          backgroundColor: Colors.white,
+          textColor: _textPrimary,
+          icon: Icons.payments_outlined,
+          onPressed: _openEditHourlyPricingDialog,
+        ),
+      );
+    }
+
+    if (stackedButtons) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      );
+    }
+
+    return Row(mainAxisAlignment: MainAxisAlignment.end, children: children);
+  }
+
   Future<void> _openCreatePromoDialog() async {
+    if (!_canCreatePricingPromos) {
+      _showMessage('Staff accounts can only view pricing and promos.');
+      return;
+    }
+
     final result = await showDialog<PromoDialogResult>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (_) => const CreatePromoDialog(),
     );
 
@@ -420,9 +427,14 @@ class _MembershipLoyaltyProgramScreenState
   }
 
   Future<void> _openAddMembershipDialog() async {
+    if (!_canCreatePricingPromos) {
+      _showMessage('Staff accounts can only view pricing and promos.');
+      return;
+    }
+
     final result = await showDialog<AddMembershipDialogResult>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (_) => const AddMembershipDialog(),
     );
 
@@ -454,7 +466,7 @@ class _MembershipLoyaltyProgramScreenState
     final pricing = SpacePricingStore.current;
     final result = await showDialog<HourlyPricingDialogResult>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (_) => EditHourlyPricingDialog(
         initialBoardRoomRate: pricing.boardRoomHourlyRate,
         initialOrdinarySpaceRate: pricing.ordinarySpaceHourlyRate,
@@ -483,7 +495,7 @@ class _MembershipLoyaltyProgramScreenState
     final membership = _membershipTypes[index];
     final result = await showDialog<MembershipDialogResult>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.18),
+      barrierColor: Colors.black.withValues(alpha: 0.18),
       builder: (_) => EditMembershipDialog(
         initialType: membership.type,
         initialDuration: membership.duration,
@@ -518,7 +530,7 @@ class _MembershipLoyaltyProgramScreenState
     final shouldDelete =
         await showDialog<bool>(
           context: context,
-          barrierColor: Colors.black.withOpacity(0.18),
+          barrierColor: Colors.black.withValues(alpha: 0.18),
           builder: (_) =>
               DeleteMembershipDialog(membershipType: membership.type),
         ) ??
@@ -548,7 +560,7 @@ class _MembershipLoyaltyProgramScreenState
       decoration: BoxDecoration(
         color: _cardWhite,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.75)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x10000000),
@@ -607,9 +619,9 @@ class _MembershipLoyaltyProgramScreenState
       constraints: const BoxConstraints(minWidth: 160),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.85)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -703,9 +715,9 @@ class _MembershipLoyaltyProgramScreenState
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.9)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -770,9 +782,9 @@ class _MembershipLoyaltyProgramScreenState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withOpacity(0.95)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.95)),
             ),
             child: const Text(
               'Edit',

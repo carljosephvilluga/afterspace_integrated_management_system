@@ -60,7 +60,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.85)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x26000000),
@@ -82,7 +82,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _panelBlue.withOpacity(0.35),
+                      color: _panelBlue.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Column(
@@ -330,11 +330,14 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
   }
 
   Future<void> _pickDateRange() async {
-    final pickedRange = await showDateRangePicker(
+    final pickedRange = await showDialog<DateTimeRange>(
       context: context,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2035),
-      initialDateRange: _selectedRange,
+      barrierColor: Colors.black.withValues(alpha: 0.18),
+      builder: (_) => _PromoDateRangeDialog(
+        initialRange: _selectedRange,
+        firstDate: DateTime(2024),
+        lastDate: DateTime(2035),
+      ),
     );
 
     if (pickedRange == null) {
@@ -344,7 +347,7 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
     setState(() {
       _selectedRange = pickedRange;
       _durationController.text =
-          '${_formatDate(pickedRange.start)}- ${_formatDate(pickedRange.end)}';
+          '${_formatDate(pickedRange.start)} - ${_formatDate(pickedRange.end)}';
     });
   }
 
@@ -367,5 +370,433 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
     final month = months[date.month - 1];
     final day = date.day.toString().padLeft(2, '0');
     return '$month $day, ${date.year}';
+  }
+}
+
+class _PromoDateRangeDialog extends StatefulWidget {
+  const _PromoDateRangeDialog({
+    required this.initialRange,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  final DateTimeRange? initialRange;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  @override
+  State<_PromoDateRangeDialog> createState() => _PromoDateRangeDialogState();
+}
+
+class _PromoDateRangeDialogState extends State<_PromoDateRangeDialog> {
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+  static const Color _panelBlue = Color(0xFFCDECF3);
+  static const Color _headerBlue = Color(0xFF80AEC1);
+
+  late DateTime _focusedMonth;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDate = widget.initialRange?.start;
+    _endDate = widget.initialRange?.end;
+    final focus = _startDate ?? DateTime.now();
+    _focusedMonth = DateTime(focus.year, focus.month);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x24000000),
+                blurRadius: 24,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 14),
+              _buildSelectedRangeLabel(),
+              const SizedBox(height: 16),
+              _buildMonthHeader(),
+              const SizedBox(height: 12),
+              _buildWeekdayHeader(),
+              const SizedBox(height: 6),
+              _buildCalendarGrid(),
+              const SizedBox(height: 16),
+              _buildActions(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: _panelBlue,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.calendar_today_outlined,
+            color: _headerBlue,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Promo Duration',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: _textPrimary,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Select a start and end date.',
+                style: TextStyle(fontSize: 12, color: _textMuted),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Close',
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close_rounded, color: _textPrimary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectedRangeLabel() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _panelBlue.withValues(alpha: 0.32),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _headerBlue.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        _rangeLabel,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: _textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthHeader() {
+    return Row(
+      children: [
+        _buildMonthButton(
+          icon: Icons.chevron_left_rounded,
+          enabled: _canGoToPreviousMonth,
+          onTap: () {
+            setState(() {
+              _focusedMonth = DateTime(
+                _focusedMonth.year,
+                _focusedMonth.month - 1,
+              );
+            });
+          },
+        ),
+        Expanded(
+          child: Center(
+            child: Text(
+              '${_monthName(_focusedMonth.month)} ${_focusedMonth.year}',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: _textPrimary,
+              ),
+            ),
+          ),
+        ),
+        _buildMonthButton(
+          icon: Icons.chevron_right_rounded,
+          enabled: _canGoToNextMonth,
+          onTap: () {
+            setState(() {
+              _focusedMonth = DateTime(
+                _focusedMonth.year,
+                _focusedMonth.month + 1,
+              );
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 34,
+        height: 34,
+        child: Icon(
+          icon,
+          color: enabled ? _textPrimary : _textMuted.withValues(alpha: 0.35),
+          size: 22,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekdayHeader() {
+    const labels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    return Row(
+      children: labels
+          .map(
+            (label) => Expanded(
+              child: Center(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: _textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final cells = _calendarCells();
+
+    return Column(
+      children: [
+        for (var row = 0; row < cells.length / 7; row++)
+          Row(
+            children: [
+              for (var column = 0; column < 7; column++)
+                Expanded(child: _buildDayCell(cells[(row * 7) + column])),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDayCell(DateTime? day) {
+    if (day == null) {
+      return const SizedBox(height: 38);
+    }
+
+    final disabled = _isOutsideAllowedRange(day);
+    final selectedStart = _isSameDate(day, _startDate);
+    final selectedEnd = _isSameDate(day, _endDate);
+    final selected = selectedStart || selectedEnd;
+    final inRange = _isInsideSelectedRange(day);
+
+    return Padding(
+      padding: const EdgeInsets.all(2),
+      child: InkWell(
+        onTap: disabled ? null : () => _selectDay(day),
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected
+                ? _headerBlue
+                : inRange
+                ? _headerBlue.withValues(alpha: 0.16)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: selectedStart && !selectedEnd
+                ? Border.all(color: _textPrimary.withValues(alpha: 0.16))
+                : null,
+          ),
+          child: Text(
+            day.day.toString(),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: disabled
+                  ? _textMuted.withValues(alpha: 0.35)
+                  : selected
+                  ? Colors.white
+                  : _textPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: _startDate == null || _endDate == null
+              ? null
+              : () {
+                  Navigator.pop(
+                    context,
+                    DateTimeRange(start: _startDate!, end: _endDate!),
+                  );
+                },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  void _selectDay(DateTime day) {
+    setState(() {
+      if (_startDate == null || _endDate != null) {
+        _startDate = day;
+        _endDate = null;
+        return;
+      }
+
+      if (day.isBefore(_startDate!)) {
+        _startDate = day;
+        _endDate = null;
+        return;
+      }
+
+      _endDate = day;
+    });
+  }
+
+  List<DateTime?> _calendarCells() {
+    final firstMonthDay = DateTime(_focusedMonth.year, _focusedMonth.month);
+    final daysInMonth = DateTime(
+      _focusedMonth.year,
+      _focusedMonth.month + 1,
+      0,
+    ).day;
+    final leadingBlankDays = firstMonthDay.weekday % 7;
+    final totalCells = ((leadingBlankDays + daysInMonth) / 7).ceil() * 7;
+
+    return List<DateTime?>.generate(totalCells, (index) {
+      final dayNumber = index - leadingBlankDays + 1;
+      if (dayNumber < 1 || dayNumber > daysInMonth) {
+        return null;
+      }
+
+      return DateTime(_focusedMonth.year, _focusedMonth.month, dayNumber);
+    });
+  }
+
+  bool _isInsideSelectedRange(DateTime day) {
+    final start = _startDate;
+    final end = _endDate;
+    if (start == null || end == null) {
+      return false;
+    }
+
+    return day.isAfter(start) && day.isBefore(end);
+  }
+
+  bool _isOutsideAllowedRange(DateTime day) {
+    final first = _dateOnly(widget.firstDate);
+    final last = _dateOnly(widget.lastDate);
+    return day.isBefore(first) || day.isAfter(last);
+  }
+
+  bool _isSameDate(DateTime? a, DateTime? b) {
+    if (a == null || b == null) {
+      return false;
+    }
+
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool get _canGoToPreviousMonth {
+    final current = DateTime(_focusedMonth.year, _focusedMonth.month);
+    final first = DateTime(widget.firstDate.year, widget.firstDate.month);
+    return current.isAfter(first);
+  }
+
+  bool get _canGoToNextMonth {
+    final current = DateTime(_focusedMonth.year, _focusedMonth.month);
+    final last = DateTime(widget.lastDate.year, widget.lastDate.month);
+    return current.isBefore(last);
+  }
+
+  String get _rangeLabel {
+    final start = _startDate;
+    final end = _endDate;
+    if (start == null) {
+      return 'Select start date';
+    }
+    if (end == null) {
+      return '${_shortDate(start)} - Select end date';
+    }
+    return '${_shortDate(start)} - ${_shortDate(end)}';
+  }
+
+  DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  String _shortDate(DateTime date) {
+    return '${_monthName(date.month)} ${date.day}, ${date.year}';
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return months[(month - 1).clamp(0, 11)];
   }
 }

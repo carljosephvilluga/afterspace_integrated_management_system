@@ -70,18 +70,36 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   late Future<ManagerDashboardSnapshot> _dashboardSnapshotFuture;
   final Map<_ManagerRange, Future<SalesReportSeries>> _salesReportFutures = {};
   Timer? _salesRefreshTimer;
+  Timer? _dashboardRefreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _dashboardSnapshotFuture = AimsApiClient.instance
-        .fetchManagerDashboardSnapshot();
+    _reloadDashboard(notify: false);
     _refreshSalesReport(selectedRange);
     _salesRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!mounted || selectedMenu != 'Dashboard') {
         return;
       }
       _refreshSalesReport(selectedRange, notify: false);
+    });
+    _dashboardRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || selectedMenu != 'Dashboard') {
+        return;
+      }
+      _reloadDashboard();
+    });
+  }
+
+  void _reloadDashboard({bool notify = true}) {
+    final nextFuture = AimsApiClient.instance.fetchManagerDashboardSnapshot();
+    if (!notify || !mounted) {
+      _dashboardSnapshotFuture = nextFuture;
+      return;
+    }
+
+    setState(() {
+      _dashboardSnapshotFuture = nextFuture;
     });
   }
 
@@ -162,6 +180,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   @override
   void dispose() {
     _salesRefreshTimer?.cancel();
+    _dashboardRefreshTimer?.cancel();
     super.dispose();
   }
 

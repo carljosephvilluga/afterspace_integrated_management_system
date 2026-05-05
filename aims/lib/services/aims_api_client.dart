@@ -1240,6 +1240,7 @@ class AimsApiClient {
   }
 
   Future<Map<String, dynamic>> _handleManagerDashboard() async {
+    await _autoCheckInStartedReservations();
     final summary = await _managerSummary();
     return _ok(<String, dynamic>{
       ...summary,
@@ -1249,6 +1250,7 @@ class AimsApiClient {
   }
 
   Future<Map<String, dynamic>> _handleStaffDashboard() async {
+    await _autoCheckInStartedReservations();
     final client = await _client();
     final sessions = await _tableRows('sessions');
     final bookings = await _tableRows('bookings');
@@ -1357,12 +1359,19 @@ class AimsApiClient {
   Future<Map<String, dynamic>> _handleCheckInBooking(
     Map<String, dynamic> body,
   ) async {
-    final client = await _client();
     final bookingId = _asInt(body['bookingId']);
     if (bookingId <= 0) {
       throw const AimsApiException('Missing required field: bookingId.');
     }
 
+    return _checkInBookingById(bookingId);
+  }
+
+  Future<Map<String, dynamic>> _checkInBookingById(
+    int bookingId, {
+    DateTime? checkInAt,
+  }) async {
+    final client = await _client();
     final booking = _asMap(
       await client
           .from('bookings')
@@ -1373,16 +1382,37 @@ class AimsApiClient {
     if (booking.isEmpty) {
       throw const AimsApiException('Booking not found.');
     }
+    return _checkInBookingRow(booking, checkInAt: checkInAt);
+  }
+
+  Future<Map<String, dynamic>> _checkInBookingRow(
+    Map<String, dynamic> booking, {
+    DateTime? checkInAt,
+  }) async {
+    final client = await _client();
+    final bookingId = _asInt(booking['booking_id']);
     if (_asString(booking['status']).toLowerCase() == 'cancelled') {
       throw const AimsApiException('Cancelled bookings cannot be checked in.');
     }
+    if (_asString(booking['status']).toLowerCase() == 'confirmed') {
+      final sessionId = await _ensureActiveSession(
+        _asInt(booking['user_id']),
+        checkInAt: checkInAt,
+      );
+      return _ok(<String, dynamic>{
+        'bookingId': bookingId,
+        'sessionId': sessionId,
+        'status': 'checkedIn',
+      });
+    }
+
     final userId = _asInt(booking['user_id']);
     await client
         .from('bookings')
         .update(<String, dynamic>{'status': 'Confirmed'})
         .eq('booking_id', bookingId);
 
-    final sessionId = await _ensureActiveSession(userId);
+    final sessionId = await _ensureActiveSession(userId, checkInAt: checkInAt);
     final meta = await _bookingMeta(bookingId);
     await client.from('session_meta').upsert(<String, dynamic>{
       'session_id': sessionId,
@@ -1765,6 +1795,12 @@ class AimsApiClient {
   Future<Map<String, dynamic>> _handlePostPricingPromos(
     Map<String, dynamic> body,
   ) async {
+    if (_currentStaffRole == 'staff') {
+      throw const AimsApiException(
+        'Staff accounts cannot create membership types or promotions.',
+      );
+    }
+
     final kind = _requiredString(body, 'kind').toLowerCase();
     if (kind == 'membership') {
       final client = await _client();
@@ -2190,23 +2226,57 @@ class AimsApiClient {
           .order('booking_date', ascending: true)
           .order('start_time', ascending: true)
           .order('booking_id', ascending: true)
-          .limit(limit),
+          .limit(500),
     );
     final users = await _userByIdMap();
-    return rows.map((row) {
-      final user = users[_asInt(row['user_id'])] ?? const <String, dynamic>{};
-      final date = _asString(row['booking_date']);
-      return <String, dynamic>{
-        'bookingId': _asInt(row['booking_id']),
-        'customerName': _asString(user['full_name']),
-        'email': _asString(user['email']),
-        'contactDetails': _asString(user['email']).isNotEmpty
-            ? _asString(user['email'])
-            : _asString(user['contact_number']),
-        'startAt': '$date ${_asString(row['start_time'])}',
-        'endAt': '$date ${_asString(row['end_time'])}',
-      };
-    }).toList();
+    return rows
+        .where((row) => _bookingStartAt(row).isAfter(DateTime.now()))
+        .take(limit)
+        .map((row) {
+          final user =
+              users[_asInt(row['user_id'])] ?? const <String, dynamic>{};
+          final date = _asString(row['booking_date']);
+          return <String, dynamic>{
+            'bookingId': _asInt(row['booking_id']),
+            'customerName': _asString(user['full_name']),
+            'email': _asString(user['email']),
+            'contactDetails': _asString(user['email']).isNotEmpty
+                ? _asString(user['email'])
+                : _asString(user['contact_number']),
+            'startAt': '$date ${_asString(row['start_time'])}',
+            'endAt': '$date ${_asString(row['end_time'])}',
+          };
+        })
+        .toList();
+  }
+
+  Future<void> _autoCheckInStartedReservations() async {
+    final client = await _client();
+    final now = DateTime.now();
+    final rows = _rows(
+      await client
+          .from('bookings')
+          .select()
+          .eq('status', 'Pending')
+          .order('booking_date', ascending: true)
+          .order('start_time', ascending: true)
+          .order('booking_id', ascending: true)
+          .limit(500),
+    );
+
+    for (final row in rows) {
+      final startAt = _bookingStartAt(row);
+      if (startAt.isAfter(now)) {
+        continue;
+      }
+
+      try {
+        await _checkInBookingRow(row, checkInAt: startAt);
+      } catch (_) {
+        // Keep dashboards loading even if an old malformed booking cannot be
+        // auto-checked in. The reservation remains pending for manual review.
+      }
+    }
   }
 
   Future<List<Map<String, dynamic>>> _latestTransactions({
@@ -2441,7 +2511,7 @@ class AimsApiClient {
     return _asInt(row['user_id']);
   }
 
-  Future<int> _ensureActiveSession(int userId) async {
+  Future<int> _ensureActiveSession(int userId, {DateTime? checkInAt}) async {
     final client = await _client();
     final active = await _activeSessionForUser(userId);
     if (active.isNotEmpty) {
@@ -2452,7 +2522,7 @@ class AimsApiClient {
           .from('sessions')
           .insert(<String, dynamic>{
             'user_id': userId,
-            'check_in': DateTime.now().toIso8601String(),
+            'check_in': (checkInAt ?? DateTime.now()).toIso8601String(),
             'check_out': null,
             'status': 'Active',
           })
@@ -2834,6 +2904,9 @@ class AimsApiClient {
 
   int get _currentStaffId => _asInt(AppSession.user?['staff_id']);
 
+  String get _currentStaffRole =>
+      _asString(AppSession.user?['role']).trim().toLowerCase();
+
   String _requiredString(Map<String, dynamic> body, String field) {
     final value = _asString(body[field]);
     if (value.isEmpty) {
@@ -2959,6 +3032,12 @@ class AimsApiClient {
     return '${value.hour.toString().padLeft(2, '0')}:'
         '${value.minute.toString().padLeft(2, '0')}:'
         '${value.second.toString().padLeft(2, '0')}';
+  }
+
+  DateTime _bookingStartAt(Map<String, dynamic> booking) {
+    return _asDateTime(
+      '${_asString(booking['booking_date'])} ${_asString(booking['start_time'])}',
+    );
   }
 
   ({String first, String last}) _splitName(String fullName) {

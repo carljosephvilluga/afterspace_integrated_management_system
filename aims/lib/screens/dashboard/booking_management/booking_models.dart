@@ -71,16 +71,16 @@ class AvailabilityWindow {
 class ReservationDraft {
   const ReservationDraft({
     required this.date,
-    required this.startHour,
-    required this.endHour,
+    required this.startAt,
+    required this.endAt,
     required this.spaceType,
     required this.customerName,
     required this.contactDetails,
   });
 
   final DateTime date;
-  final int startHour;
-  final int endHour;
+  final DateTime startAt;
+  final DateTime endAt;
   final BookingSpaceType spaceType;
   final String customerName;
   final String contactDetails;
@@ -171,7 +171,13 @@ String formatMonthDayYear(DateTime value) {
 }
 
 String formatTimeRange(DateTime start, DateTime end) {
-  return '${formatHour(start.hour)} - ${formatHour(end.hour)}';
+  return '${formatTime(start)} - ${formatTime(end)}';
+}
+
+String formatTime(DateTime value) {
+  final suffix = value.hour >= 12 ? 'PM' : 'AM';
+  final normalized = value.hour % 12 == 0 ? 12 : value.hour % 12;
+  return '$normalized:${value.minute.toString().padLeft(2, '0')} $suffix';
 }
 
 String formatHour(int hour) {
@@ -354,37 +360,63 @@ String? availabilityErrorForDraft(
 ) {
   if (draft.customerName.trim().isEmpty ||
       draft.contactDetails.trim().isEmpty) {
-    return 'Enter the customer name and contact details.';
+    return 'Enter the first name, last name, and contact details.';
   }
 
-  if (draft.endHour <= draft.startHour) {
+  if (!draft.endAt.isAfter(draft.startAt)) {
     return 'The end time must be later than the start time.';
   }
 
-  if (draft.startHour < bookingOpeningHour ||
-      draft.endHour > bookingClosingHour) {
+  final openingAt = DateTime(
+    draft.date.year,
+    draft.date.month,
+    draft.date.day,
+    bookingOpeningHour,
+  );
+  final closingAt = DateTime(
+    draft.date.year,
+    draft.date.month,
+    draft.date.day,
+    bookingClosingHour,
+  );
+  if (draft.startAt.isBefore(openingAt) || draft.endAt.isAfter(closingAt)) {
     return 'Bookings must stay within operating hours.';
   }
 
   switch (draft.spaceType) {
     case BookingSpaceType.boardRoom:
-      if (!boardRoomAvailableForRange(
-        reservations,
-        draft.date,
-        draft.startHour,
-        draft.endHour,
-      )) {
+      final hasOverlap =
+          reservationsForSpace(
+            reservations,
+            draft.date,
+            BookingSpaceType.boardRoom,
+          ).any(
+            (reservation) => reservationsOverlap(
+              reservation.start,
+              reservation.end,
+              draft.startAt,
+              draft.endAt,
+            ),
+          );
+      if (hasOverlap) {
         return 'Board Room is already reserved for that time.';
       }
       break;
     case BookingSpaceType.openSpace:
-      if (openSeatsLeftForRange(
+      final overlaps =
+          reservationsForSpace(
             reservations,
             draft.date,
-            draft.startHour,
-            draft.endHour,
-          ) <=
-          0) {
+            BookingSpaceType.openSpace,
+          ).where(
+            (reservation) => reservationsOverlap(
+              reservation.start,
+              reservation.end,
+              draft.startAt,
+              draft.endAt,
+            ),
+          );
+      if (overlaps.length >= openSpaceCapacity) {
         return 'Open Space has no available seats for that time.';
       }
       break;

@@ -150,11 +150,11 @@ class _TodaysBookingsSectionState extends State<TodaysBookingsSection> {
                         child: Row(
                           children: [
                             _cell(flex: 2, reservation.id),
-                            _cell(flex: 1, formatHour(reservation.start.hour)),
+                            _cell(flex: 1, formatTime(reservation.start)),
                             _cell(flex: 1, reservation.spaceType.label),
                             _cell(flex: 1, reservation.customerType),
                             _cell(flex: 2, reservation.customerName),
-                            _cell(flex: 1, formatHour(reservation.end.hour)),
+                            _cell(flex: 1, formatTime(reservation.end)),
                             Expanded(
                               flex: 2,
                               child: Row(

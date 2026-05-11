@@ -24,7 +24,7 @@ class MembershipProgramSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.6)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x12000000),
@@ -65,7 +65,7 @@ class MembershipProgramSection extends StatelessWidget {
                         subtitle!,
                         style: TextStyle(
                           fontSize: 12,
-                          color: textColor.withOpacity(0.65),
+                          color: textColor.withValues(alpha: 0.65),
                         ),
                       ),
                     ],
@@ -78,7 +78,7 @@ class MembershipProgramSection extends StatelessWidget {
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
+              color: Colors.white.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: child,

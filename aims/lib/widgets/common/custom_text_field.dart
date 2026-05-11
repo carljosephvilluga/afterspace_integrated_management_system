@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:aims/widgets/utils/validators.dart';
 
 //Reusable text field
 class CustomTextField extends StatefulWidget {
@@ -22,8 +21,8 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.validator,
     this.textAlign = TextAlign.start, // default left align
-    this.showToggle = false,          // default: no eye icon
-    this.fillColor = Colors.white,    // default background
+    this.showToggle = false, // default: no eye icon
+    this.fillColor = Colors.white, // default background
     this.onChanged,
     this.suffixIcon,
   });
@@ -75,7 +74,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
           // Password visibility toggle only if requested
           suffixIcon: widget.isPassword && widget.showToggle
               ? IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                  icon: Icon(
+                    _obscure ? Icons.visibility_off : Icons.visibility,
+                  ),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 )
               : null,

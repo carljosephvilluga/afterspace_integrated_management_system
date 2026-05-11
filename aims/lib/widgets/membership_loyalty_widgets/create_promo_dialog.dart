@@ -1,4 +1,5 @@
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_input_field.dart';
 import 'package:flutter/material.dart';
 
@@ -7,6 +8,7 @@ class PromoDialogResult {
     required this.name,
     required this.type,
     required this.discount,
+    required this.start,
     required this.expiry,
     required this.benefits,
   });
@@ -14,6 +16,7 @@ class PromoDialogResult {
   final String name;
   final String type;
   final String discount;
+  final String start;
   final String expiry;
   final String benefits;
 }
@@ -144,6 +147,9 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
                           final name = _promoNameController.text.trim();
                           final type = _typeController.text.trim();
                           final discount = _priceController.text.trim();
+                          final start = _selectedRange == null
+                              ? ''
+                              : _formatDate(_selectedRange!.start);
                           final expiry = _selectedRange == null
                               ? _durationController.text.trim()
                               : _formatDate(_selectedRange!.end);
@@ -151,12 +157,24 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
                               type.isEmpty ||
                               discount.isEmpty ||
                               expiry.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
+                            showTopNotification(
+                              context,
+                              message:
                                   'Please complete promo name, type, discount, and expiry.',
-                                ),
-                              ),
+                              isError: true,
+                            );
+                            return;
+                          }
+
+                          final parsedDiscount = _parsePercent(discount);
+                          if (parsedDiscount == null ||
+                              parsedDiscount <= 0 ||
+                              parsedDiscount > 100) {
+                            showTopNotification(
+                              context,
+                              message:
+                                  'Discount must be greater than 0% and no more than 100%.',
+                              isError: true,
                             );
                             return;
                           }
@@ -166,7 +184,8 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
                             PromoDialogResult(
                               name: name,
                               type: type,
-                              discount: discount,
+                              discount: _formatPercent(parsedDiscount),
+                              start: start,
                               expiry: expiry,
                               benefits: _benefitsController.text.trim(),
                             ),
@@ -244,9 +263,9 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
           ),
           const SizedBox(height: 14),
           MembershipProgramInputField(
-            label: 'Discount',
+            label: 'Discount (%)',
             controller: _priceController,
-            hintText: 'Enter discount',
+            hintText: '0',
           ),
           const SizedBox(height: 14),
           MembershipProgramInputField(
@@ -272,9 +291,9 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
         const SizedBox(width: 14),
         Expanded(
           child: MembershipProgramInputField(
-            label: 'Discount',
+            label: 'Discount (%)',
             controller: _priceController,
-            hintText: 'Enter discount',
+            hintText: '0',
           ),
         ),
         const SizedBox(width: 14),
@@ -352,24 +371,19 @@ class _CreatePromoDialogState extends State<CreatePromoDialog> {
   }
 
   String _formatDate(DateTime date) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
 
-    final month = months[date.month - 1];
-    final day = date.day.toString().padLeft(2, '0');
-    return '$month $day, ${date.year}';
+  String _formatPercent(double value) {
+    return value % 1 == 0
+        ? '${value.round()}%'
+        : '${value.toStringAsFixed(2)}%';
+  }
+
+  double? _parsePercent(String value) {
+    return double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
   }
 }
 

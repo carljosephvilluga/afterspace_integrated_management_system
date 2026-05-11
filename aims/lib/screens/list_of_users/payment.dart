@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 
 class PaymentDialog extends StatefulWidget {
+  final double subtotalAmount;
+  final double discountApplied;
   final double totalAmount;
-  final VoidCallback onConfirm;
+  final ValueChanged<String> onConfirm;
 
   const PaymentDialog({
     super.key,
+    required this.subtotalAmount,
+    this.discountApplied = 0,
     required this.totalAmount,
     required this.onConfirm,
   });
@@ -80,6 +85,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 ],
               ),
               const SizedBox(height: 40),
+
+              _buildPaymentSummary(),
+              const SizedBox(height: 30),
 
               // --- PAYMENT METHOD BUTTONS ---
               Row(
@@ -224,22 +232,73 @@ class _PaymentDialogState extends State<PaymentDialog> {
                   if (_selectedMethod == 'Cash' &&
                       (double.tryParse(_amountController.text) ?? 0.0) <
                           widget.totalAmount) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Amount received is less than total!'),
-                      ),
+                    showTopNotification(
+                      context,
+                      message: 'Amount received is less than total!',
+                      isError: true,
                     );
                     return;
                   }
 
                   Navigator.pop(context); // Close Payment Dialog
-                  widget.onConfirm(); // Trigger success logic
+                  widget.onConfirm(
+                    _selectedMethod == 'Cash' ? 'cash' : 'online_payment',
+                  ); // Trigger success logic
                 },
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPaymentSummary() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F8FA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFDDECEF)),
+      ),
+      child: Column(
+        children: [
+          _buildSummaryRow('Subtotal', widget.subtotalAmount),
+          if (widget.discountApplied > 0) ...[
+            const SizedBox(height: 8),
+            _buildSummaryRow('Discount', -widget.discountApplied),
+          ],
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          _buildSummaryRow('Amount due', widget.totalAmount, isTotal: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, double amount, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isTotal ? 16 : 13,
+            fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        Text(
+          '${amount < 0 ? '-' : ''}₱${amount.abs().toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 13,
+            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+            color: amount < 0 ? const Color(0xFF2E8B57) : Colors.black,
+          ),
+        ),
+      ],
     );
   }
 

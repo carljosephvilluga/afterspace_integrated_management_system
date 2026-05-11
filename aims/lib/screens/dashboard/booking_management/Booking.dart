@@ -23,10 +23,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
   late int _month;
   late int _day;
   late int _year;
-  int _fromHour = bookingOpeningHour;
-  int _toHour = bookingOpeningHour + 1;
+  TimeOfDay _fromTime = const TimeOfDay(hour: bookingOpeningHour, minute: 0);
+  TimeOfDay _toTime = const TimeOfDay(hour: bookingOpeningHour + 1, minute: 0);
   BookingSpaceType _spaceType = BookingSpaceType.boardRoom;
-  final TextEditingController _customerController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
 
   static const Color _headerBlue = Color(0xFF80AEC1);
@@ -51,7 +52,8 @@ class _AddReservationCardState extends State<AddReservationCard> {
 
   @override
   void dispose() {
-    _customerController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _contactController.dispose();
     super.dispose();
   }
@@ -64,12 +66,27 @@ class _AddReservationCardState extends State<AddReservationCard> {
 
   DateTime get _draftDate => DateTime(_year, _month, _day);
 
+  DateTime get _startAt =>
+      DateTime(_year, _month, _day, _fromTime.hour, _fromTime.minute);
+
+  DateTime get _endAt =>
+      DateTime(_year, _month, _day, _toTime.hour, _toTime.minute);
+
+  String get _customerName {
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    if (firstName.isEmpty || lastName.isEmpty) {
+      return '';
+    }
+    return '$firstName $lastName';
+  }
+
   ReservationDraft get _draft => ReservationDraft(
     date: _draftDate,
-    startHour: _fromHour,
-    endHour: _toHour,
+    startAt: _startAt,
+    endAt: _endAt,
     spaceType: _spaceType,
-    customerName: _customerController.text,
+    customerName: _customerName,
     contactDetails: _contactController.text,
   );
 
@@ -220,29 +237,18 @@ class _AddReservationCardState extends State<AddReservationCard> {
             Row(
               children: [
                 Expanded(
-                  child: _timeDropdown(
+                  child: _timeInput(
                     label: 'From',
-                    value: _fromHour,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _fromHour = value;
-                        if (_toHour <= _fromHour) {
-                          _toHour = _fromHour + 1;
-                        }
-                      });
-                    },
+                    value: _fromTime,
+                    onTap: () => _pickTime(isStart: true),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _timeDropdown(
+                  child: _timeInput(
                     label: 'To',
-                    value: _toHour,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _toHour = value);
-                    },
+                    value: _toTime,
+                    onTap: () => _pickTime(isStart: false),
                   ),
                 ),
               ],
@@ -281,8 +287,14 @@ class _AddReservationCardState extends State<AddReservationCard> {
             ),
             const SizedBox(height: 6),
             _textField(
-              controller: _customerController,
-              hintText: 'Enter full name',
+              controller: _firstNameController,
+              hintText: 'First name',
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            _textField(
+              controller: _lastNameController,
+              hintText: 'Last name',
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 14),
@@ -318,7 +330,7 @@ class _AddReservationCardState extends State<AddReservationCard> {
               ),
               child: Text(
                 errorText ??
-                    '${_spaceType.label} is available for ${formatHour(_fromHour)} to ${formatHour(_toHour)}.',
+                    '${_spaceType.label} is available for ${formatTime(_startAt)} to ${formatTime(_endAt)}.',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -333,7 +345,8 @@ class _AddReservationCardState extends State<AddReservationCard> {
                 onPressed: canSubmit
                     ? () {
                         widget.onReservationSaved(_draft);
-                        _customerController.clear();
+                        _firstNameController.clear();
+                        _lastNameController.clear();
                         _contactController.clear();
                         setState(() {});
                       }
@@ -361,6 +374,41 @@ class _AddReservationCardState extends State<AddReservationCard> {
     );
   }
 
+  Future<void> _pickTime({required bool isStart}) async {
+    final currentValue = isStart ? _fromTime : _toTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: currentValue,
+      initialEntryMode: TimePickerEntryMode.input,
+      helpText: isStart ? 'Enter start time' : 'Enter end time',
+    );
+
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _fromTime = picked;
+        if (!_endAt.isAfter(_startAt)) {
+          _toTime = _suggestEndTimeAfter(_startAt);
+        }
+        return;
+      }
+
+      _toTime = picked;
+    });
+  }
+
+  TimeOfDay _suggestEndTimeAfter(DateTime startAt) {
+    final closingAt = DateTime(
+      startAt.year,
+      startAt.month,
+      startAt.day,
+      bookingClosingHour,
+    );
+    final suggestedAt = startAt.add(const Duration(hours: 1));
+    final nextAt = suggestedAt.isAfter(closingAt) ? closingAt : suggestedAt;
+    return TimeOfDay(hour: nextAt.hour, minute: nextAt.minute);
+  }
+
   Widget _dropdownShell<T>({
     required T value,
     required List<DropdownMenuItem<T>> items,
@@ -384,19 +432,11 @@ class _AddReservationCardState extends State<AddReservationCard> {
     );
   }
 
-  Widget _timeDropdown({
+  Widget _timeInput({
     required String label,
-    required int value,
-    required ValueChanged<int?> onChanged,
+    required TimeOfDay value,
+    required VoidCallback onTap,
   }) {
-    final values = label == 'From'
-        ? bookingTimeOptions()
-              .where((hour) => hour < bookingClosingHour)
-              .toList()
-        : bookingTimeOptions()
-              .where((hour) => hour > bookingOpeningHour)
-              .toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -409,20 +449,38 @@ class _AddReservationCardState extends State<AddReservationCard> {
           ),
         ),
         const SizedBox(height: 4),
-        _dropdownShell(
-          value: value,
-          items: values
-              .map(
-                (hour) => DropdownMenuItem<int>(
-                  value: hour,
-                  child: Text(formatHour(hour)),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.76),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatTimeOfDay(value),
+                    style: const TextStyle(fontSize: 16, color: _text),
+                  ),
                 ),
-              )
-              .toList(),
-          onChanged: onChanged,
+                const Icon(Icons.schedule_rounded, color: _muted, size: 20),
+              ],
+            ),
+          ),
         ),
       ],
     );
+  }
+
+  String _formatTimeOfDay(TimeOfDay value) {
+    final suffix = value.hour >= 12 ? 'PM' : 'AM';
+    final normalized = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    return '$normalized:${value.minute.toString().padLeft(2, '0')} $suffix';
   }
 
   Widget _textField({

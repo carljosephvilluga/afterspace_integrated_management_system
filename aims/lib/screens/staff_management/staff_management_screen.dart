@@ -1,4 +1,5 @@
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_action_button.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_section.dart';
@@ -37,15 +38,12 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final TextEditingController _userTypeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _statusController = TextEditingController();
 
   String searchQuery = '';
-  String selectedFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _statusController.text = 'Active';
     _loadStaffAccounts();
   }
 
@@ -58,7 +56,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     _emailController.dispose();
     _lastNameController.dispose();
     _passwordController.dispose();
-    _statusController.dispose();
     super.dispose();
   }
 
@@ -103,14 +100,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                       label: 'Total Staff',
                       value: '${staffList.length}',
                     ),
-                    _buildInfoChip(
-                      label: 'Active',
-                      value: '${_countByStatus('Active')}',
-                    ),
-                    _buildInfoChip(
-                      label: 'Inactive',
-                      value: '${_countByStatus('Inactive')}',
-                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -120,20 +109,12 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                     children: [
                       _buildSearchField(),
                       const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          _buildFilterDropdown(),
-                          MembershipProgramActionButton(
-                            label: 'Add Staff',
-                            backgroundColor: _tanSoft,
-                            textColor: _textPrimary,
-                            icon: Icons.person_add_alt_1_rounded,
-                            onPressed: _showAddForm,
-                          ),
-                        ],
+                      MembershipProgramActionButton(
+                        label: 'Add Staff',
+                        backgroundColor: _tanSoft,
+                        textColor: _textPrimary,
+                        icon: Icons.person_add_alt_1_rounded,
+                        onPressed: _showAddForm,
                       ),
                     ],
                   )
@@ -141,8 +122,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                   Row(
                     children: [
                       Expanded(child: _buildSearchField()),
-                      const SizedBox(width: 12),
-                      _buildFilterDropdown(),
                       const SizedBox(width: 16),
                       MembershipProgramActionButton(
                         label: 'Add Staff',
@@ -220,18 +199,14 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
       final id = staff['id'].toString().toLowerCase();
       final email = staff['email'].toString().toLowerCase();
       final userType = staff['userType'].toString().toLowerCase();
-      final status = staff['status'].toString().toLowerCase();
       final matchesSearch =
           normalizedSearch.isEmpty ||
           fullName.contains(normalizedSearch) ||
           id.contains(normalizedSearch) ||
           email.contains(normalizedSearch) ||
-          userType.contains(normalizedSearch) ||
-          status.contains(normalizedSearch);
-      final matchesFilter =
-          selectedFilter == 'All' || staff['status'] == selectedFilter;
+          userType.contains(normalizedSearch);
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch;
     }).toList();
   }
 
@@ -281,7 +256,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Manage staff login accounts, roles, and active access for admin operations.',
+                  'Manage staff login accounts, roles, and contact details for admin operations.',
                   style: TextStyle(
                     fontSize: 14,
                     color: _textMuted,
@@ -332,10 +307,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
-  int _countByStatus(String status) {
-    return staffList.where((staff) => staff['status'] == status).length;
-  }
-
   Widget _buildSearchField() {
     return SizedBox(
       height: 50,
@@ -352,7 +323,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
-          hintText: 'Search staff by name, employee ID, role, status, or email',
+          hintText: 'Search staff by name, employee ID, role, or email',
           hintStyle: const TextStyle(
             color: _textMuted,
             fontSize: 13,
@@ -379,44 +350,10 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
-  Widget _buildFilterDropdown() {
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: _tanSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x2A23323A)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedFilter,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          style: const TextStyle(
-            color: _textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-          items: const [
-            DropdownMenuItem(value: 'All', child: Text('All Staff')),
-            DropdownMenuItem(value: 'Active', child: Text('Active')),
-            DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
-          ],
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() {
-              selectedFilter = value;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildStaffDirectorySection(List<Map<String, dynamic>> filteredStaff) {
     return MembershipProgramSection(
       title: 'Staff Directory',
-      subtitle: 'Review login accounts, roles, status, and contact details.',
+      subtitle: 'Review login accounts, roles, and contact details.',
       backgroundColor: _panelBlue,
       textColor: _textPrimary,
       child: _isLoadingStaff
@@ -440,17 +377,15 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                         'Staff Account',
                         'Role',
                         'Email',
-                        'Status',
                         'Created',
                         '',
                       ],
-                      flexes: const [3, 2, 3, 2, 2, 3],
+                      flexes: const [3, 2, 3, 2, 3],
                       rows: filteredStaff.map((staff) {
                         return [
                           '${_displayName(staff)}\n${staff['id'] ?? ''}',
                           '${staff['userType'] ?? ''}',
                           '${staff['email'] ?? ''}',
-                          '${staff['status'] ?? ''}',
                           '${staff['createdAt'] ?? ''}',
                           'View    Edit    Delete',
                         ];
@@ -458,7 +393,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                       headerColor: _tan,
                       primaryTextColor: _textPrimary,
                       actionTextColor: _headerBlue,
-                      actionColumnIndex: 5,
+                      actionColumnIndex: 4,
                       actionBuilder: (rowIndex) =>
                           _buildStaffTableActions(filteredStaff[rowIndex]),
                     ),
@@ -631,7 +566,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
 
     final staffId = staff['staffId'] is int ? staff['staffId'] as int : 0;
     if (staffId <= 0) {
-      _showSnackBar('Missing staff account ID.', isError: true);
+      _showMessage('Missing staff account ID.', isError: true);
       return;
     }
 
@@ -641,10 +576,10 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
       setState(() {
         staffList.removeWhere((item) => item['staffId'] == staffId);
       });
-      _showSnackBar('Staff account deleted.');
+      _showMessage('Staff account deleted.');
     } catch (error) {
       if (!mounted) return;
-      _showSnackBar('Failed to delete staff account: $error', isError: true);
+      _showMessage('Failed to delete staff account: $error', isError: true);
     }
   }
 
@@ -667,9 +602,9 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     var selectedRole = _userTypeController.text.isEmpty
         ? 'Staff'
         : _userTypeController.text;
-    var selectedStatus = _statusController.text.isEmpty
-        ? 'Active'
-        : _statusController.text;
+    final selectedStatus = isEditing
+        ? '${staff['status'] ?? 'Active'}'
+        : 'Active';
     var employeeId = isEditing
         ? '${staff['id'] ?? ''}'
         : _buildNextEmployeeId(selectedRole);
@@ -728,7 +663,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                   }
                 });
                 navigator.pop();
-                _showSnackBar(
+                _showMessage(
                   isEditing
                       ? 'Staff account updated.'
                       : 'Staff account created.',
@@ -738,7 +673,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                 setDialogState(() {
                   isSaving = false;
                 });
-                _showSnackBar(
+                _showMessage(
                   'Failed to save staff account: $error',
                   isError: true,
                 );
@@ -880,21 +815,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                                   ),
                                   SizedBox(
                                     width: fieldWidth,
-                                    child: _buildDropdownField(
-                                      label: 'Status',
-                                      value: selectedStatus,
-                                      items: const ['Active', 'Inactive'],
-                                      onChanged: (value) {
-                                        if (value == null) return;
-                                        setDialogState(() {
-                                          selectedStatus = value;
-                                          _statusController.text = value;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: fieldWidth,
                                     child: _buildDialogTextField(
                                       label: 'Email',
                                       controller: _emailController,
@@ -1029,7 +949,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
               _buildDetailRow('Full Name', _displayName(staff)),
               _buildDetailRow('Email', staff['email']),
               _buildDetailRow('Role', staff['userType']),
-              _buildDetailRow('Status', staff['status']),
               _buildDetailRow('Created', staff['createdAt']),
             ],
           ),
@@ -1170,7 +1089,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     _emailController.clear();
     _passwordController.clear();
     _userTypeController.text = 'Staff';
-    _statusController.text = 'Active';
   }
 
   void _setFormFromStaff(Map<String, dynamic> staff) {
@@ -1180,7 +1098,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     _emailController.text = '${staff['email'] ?? ''}';
     _passwordController.clear();
     _userTypeController.text = '${staff['userType'] ?? 'Staff'}';
-    _statusController.text = '${staff['status'] ?? 'Active'}';
   }
 
   String _buildFullNameFromForm() {
@@ -1274,12 +1191,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     return '${months[value.month - 1]} ${value.day}, ${value.year}';
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? _danger : _headerBlue,
-      ),
-    );
+  void _showMessage(String message, {bool isError = false}) {
+    showTopNotification(context, message: message, isError: isError);
   }
 }

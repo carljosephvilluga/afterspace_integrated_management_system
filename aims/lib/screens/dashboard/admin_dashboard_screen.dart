@@ -5,6 +5,7 @@ import 'package:aims/widgets/admin_dashboard/customer_report_bar_chart.dart';
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/services/sales_report_pdf_exporter.dart';
 import 'package:aims/screens/staff_management/staff_management_screen.dart';
@@ -391,22 +392,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Sales report PDF generated (daily, weekly, monthly, yearly).',
-          ),
-        ),
+      showTopNotification(
+        context,
+        message: 'Sales report PDF generated (daily, weekly, monthly, yearly).',
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to export PDF: $error'),
-          backgroundColor: Colors.red.shade700,
-        ),
+      showTopNotification(
+        context,
+        message: 'Failed to export PDF: $error',
+        isError: true,
       );
     } finally {
       if (mounted) {

@@ -20,6 +20,7 @@ class Validators {
     if (value.trim().length > 2) {
       return 'Invalid';
     }
+    return null;
   }
 
   //Email (Optional)

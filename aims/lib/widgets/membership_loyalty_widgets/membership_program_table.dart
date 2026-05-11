@@ -51,7 +51,9 @@ class MembershipProgramTable extends StatelessWidget {
             }),
           ),
         ),
-        ...rows.asMap().entries.map((entry) => _buildRow(entry.key, entry.value)),
+        ...rows.asMap().entries.map(
+          (entry) => _buildRow(entry.key, entry.value),
+        ),
       ],
     );
   }
@@ -61,12 +63,10 @@ class MembershipProgramTable extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       decoration: BoxDecoration(
         color: rowIndex.isEven
-            ? Colors.white.withOpacity(0.30)
-            : Colors.white.withOpacity(0.16),
+            ? Colors.white.withValues(alpha: 0.30)
+            : Colors.white.withValues(alpha: 0.16),
         border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.55),
-          ),
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.55)),
         ),
       ),
       child: Row(

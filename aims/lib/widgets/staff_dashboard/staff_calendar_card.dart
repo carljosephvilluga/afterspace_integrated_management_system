@@ -46,16 +46,45 @@ class _StaffCalendarCardState extends State<StaffCalendarCard> {
   Widget build(BuildContext context) {
     const weekLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
     const visibleDays = [
-      1, 2, 3, 4, 5, 6,
-      7, 8, 9, 10, 11, 12, 13,
-      14, 15, 16, 17, 18, 19, 20,
-      21, 22, 23, 24, 25, 26, 27,
-      28, 29, 30, 1, 2, 3, 4,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      1,
+      2,
+      3,
+      4,
     ];
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
+        color: Colors.white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(6),
       ),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -74,7 +103,10 @@ class _StaffCalendarCardState extends State<StaffCalendarCard> {
                     child: DropdownButton<int>(
                       value: _month,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
                       items: List.generate(
                         12,
                         (index) => DropdownMenuItem(
@@ -99,7 +131,10 @@ class _StaffCalendarCardState extends State<StaffCalendarCard> {
                     child: DropdownButton<int>(
                       value: _year,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
                       items: _years
                           .map(
                             (year) => DropdownMenuItem(
@@ -161,7 +196,9 @@ class _StaffCalendarCardState extends State<StaffCalendarCard> {
 
                 return Container(
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF2E343A) : Colors.transparent,
+                    color: isSelected
+                        ? const Color(0xFF2E343A)
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
@@ -172,9 +209,11 @@ class _StaffCalendarCardState extends State<StaffCalendarCard> {
                       color: isSelected
                           ? Colors.white
                           : (isOutside
-                              ? const Color(0xFFAAB5BC)
-                              : const Color(0xFF3D4850)),
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                ? const Color(0xFFAAB5BC)
+                                : const Color(0xFF3D4850)),
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                     ),
                   ),
                 );

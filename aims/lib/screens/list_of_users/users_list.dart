@@ -2,6 +2,7 @@ import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/screens/list_of_users/user_form.dart';
@@ -331,35 +332,17 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                     const SizedBox(height: 10),
                                     _buildPageHero(context),
                                     const SizedBox(height: 18),
-                                    Wrap(
-                                      spacing: 12,
-                                      runSpacing: 12,
-                                      children: [
-                                        _buildInfoChip(
-                                          label: 'Total Users',
-                                          value: '${_users.length}',
-                                        ),
-                                        _buildInfoChip(
-                                          label: 'Active Users',
-                                          value:
-                                              '${_users.where((user) => user.isActive).length}',
-                                        ),
-                                        _buildInfoChip(
-                                          label: 'Filtered Results',
-                                          value: '${filteredUsers.length}',
-                                        ),
-                                      ],
+                                    _buildOverviewAndSearchSection(
+                                      resultCount: filteredUsers.length,
                                     ),
-                                    const SizedBox(height: 24),
-                                    _buildSearchSection(filteredUsers.length),
                                     if (_isLoadingUsers)
                                       const Padding(
-                                        padding: EdgeInsets.only(top: 12),
+                                        padding: EdgeInsets.only(top: 10),
                                         child: LinearProgressIndicator(
                                           minHeight: 3,
                                         ),
                                       ),
-                                    const SizedBox(height: 18),
+                                    const SizedBox(height: 16),
                                     Expanded(
                                       child: _buildUserDirectorySection(
                                         filteredUsers: filteredUsers,
@@ -528,6 +511,45 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     );
   }
 
+  Widget _buildOverviewAndSearchSection({required int resultCount}) {
+    final statChips = Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _buildInfoChip(label: 'Total Users', value: '${_users.length}'),
+        _buildInfoChip(
+          label: 'Active Users',
+          value: '${_users.where((user) => user.isActive).length}',
+        ),
+        _buildInfoChip(label: 'Filtered Results', value: '$resultCount'),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 1140) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              statChips,
+              const SizedBox(height: 14),
+              _buildSearchSection(resultCount),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 560, child: statChips),
+            const SizedBox(width: 14),
+            Expanded(child: _buildSearchSection(resultCount)),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildInfoChip({required String label, required String value}) {
     return Container(
       constraints: const BoxConstraints(minWidth: 160),
@@ -567,108 +589,131 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   Widget _buildSearchSection(int resultCount) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.54),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Search Users',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: _darkText,
-                  ),
-                ),
-              ),
-              Text(
-                '$resultCount found',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: _mutedText,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 760;
-              final filterWidth = isCompact ? double.infinity : 220.0;
-              final inputWidth = isCompact
-                  ? double.infinity
-                  : constraints.maxWidth - 220 - 12;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 760) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSearchHeading(resultCount),
+                const SizedBox(height: 10),
+                _buildSearchControls(),
+              ],
+            );
+          }
 
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  SizedBox(
-                    width: filterWidth,
-                    child: _buildDropdown(
-                      value: _selectedFilter,
-                      label: 'Filter By',
-                      items: _filterOptions,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _selectedFilter = value;
-                          _searchController.clear();
-                          _selectedDropdownValue = 'All';
-                        });
-                      },
-                    ),
-                  ),
-                  SizedBox(
-                    width: inputWidth < 180 ? double.infinity : inputWidth,
-                    child: _buildSelectedFilterInput(),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 14,
-            runSpacing: 10,
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {
-                    _selectedFilter = 'Last Name';
-                    _selectedDropdownValue = 'All';
-                  });
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _darkText,
-                  side: const BorderSide(color: Color(0x2A23323A)),
-                  backgroundColor: Colors.white.withValues(alpha: 0.64),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 13,
-                  ),
-                ),
-                icon: const Icon(Icons.clear_rounded, size: 18),
-                label: const Text(
-                  'Clear',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
+              SizedBox(width: 126, child: _buildSearchHeading(resultCount)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildSearchControls()),
             ],
-          ),
-        ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildSearchHeading(int resultCount) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Search Users',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: _darkText,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          '$resultCount found',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _mutedText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchControls() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: double.infinity, child: _buildFilterByDropdown()),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: _buildSelectedFilterInput(),
+              ),
+              const SizedBox(height: 10),
+              _buildClearSearchButton(),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            SizedBox(width: 188, child: _buildFilterByDropdown()),
+            const SizedBox(width: 10),
+            Expanded(child: _buildSelectedFilterInput()),
+            const SizedBox(width: 10),
+            _buildClearSearchButton(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterByDropdown() {
+    return _buildDropdown(
+      value: _selectedFilter,
+      label: 'Filter By',
+      items: _filterOptions,
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() {
+          _selectedFilter = value;
+          _searchController.clear();
+          _selectedDropdownValue = 'All';
+        });
+      },
+    );
+  }
+
+  Widget _buildClearSearchButton() {
+    return OutlinedButton.icon(
+      onPressed: () {
+        _searchController.clear();
+        setState(() {
+          _selectedFilter = 'Last Name';
+          _selectedDropdownValue = 'All';
+        });
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _darkText,
+        side: const BorderSide(color: Color(0x2A23323A)),
+        backgroundColor: Colors.white.withValues(alpha: 0.64),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14),
+      ),
+      icon: const Icon(Icons.clear_rounded, size: 18),
+      label: const Text('Clear', style: TextStyle(fontWeight: FontWeight.w700)),
     );
   }
 
@@ -697,32 +742,22 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
       );
     }
 
-    return CustomTextField(
-      hint: 'Search ${_selectedFilter.toLowerCase()}',
+    return TextFormField(
       controller: _searchController,
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value,
-    required String label,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      onChanged: onChanged,
+      style: const TextStyle(fontSize: 15, color: _darkText),
       decoration: InputDecoration(
-        labelText: label,
+        hintText: 'Search ${_selectedFilter.toLowerCase()}',
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.76),
-        labelStyle: const TextStyle(
+        prefixIcon: const Icon(
+          Icons.search_rounded,
           color: _mutedText,
-          fontWeight: FontWeight.w600,
+          size: 20,
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 20,
+          horizontal: 16,
+          vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -737,11 +772,69 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
           borderSide: const BorderSide(color: _headerBlue),
         ),
       ),
-      items: items
-          .map(
-            (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
-          )
-          .toList(),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required String label,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 5),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: _mutedText,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
+          ),
+        ),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          onChanged: onChanged,
+          isExpanded: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.76),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: _headerBlue),
+            ),
+          ),
+          items: items
+              .map(
+                (item) => DropdownMenuItem<String>(
+                  value: item,
+                  child: Text(item, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 
@@ -937,12 +1030,31 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                 if (!context.mounted) return;
                                 final visit = _activeVisitFor(user);
                                 final checkOutAt = DateTime.now();
-                                final totalAmount =
+                                final subtotalAmount =
                                     SpacePricingStore.totalForVisit(
                                       spaceUsed: visit.spaceUsed,
                                       timeIn: visit.timeIn,
                                       timeOut: checkOutAt,
                                     );
+                                late final CheckoutDiscountQuote discountQuote;
+                                try {
+                                  discountQuote = await AimsApiClient.instance
+                                      .quoteCheckoutDiscount(
+                                        userId: user.backendId,
+                                        subtotalAmount: subtotalAmount,
+                                        checkoutAt: checkOutAt,
+                                      );
+                                } on AimsApiException catch (error) {
+                                  _showMessage(error.message);
+                                  return;
+                                } catch (_) {
+                                  _showMessage(
+                                    'Unable to calculate checkout discounts right now.',
+                                  );
+                                  return;
+                                }
+                                if (!context.mounted) return;
+                                final totalAmount = discountQuote.finalAmount;
 
                                 showDialog(
                                   context: context,
@@ -952,18 +1064,32 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
                                     spaceUsed: visit.spaceUsed,
                                     timeIn: visit.timeIn,
                                     timeOut: checkOutAt,
+                                    subtotalAmount:
+                                        discountQuote.subtotalAmount,
+                                    membershipDiscount:
+                                        discountQuote.membershipDiscount,
+                                    membershipDiscountLabel:
+                                        discountQuote.membershipLabel,
+                                    promoDiscount: discountQuote.promoDiscount,
+                                    promoDiscountLabel:
+                                        discountQuote.promoLabel,
                                     totalAmount: totalAmount,
                                     onConfirm: () {
                                       showDialog(
                                         context: context,
                                         builder: (_) => PaymentDialog(
+                                          subtotalAmount:
+                                              discountQuote.subtotalAmount,
+                                          discountApplied:
+                                              discountQuote.totalDiscount,
                                           totalAmount: totalAmount,
-                                          onConfirm: () {
+                                          onConfirm: (paymentMethod) {
                                             _completeCheckout(
                                               user: user,
                                               visit: visit,
                                               checkOutAt: checkOutAt,
-                                              totalAmount: totalAmount,
+                                              discountQuote: discountQuote,
+                                              paymentMethod: paymentMethod,
                                             );
                                           },
                                         ),
@@ -1017,6 +1143,7 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
 
                                 try {
                                   await AimsApiClient.instance.checkInUser(
+                                    userId: user.backendId,
                                     userEmail: user.email,
                                     spaceUsed: result.spaceUsed,
                                     checkInAt: result.timeIn,
@@ -1234,8 +1361,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   Future<void> _openEditUserForm(BuildContext context, _StaffUser user) async {
-    final result = await Navigator.of(context).push<UserFormData>(
-      MaterialPageRoute(builder: (_) => _UserFormScreen(user: user)),
+    final result = await showDialog<UserFormData>(
+      context: context,
+      builder: (_) => _UserFormDialog(user: user),
     );
 
     if (result == null) return;
@@ -1316,12 +1444,11 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
     }
   }
 
-  void _openHistoryScreen(BuildContext context, _StaffUser user) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            _UserHistoryScreen(userName: user.fullName, history: user.history),
-      ),
+  Future<void> _openHistoryScreen(BuildContext context, _StaffUser user) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _UserHistoryDialog(userName: user.fullName, history: user.history),
     );
   }
 
@@ -1335,23 +1462,24 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showTopNotification(context, message: message);
   }
 
   Future<void> _completeCheckout({
     required _StaffUser user,
     required _ActiveVisit visit,
     required DateTime checkOutAt,
-    required double totalAmount,
+    required CheckoutDiscountQuote discountQuote,
+    required String paymentMethod,
   }) async {
     try {
       await AimsApiClient.instance.checkOutUser(
+        userId: user.backendId,
         userEmail: user.email,
-        amount: totalAmount,
+        amount: discountQuote.subtotalAmount,
+        discountApplied: discountQuote.totalDiscount,
         checkOutAt: checkOutAt,
-        paymentMethod: 'cash',
+        paymentMethod: paymentMethod,
         paymentStatus: 'paid',
       );
     } on AimsApiException catch (error) {
@@ -1384,7 +1512,9 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
               bookingId: 'BK-${user.id}',
               customerName: user.fullName,
               spaceUsed: visit.spaceUsed,
-              totalAmount: totalAmount,
+              subtotalAmount: discountQuote.subtotalAmount,
+              discountApplied: discountQuote.totalDiscount,
+              totalAmount: discountQuote.finalAmount,
             ),
           );
         },
@@ -1393,19 +1523,17 @@ class _StaffUsersListScreenState extends State<StaffUsersListScreen> {
   }
 }
 
-class _UserFormScreen extends StatefulWidget {
-  const _UserFormScreen({this.user});
+class _UserFormDialog extends StatefulWidget {
+  const _UserFormDialog({required this.user});
 
-  final _StaffUser? user;
-
-  bool get isEdit => user != null;
+  final _StaffUser user;
 
   @override
-  State<_UserFormScreen> createState() => _UserFormScreenState();
+  State<_UserFormDialog> createState() => _UserFormDialogState();
 }
 
-class _UserFormScreenState extends State<_UserFormScreen> {
-  static const Color _pageBackground = Color(0xFFDDECEF);
+class _UserFormDialogState extends State<_UserFormDialog> {
+  static const Color _panelBlue = Color(0xFFCDECF3);
   static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _textPrimary = Color(0xFF23323A);
   static const Color _textMuted = Color(0xFF6F7E87);
@@ -1423,15 +1551,13 @@ class _UserFormScreenState extends State<_UserFormScreen> {
   void initState() {
     super.initState();
     final user = widget.user;
-    _lastNameController = TextEditingController(text: user?.lastName ?? '');
-    _firstNameController = TextEditingController(text: user?.firstName ?? '');
-    _emailController = TextEditingController(text: user?.email ?? '');
-    _phoneNumberController = TextEditingController(
-      text: user?.phoneNumber ?? '',
-    );
-    _selectedUserType = user?.userType ?? 'Student';
-    _selectedMembershipType = user?.membershipType ?? 'Annual';
-    _isActive = user?.isActive ?? true;
+    _lastNameController = TextEditingController(text: user.lastName);
+    _firstNameController = TextEditingController(text: user.firstName);
+    _emailController = TextEditingController(text: user.email);
+    _phoneNumberController = TextEditingController(text: user.phoneNumber);
+    _selectedUserType = user.userType;
+    _selectedMembershipType = user.membershipType;
+    _isActive = user.isActive;
   }
 
   @override
@@ -1445,74 +1571,94 @@ class _UserFormScreenState extends State<_UserFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEdit ? 'Edit User' : 'Add User'),
-        backgroundColor: _headerBlue,
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: _pageBackground,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
-            child: Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: const Color(0xF7FFFFFF),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x10000000),
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.isEdit
-                          ? 'Update the selected user information.'
-                          : 'Enter the new staff-accessible user details.',
-                      style: const TextStyle(
-                        color: _textMuted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    CustomTextField(
-                      hint: 'Last Name',
-                      controller: _lastNameController,
-                      validator: _requiredField,
-                    ),
-                    const SizedBox(height: 14),
-                    CustomTextField(
-                      hint: 'First Name',
-                      controller: _firstNameController,
-                      validator: _requiredField,
-                    ),
-                    const SizedBox(height: 14),
+    final user = widget.user;
 
-                    const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: CustomTextField(
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 760),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xF7FFFFFF),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 14, 18),
+                  color: _panelBlue.withValues(alpha: 0.68),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          color: _headerBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Edit User',
+                              style: TextStyle(
+                                color: _textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${user.id} - ${user.email}',
+                              style: const TextStyle(
+                                color: _textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(22),
+                    child: Form(
+                      key: _formKey,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final stackFields = constraints.maxWidth < 560;
+                          final emailField = CustomTextField(
                             hint: 'Email',
                             controller: _emailController,
                             validator: _emailValidator,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
+                          );
+                          final userTypeField = DropdownButtonFormField<String>(
                             initialValue: _selectedUserType,
                             decoration: _inputDecoration('User Type'),
                             items: const [
@@ -1529,100 +1675,139 @@ class _UserFormScreenState extends State<_UserFormScreen> {
                               if (value == null) return;
                               setState(() => _selectedUserType = value);
                             },
-                          ),
-                        ),
-                      ],
-                    ),
+                          );
 
-                    const SizedBox(height: 14),
-
-                    CustomTextField(
-                      hint: 'Phone Number',
-                      controller: _phoneNumberController,
-                      validator: _requiredField,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    Center(
-                      child: SizedBox(
-                        width: 300,
-
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedMembershipType,
-                          decoration: _inputDecoration('Membership Type'),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Annual',
-                              child: Text('Annual'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Loyalty Rewards',
-                              child: Text('Loyalty Rewards'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Monthly Membership',
-                              child: Text('Monthly Membership'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Open Time',
-                              child: Text('Open Time'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _selectedMembershipType = value);
-                          },
-                        ),
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Update the selected user information.',
+                                style: TextStyle(
+                                  color: _textMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              CustomTextField(
+                                hint: 'Last Name',
+                                controller: _lastNameController,
+                                validator: _requiredField,
+                              ),
+                              const SizedBox(height: 14),
+                              CustomTextField(
+                                hint: 'First Name',
+                                controller: _firstNameController,
+                                validator: _requiredField,
+                              ),
+                              const SizedBox(height: 14),
+                              if (stackFields) ...[
+                                emailField,
+                                const SizedBox(height: 14),
+                                userTypeField,
+                              ] else
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: emailField),
+                                    const SizedBox(width: 14),
+                                    Expanded(child: userTypeField),
+                                  ],
+                                ),
+                              const SizedBox(height: 14),
+                              CustomTextField(
+                                hint: 'Phone Number',
+                                controller: _phoneNumberController,
+                                validator: _requiredField,
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                width: stackFields ? double.infinity : 320,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _selectedMembershipType,
+                                  decoration: _inputDecoration(
+                                    'Membership Type',
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'Annual',
+                                      child: Text('Annual'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'Loyalty Rewards',
+                                      child: Text('Loyalty Rewards'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'Monthly Membership',
+                                      child: Text('Monthly Membership'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'Open Time',
+                                      child: Text('Open Time'),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setState(
+                                      () => _selectedMembershipType = value,
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: CustomButton(
+                                      label: 'Cancel',
+                                      backgroundColor: Colors.white,
+                                      textColor: _textPrimary,
+                                      borderColor: const Color(0xFFB7C4CB),
+                                      onPressed: () async {
+                                        Navigator.pop(context);
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: CustomButton(
+                                      label: 'Save Changes',
+                                      backgroundColor: _textPrimary,
+                                      borderColor: _textPrimary,
+                                      onPressed: () async {
+                                        if (!_formKey.currentState!
+                                            .validate()) {
+                                          return;
+                                        }
+                                        Navigator.pop(
+                                          context,
+                                          UserFormData(
+                                            firstName: _firstNameController.text
+                                                .trim(),
+                                            lastName: _lastNameController.text
+                                                .trim(),
+                                            email: _emailController.text.trim(),
+                                            phoneNumber: _phoneNumberController
+                                                .text
+                                                .trim(),
+                                            userType: _selectedUserType,
+                                            membershipType:
+                                                _selectedMembershipType,
+                                            isActive: _isActive,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomButton(
-                            label: 'Cancel',
-                            backgroundColor: Colors.white,
-                            textColor: _textPrimary,
-                            borderColor: const Color(0xFFB7C4CB),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: CustomButton(
-                            label: widget.isEdit
-                                ? 'Save Changes'
-                                : 'Create User',
-                            backgroundColor: _textPrimary,
-                            borderColor: _textPrimary,
-                            onPressed: () async {
-                              if (!_formKey.currentState!.validate()) return;
-                              Navigator.pop(
-                                context,
-                                UserFormData(
-                                  firstName: _firstNameController.text.trim(),
-                                  lastName: _lastNameController.text.trim(),
-                                  email: _emailController.text.trim(),
-                                  phoneNumber: _phoneNumberController.text
-                                      .trim(),
-                                  userType: _selectedUserType,
-                                  membershipType: _selectedMembershipType,
-                                  isActive: _isActive,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -1673,10 +1858,9 @@ class _UserFormScreenState extends State<_UserFormScreen> {
   }
 }
 
-class _UserHistoryScreen extends StatelessWidget {
-  const _UserHistoryScreen({required this.userName, required this.history});
+class _UserHistoryDialog extends StatelessWidget {
+  const _UserHistoryDialog({required this.userName, required this.history});
 
-  static const Color _pageBackground = Color(0xFFDDECEF);
   static const Color _panelBlue = Color(0xFFCDECF3);
   static const Color _headerBlue = Color(0xFF80AEC1);
   static const Color _textPrimary = Color(0xFF23323A);
@@ -1687,48 +1871,128 @@ class _UserHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('$userName History'),
-        backgroundColor: _headerBlue,
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: _pageBackground,
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 560),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: _panelBlue,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+            color: const Color(0xF7FFFFFF),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
           ),
-          child: history.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No history available for this user.',
-                    style: TextStyle(color: _textMuted),
-                  ),
-                )
-              : ListView.separated(
-                  itemCount: history.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 18),
-                  itemBuilder: (context, index) {
-                    final entry = history[history.length - index - 1];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFEBD9CA),
-                        child: Icon(
-                          Icons.history_toggle_off_rounded,
-                          color: _textPrimary,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(22, 18, 14, 18),
+                  color: _panelBlue.withValues(alpha: 0.72),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.history_rounded,
+                          color: _headerBlue,
                         ),
                       ),
-                      title: Text(entry),
-                    );
-                  },
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'User History',
+                              style: TextStyle(
+                                color: _textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                color: _textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
                 ),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _panelBlue.withValues(alpha: 0.62),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                    child: history.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No history available for this user.',
+                              style: TextStyle(color: _textMuted),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: history.length,
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 18),
+                            itemBuilder: (context, index) {
+                              final entry = history[history.length - index - 1];
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                leading: const CircleAvatar(
+                                  backgroundColor: Color(0xFFEBD9CA),
+                                  child: Icon(
+                                    Icons.history_toggle_off_rounded,
+                                    color: _textPrimary,
+                                  ),
+                                ),
+                                title: Text(
+                                  entry,
+                                  style: const TextStyle(
+                                    color: _textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

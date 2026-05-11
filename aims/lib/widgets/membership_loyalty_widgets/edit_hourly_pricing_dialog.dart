@@ -1,4 +1,5 @@
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_input_field.dart';
 import 'package:flutter/material.dart';
 
@@ -23,7 +24,8 @@ class EditHourlyPricingDialog extends StatefulWidget {
   final double initialOrdinarySpaceRate;
 
   @override
-  State<EditHourlyPricingDialog> createState() => _EditHourlyPricingDialogState();
+  State<EditHourlyPricingDialog> createState() =>
+      _EditHourlyPricingDialogState();
 }
 
 class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
@@ -64,7 +66,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.85)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x26000000),
@@ -82,7 +84,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _panelBlue.withOpacity(0.35),
+                  color: _panelBlue.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Column(
@@ -167,21 +169,22 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
                     width: 190,
                     height: 42,
                     onPressed: () async {
-                      final boardRoomRate =
-                          double.tryParse(_boardRoomController.text.trim());
-                      final ordinarySpaceRate =
-                          double.tryParse(_ordinarySpaceController.text.trim());
+                      final boardRoomRate = double.tryParse(
+                        _boardRoomController.text.trim(),
+                      );
+                      final ordinarySpaceRate = double.tryParse(
+                        _ordinarySpaceController.text.trim(),
+                      );
 
                       if (boardRoomRate == null ||
                           ordinarySpaceRate == null ||
                           boardRoomRate <= 0 ||
                           ordinarySpaceRate <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
+                        showTopNotification(
+                          context,
+                          message:
                               'Enter valid hourly charges for both space types.',
-                            ),
-                          ),
+                          isError: true,
                         );
                         return;
                       }
@@ -236,10 +239,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
               SizedBox(height: 4),
               Text(
                 'Set the manager-approved rates for boardrooms and ordinary spaces.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _textMuted,
-                ),
+                style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],
           ),

@@ -9,6 +9,7 @@ import 'package:aims/widgets/membership_loyalty_widgets/membership_program_actio
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_section.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_table.dart';
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/utils/space_pricing.dart';
 import 'package:flutter/material.dart';
 
@@ -150,16 +151,18 @@ class _MembershipLoyaltyProgramScreenState
                                         'Type',
                                         'Duration',
                                         'Price',
+                                        'Discount',
                                         'Benefits',
                                         '',
                                       ],
-                                      flexes: const [3, 2, 2, 3, 2],
+                                      flexes: const [3, 2, 2, 2, 3, 2],
                                       rows: _membershipTypes
                                           .map(
                                             (membership) => [
                                               membership.type,
                                               membership.duration,
                                               membership.price,
+                                              membership.discount,
                                               membership.benefits,
                                               'Edit    Delete',
                                             ],
@@ -168,7 +171,7 @@ class _MembershipLoyaltyProgramScreenState
                                       headerColor: _tan,
                                       primaryTextColor: _textPrimary,
                                       actionTextColor: _headerBlue,
-                                      actionColumnIndex: 4,
+                                      actionColumnIndex: 5,
                                       actionBuilder: _buildMembershipActions,
                                     ),
                                   ),
@@ -329,9 +332,7 @@ class _MembershipLoyaltyProgramScreenState
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showTopNotification(context, message: message);
   }
 
   Widget _buildPricingActions(bool stackedButtons) {
@@ -414,6 +415,7 @@ class _MembershipLoyaltyProgramScreenState
         name: result.name,
         type: result.type,
         discount: result.discount,
+        start: result.start,
         expiry: result.expiry,
         benefits: result.benefits,
       );
@@ -447,6 +449,7 @@ class _MembershipLoyaltyProgramScreenState
         type: result.type,
         duration: result.duration,
         price: result.price,
+        discount: result.discount,
         benefits: result.benefits,
       );
       await _refreshPricingPromoData(showLoader: false);
@@ -500,6 +503,7 @@ class _MembershipLoyaltyProgramScreenState
         initialType: membership.type,
         initialDuration: membership.duration,
         initialPrice: membership.price,
+        initialDiscount: membership.discount,
         initialBenefits: membership.benefits,
       ),
     );
@@ -514,6 +518,7 @@ class _MembershipLoyaltyProgramScreenState
         type: result.type,
         duration: result.duration,
         price: result.price,
+        discount: result.discount,
         benefits: result.benefits,
       );
       await _refreshPricingPromoData(showLoader: false);

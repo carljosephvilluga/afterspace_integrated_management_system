@@ -7,6 +7,7 @@ import 'package:aims/screens/dashboard/booking_management/list_of_bookings.dart'
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';
 
 class StaffBookingManagementScreen extends StatefulWidget {
@@ -38,6 +39,8 @@ class _StaffBookingManagementScreenState
   bool _isLoadingReservations = false;
   bool _isSubmitting = false;
   Timer? _reservationRefreshTimer;
+  bool _isShowingStartedReservationPrompt = false;
+  final Set<String> _handledStartedReservationPrompts = {};
 
   @override
   void initState() {
@@ -445,6 +448,7 @@ class _StaffBookingManagementScreenState
       setState(() {
         _reservations = mapped;
       });
+      _scheduleStartedReservationPrompt();
     } on AimsApiException catch (error) {
       if (showErrorToast) {
         _showToast(error.message);
@@ -465,18 +469,8 @@ class _StaffBookingManagementScreenState
   Future<void> _createReservation(ReservationDraft draft) async {
     if (_isSubmitting) return;
 
-    final startAt = DateTime(
-      draft.date.year,
-      draft.date.month,
-      draft.date.day,
-      draft.startHour,
-    );
-    final endAt = DateTime(
-      draft.date.year,
-      draft.date.month,
-      draft.date.day,
-      draft.endHour,
-    );
+    final startAt = draft.startAt;
+    final endAt = draft.endAt;
     final spaceType = draft.spaceType == BookingSpaceType.boardRoom
         ? 'Board Room'
         : 'Open Space';
@@ -531,6 +525,7 @@ class _StaffBookingManagementScreenState
     });
     try {
       await AimsApiClient.instance.checkInBooking(bookingId);
+      _handledStartedReservationPrompts.add(_reservationPromptKey(reservation));
       await _loadReservations(showLoader: false, showErrorToast: false);
       _showToast('${reservation.customerName} is now checked in.');
     } on AimsApiException catch (error) {
@@ -561,6 +556,7 @@ class _StaffBookingManagementScreenState
     });
     try {
       await AimsApiClient.instance.cancelBooking(bookingId);
+      _handledStartedReservationPrompts.add(_reservationPromptKey(reservation));
       await _loadReservations(showLoader: false, showErrorToast: false);
       _showToast('${reservation.customerName} reservation has been cancelled.');
     } on AimsApiException catch (error) {
@@ -603,11 +599,109 @@ class _StaffBookingManagementScreenState
     );
   }
 
+  void _scheduleStartedReservationPrompt() {
+    if (widget.role != UserRole.staff || _isShowingStartedReservationPrompt) {
+      return;
+    }
+    if (_startedReservationNeedingPrompt() == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isShowingStartedReservationPrompt) {
+        return;
+      }
+      final reservation = _startedReservationNeedingPrompt();
+      if (reservation == null) {
+        return;
+      }
+      _showStartedReservationPrompt(reservation);
+    });
+  }
+
+  BookingReservation? _startedReservationNeedingPrompt() {
+    final now = DateTime.now();
+    final startedReservations =
+        _reservations
+            .where(
+              (reservation) =>
+                  reservation.status == BookingStatus.reserved &&
+                  !reservation.start.isAfter(now) &&
+                  reservation.end.isAfter(now) &&
+                  !_handledStartedReservationPrompts.contains(
+                    _reservationPromptKey(reservation),
+                  ),
+            )
+            .toList()
+          ..sort((a, b) => a.start.compareTo(b.start));
+
+    return startedReservations.isEmpty ? null : startedReservations.first;
+  }
+
+  String _reservationPromptKey(BookingReservation reservation) {
+    return '${reservation.backendId ?? reservation.id}-${reservation.start.toIso8601String()}';
+  }
+
+  Future<void> _showStartedReservationPrompt(
+    BookingReservation reservation,
+  ) async {
+    _isShowingStartedReservationPrompt = true;
+    _handledStartedReservationPrompts.add(_reservationPromptKey(reservation));
+    try {
+      final wasAutoCheckedIn = await _autoCheckInStartedReservation(
+        reservation,
+      );
+      if (!mounted) {
+        return;
+      }
+      const notificationDuration = Duration(seconds: 6);
+      showTopNotification(
+        context,
+        title: wasAutoCheckedIn
+            ? 'Reservation Auto Checked-in'
+            : 'Reservation Started',
+        message: wasAutoCheckedIn
+            ? '${reservation.customerName} was automatically checked in for ${reservation.spaceType.label}, ${formatTimeRange(reservation.start, reservation.end)}.'
+            : '${reservation.customerName} reached the reservation start time but needs manual review.',
+        icon: Icons.notifications_active_outlined,
+        isError: !wasAutoCheckedIn,
+        duration: notificationDuration,
+      );
+      await Future<void>.delayed(notificationDuration);
+    } finally {
+      _isShowingStartedReservationPrompt = false;
+      if (mounted) {
+        _scheduleStartedReservationPrompt();
+      }
+    }
+  }
+
+  Future<bool> _autoCheckInStartedReservation(
+    BookingReservation reservation,
+  ) async {
+    final bookingId = reservation.backendId;
+    if (bookingId == null) {
+      _showToast('This reservation has no backend ID yet.');
+      return false;
+    }
+
+    try {
+      await AimsApiClient.instance.checkInBooking(bookingId);
+      if (!mounted) return true;
+      await _loadReservations(showLoader: false, showErrorToast: false);
+      return true;
+    } on AimsApiException catch (error) {
+      _showToast(error.message);
+      return false;
+    } catch (_) {
+      _showToast('Unable to auto check in this reservation.');
+      return false;
+    }
+  }
+
   void _showToast(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showTopNotification(context, message: message);
   }
 }
 

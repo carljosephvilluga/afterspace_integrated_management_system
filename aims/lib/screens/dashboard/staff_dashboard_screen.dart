@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/common/sidebar.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/services/aims_api_client.dart';
 import 'package:flutter/material.dart';
 
@@ -54,7 +55,7 @@ class StaffDashboardPanel extends StatelessWidget {
                 subtitle!,
                 style: TextStyle(
                   fontSize: 12,
-                  color: textColor.withOpacity(0.7),
+                  color: textColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -118,7 +119,7 @@ class StaffMetricCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.55),
+              color: Colors.white.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -160,7 +161,7 @@ class StaffReservationListItem extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: Colors.white.withOpacity(0.75),
+          backgroundColor: Colors.white.withValues(alpha: 0.75),
           child: Text(
             name.substring(0, 1),
             style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
@@ -222,7 +223,7 @@ class _ActiveCustomersTable extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -238,7 +239,7 @@ class _ActiveCustomersTable extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final row = rows[index];
               return Container(
@@ -247,7 +248,7 @@ class _ActiveCustomersTable extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -280,7 +281,9 @@ class _ActiveCustomersTable extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2D8C63).withOpacity(0.14),
+                          color: const Color(
+                            0xFF2D8C63,
+                          ).withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -372,7 +375,7 @@ class _CalendarChart extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: index == bars.length - 1
                                     ? const Color(0xFF80AEC1)
-                                    : Colors.white.withOpacity(0.75),
+                                    : Colors.white.withValues(alpha: 0.75),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
@@ -478,6 +481,8 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
   String selectedMenu = 'Dashboard';
   late Future<StaffDashboardSnapshot> _dashboardSnapshotFuture;
   Timer? _refreshTimer;
+  bool _isShowingStartedReservationPrompt = false;
+  final Set<int> _handledStartedReservationPrompts = {};
 
   @override
   void initState() {
@@ -499,6 +504,15 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
 
   void _reloadDashboard({bool notify = true}) {
     final nextFuture = AimsApiClient.instance.fetchStaffDashboardSnapshot();
+    nextFuture
+        .then((snapshot) {
+          if (!mounted) {
+            return;
+          }
+          _scheduleStartedReservationPrompt(snapshot.pendingReservations);
+        })
+        .catchError((_) {});
+
     if (!notify || !mounted) {
       _dashboardSnapshotFuture = nextFuture;
       return;
@@ -947,5 +961,99 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen> {
         ),
       ),
     );
+  }
+
+  void _scheduleStartedReservationPrompt(
+    List<DashboardReservationItem> reservations,
+  ) {
+    if (selectedMenu != 'Dashboard' || _isShowingStartedReservationPrompt) {
+      return;
+    }
+
+    final reservation = _startedReservationNeedingPrompt(reservations);
+    if (reservation == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isShowingStartedReservationPrompt) {
+        return;
+      }
+      _showStartedReservationPrompt(reservation);
+    });
+  }
+
+  DashboardReservationItem? _startedReservationNeedingPrompt(
+    List<DashboardReservationItem> reservations,
+  ) {
+    final now = DateTime.now();
+    final startedReservations =
+        reservations
+            .where(
+              (reservation) =>
+                  !reservation.startAt.isAfter(now) &&
+                  reservation.endAt.isAfter(now) &&
+                  !_handledStartedReservationPrompts.contains(
+                    reservation.bookingId,
+                  ),
+            )
+            .toList()
+          ..sort((a, b) => a.startAt.compareTo(b.startAt));
+
+    return startedReservations.isEmpty ? null : startedReservations.first;
+  }
+
+  Future<void> _showStartedReservationPrompt(
+    DashboardReservationItem reservation,
+  ) async {
+    _isShowingStartedReservationPrompt = true;
+    _handledStartedReservationPrompts.add(reservation.bookingId);
+    try {
+      final wasAutoCheckedIn = await _autoCheckInStartedReservation(
+        reservation,
+      );
+      if (!mounted) {
+        return;
+      }
+      const notificationDuration = Duration(seconds: 6);
+      showTopNotification(
+        context,
+        title: wasAutoCheckedIn
+            ? 'Reservation Auto Checked-in'
+            : 'Reservation Started',
+        message: wasAutoCheckedIn
+            ? '${reservation.customerName} was automatically checked in for ${_formatTime(reservation.startAt)} - ${_formatTime(reservation.endAt)}.'
+            : '${reservation.customerName} reached the reservation start time but needs manual review.',
+        icon: Icons.notifications_active_outlined,
+        isError: !wasAutoCheckedIn,
+        duration: notificationDuration,
+      );
+      await Future<void>.delayed(notificationDuration);
+    } finally {
+      _isShowingStartedReservationPrompt = false;
+    }
+  }
+
+  Future<bool> _autoCheckInStartedReservation(
+    DashboardReservationItem reservation,
+  ) async {
+    try {
+      await AimsApiClient.instance.checkInBooking(reservation.bookingId);
+      if (mounted) {
+        _reloadDashboard();
+      }
+      return true;
+    } on AimsApiException catch (error) {
+      _showToast(error.message);
+      return false;
+    } catch (_) {
+      _showToast('Unable to auto check in this reservation.');
+      return false;
+    }
+  }
+
+  void _showToast(String message) {
+    if (!mounted) return;
+    showTopNotification(context, message: message);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -323,16 +324,16 @@ class _CalendarChartState extends State<CalendarChart> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Schedule added.')));
+      showTopNotification(context, message: 'Schedule added.');
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
+      showTopNotification(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add schedule: $error')));
+        message: 'Failed to add schedule: $error',
+        isError: true,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -370,15 +371,15 @@ class _CalendarChartState extends State<CalendarChart> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Schedule updated.')));
+      showTopNotification(context, message: 'Schedule updated.');
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update schedule: $error')),
+      showTopNotification(
+        context,
+        message: 'Failed to update schedule: $error',
+        isError: true,
       );
     } finally {
       if (mounted) {
@@ -429,15 +430,15 @@ class _CalendarChartState extends State<CalendarChart> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Schedule deleted.')));
+      showTopNotification(context, message: 'Schedule deleted.');
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete schedule: $error')),
+      showTopNotification(
+        context,
+        message: 'Failed to delete schedule: $error',
+        isError: true,
       );
     } finally {
       if (mounted) {

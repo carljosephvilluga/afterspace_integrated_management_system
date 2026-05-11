@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/utils/validators.dart';
 import 'package:aims/screens/list_of_users/users_list.dart';
 
@@ -347,21 +348,19 @@ class _AddUserState extends State<AddUser> {
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
                             if (selectedType.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Please select a User Type"),
-                                ),
+                              showTopNotification(
+                                context,
+                                message: 'Please select a User Type',
+                                isError: true,
                               );
                               return;
                             }
                             if (_formKey.currentState!.validate()) {
                               if (selectedMembership.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Please select a Membership Type",
-                                    ),
-                                  ),
+                                showTopNotification(
+                                  context,
+                                  message: 'Please select a Membership Type',
+                                  isError: true,
                                 );
                                 return;
                               }

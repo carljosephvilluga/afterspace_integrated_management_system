@@ -8,6 +8,11 @@ class CheckOut extends StatelessWidget {
   final String spaceUsed;
   final DateTime timeIn;
   final DateTime timeOut;
+  final double subtotalAmount;
+  final double membershipDiscount;
+  final String membershipDiscountLabel;
+  final double promoDiscount;
+  final String promoDiscountLabel;
   final double totalAmount;
   final VoidCallback onConfirm;
 
@@ -18,6 +23,11 @@ class CheckOut extends StatelessWidget {
     required this.spaceUsed,
     required this.timeIn,
     required this.timeOut,
+    required this.subtotalAmount,
+    this.membershipDiscount = 0,
+    this.membershipDiscountLabel = '',
+    this.promoDiscount = 0,
+    this.promoDiscountLabel = '',
     required this.totalAmount,
     required this.onConfirm,
   });
@@ -99,6 +109,30 @@ class CheckOut extends StatelessWidget {
                   SpacePricingStore.hourlyRateForSpace(spaceUsed),
                 ),
               ),
+              const SizedBox(height: 12),
+              _checkOutDetail(
+                Icons.receipt_long_outlined,
+                'Subtotal:',
+                SpacePricingStore.formatCurrency(subtotalAmount),
+              ),
+              if (membershipDiscount > 0) ...[
+                const SizedBox(height: 12),
+                _checkOutDetail(
+                  Icons.card_membership_outlined,
+                  'Membership discount:',
+                  '-${SpacePricingStore.formatCurrency(membershipDiscount)}'
+                      '${membershipDiscountLabel.isEmpty ? '' : ' ($membershipDiscountLabel)'}',
+                ),
+              ],
+              if (promoDiscount > 0) ...[
+                const SizedBox(height: 12),
+                _checkOutDetail(
+                  Icons.local_offer_outlined,
+                  'Promo discount:',
+                  '-${SpacePricingStore.formatCurrency(promoDiscount)}'
+                      '${promoDiscountLabel.isEmpty ? '' : ' ($promoDiscountLabel)'}',
+                ),
+              ],
               const SizedBox(height: 30),
               RichText(
                 textAlign: TextAlign.center,

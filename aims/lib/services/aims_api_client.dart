@@ -231,6 +231,7 @@ class PricingMembershipType {
     required this.type,
     required this.duration,
     required this.price,
+    required this.discount,
     required this.benefits,
   });
 
@@ -238,6 +239,7 @@ class PricingMembershipType {
   final String type;
   final String duration;
   final String price;
+  final String discount;
   final String benefits;
 }
 
@@ -291,6 +293,30 @@ class PricingPromoSnapshot {
   final List<PricingPromotion> promotions;
   final List<LoyaltyRewardRecord> loyaltyRewards;
   final SpacePricingRecord spacePricing;
+}
+
+class CheckoutDiscountQuote {
+  const CheckoutDiscountQuote({
+    required this.subtotalAmount,
+    required this.membershipDiscount,
+    required this.membershipLabel,
+    required this.promoDiscount,
+    required this.promoLabel,
+  });
+
+  final double subtotalAmount;
+  final double membershipDiscount;
+  final String membershipLabel;
+  final double promoDiscount;
+  final String promoLabel;
+
+  double get totalDiscount =>
+      (membershipDiscount + promoDiscount).clamp(0, subtotalAmount).toDouble();
+
+  double get finalAmount =>
+      (subtotalAmount - totalDiscount).clamp(0, double.infinity).toDouble();
+
+  bool get hasDiscount => totalDiscount > 0;
 }
 
 class SalesReportSeries {
@@ -623,6 +649,7 @@ class AimsApiClient {
   }
 
   Future<void> checkInUser({
+    required int userId,
     required String userEmail,
     required String spaceUsed,
     DateTime? checkInAt,
@@ -632,6 +659,7 @@ class AimsApiClient {
       path: '/api/sessions/check-in/',
       withAuth: true,
       body: {
+        'userId': userId,
         'userEmail': userEmail,
         'spaceUsed': spaceUsed,
         if (checkInAt != null) 'checkInAt': checkInAt.toIso8601String(),
@@ -640,6 +668,7 @@ class AimsApiClient {
   }
 
   Future<void> checkOutUser({
+    required int userId,
     required String userEmail,
     required double amount,
     DateTime? checkOutAt,
@@ -652,6 +681,7 @@ class AimsApiClient {
       path: '/api/sessions/check-out/',
       withAuth: true,
       body: {
+        'userId': userId,
         'userEmail': userEmail,
         'amount': amount,
         if (checkOutAt != null) 'checkOutAt': checkOutAt.toIso8601String(),
@@ -800,7 +830,46 @@ class AimsApiClient {
       },
     );
     final data = _asMap(envelope['data']);
-    return _parseStaffAccountRecord(data['staffAccount']);
+    final account = _parseStaffAccountRecord(data['staffAccount']);
+    _syncCurrentStaffSession(account);
+    return account;
+  }
+
+  Future<StaffAccountRecord> updateCurrentStaffName({
+    required String fullName,
+  }) async {
+    final nextFullName = fullName.trim();
+    if (nextFullName.isEmpty) {
+      throw const AimsApiException('Name is required.');
+    }
+    final account = await _currentStaffAccountRecord();
+    return updateStaffAccount(
+      staffId: account.staffId,
+      employeeId: account.employeeId,
+      fullName: nextFullName,
+      email: account.email,
+      role: account.role,
+      status: account.status,
+    );
+  }
+
+  Future<StaffAccountRecord> updateCurrentStaffPassword({
+    required String password,
+  }) async {
+    final nextPassword = password.trim();
+    if (nextPassword.length < 6) {
+      throw const AimsApiException('Password must be at least 6 characters.');
+    }
+    final account = await _currentStaffAccountRecord();
+    return updateStaffAccount(
+      staffId: account.staffId,
+      employeeId: account.employeeId,
+      fullName: account.fullName,
+      email: account.email,
+      role: account.role,
+      status: account.status,
+      password: nextPassword,
+    );
   }
 
   Future<void> deleteStaffAccount(int staffId) async {
@@ -842,6 +911,7 @@ class AimsApiClient {
     required String type,
     required String duration,
     required String price,
+    required String discount,
     required String benefits,
   }) async {
     final envelope = await _send(
@@ -853,6 +923,7 @@ class AimsApiClient {
         'type': type,
         'duration': duration,
         'price': price,
+        'discount': discount,
         'benefits': benefits,
       },
     );
@@ -865,6 +936,7 @@ class AimsApiClient {
     required String type,
     required String duration,
     required String price,
+    required String discount,
     required String benefits,
   }) async {
     final envelope = await _send(
@@ -877,6 +949,7 @@ class AimsApiClient {
         'type': type,
         'duration': duration,
         'price': price,
+        'discount': discount,
         'benefits': benefits,
       },
     );
@@ -897,6 +970,7 @@ class AimsApiClient {
     required String name,
     required String type,
     required String discount,
+    String start = '',
     required String expiry,
     String benefits = '',
   }) async {
@@ -909,12 +983,35 @@ class AimsApiClient {
         'name': name,
         'type': type,
         'discount': discount,
+        'start': start,
         'expiry': expiry,
         'benefits': benefits,
       },
     );
     final data = _asMap(envelope['data']);
     return _parsePricingPromotion(data['promotion']);
+  }
+
+  Future<CheckoutDiscountQuote> quoteCheckoutDiscount({
+    required int userId,
+    required double subtotalAmount,
+    DateTime? checkoutAt,
+  }) async {
+    if (!AppSession.isAuthenticated) {
+      throw const AimsApiException('Please log in first.');
+    }
+    if (userId <= 0) {
+      throw const AimsApiException('Missing required field: userId.');
+    }
+    final user = await _userById(userId);
+    if (user.isEmpty) {
+      throw const AimsApiException('User account not found.');
+    }
+    return _checkoutDiscountQuote(
+      user: user,
+      subtotalAmount: subtotalAmount,
+      checkoutAt: checkoutAt ?? DateTime.now(),
+    );
   }
 
   Future<SpacePricingRecord> fetchSpacePricing() async {
@@ -1246,7 +1343,6 @@ class AimsApiClient {
   }
 
   Future<Map<String, dynamic>> _handleManagerDashboard() async {
-    await _autoCheckInStartedReservations();
     final summary = await _managerSummary();
     return _ok(<String, dynamic>{
       ...summary,
@@ -1256,7 +1352,6 @@ class AimsApiClient {
   }
 
   Future<Map<String, dynamic>> _handleStaffDashboard() async {
-    await _autoCheckInStartedReservations();
     final client = await _client();
     final sessions = await _tableRows('sessions');
     final bookings = await _tableRows('bookings');
@@ -1270,7 +1365,7 @@ class AimsApiClient {
         .select()
         .eq('status', 'Active')
         .order('check_in', ascending: false)
-        .limit(8);
+        .limit(100);
 
     return _ok(<String, dynamic>{
       'activeCustomers': activeSessions
@@ -1337,7 +1432,7 @@ class AimsApiClient {
       );
     }
 
-    final userId = await _resolveOrCreateUser(customerName, contactDetails);
+    final userId = await _createBookingUser(customerName, contactDetails);
     final booking = _asMap(
       await client
           .from('bookings')
@@ -1462,15 +1557,21 @@ class AimsApiClient {
     Map<String, dynamic> body,
   ) async {
     final client = await _client();
-    final userEmail = _requiredString(body, 'userEmail').toLowerCase();
+    final requestedUserId = _asInt(body['userId']);
     final spaceUsed = _spaceLabel(
       _asString(body['spaceUsed']).isEmpty
           ? 'Open Space'
           : _asString(body['spaceUsed']),
     );
-    final user = await _findUserByEmail(userEmail);
+    final user = requestedUserId > 0
+        ? await _userById(requestedUserId)
+        : await _findUserByEmail(_requiredString(body, 'userEmail'));
     if (user.isEmpty) {
-      throw const AimsApiException('User account not found for this email.');
+      throw AimsApiException(
+        requestedUserId > 0
+            ? 'User account not found.'
+            : 'User account not found for this email.',
+      );
     }
     final userId = _asInt(user['user_id']);
     final existing = await _activeSessionForUser(userId);
@@ -1522,10 +1623,16 @@ class AimsApiClient {
     Map<String, dynamic> body,
   ) async {
     final client = await _client();
-    final userEmail = _requiredString(body, 'userEmail').toLowerCase();
-    final user = await _findUserByEmail(userEmail);
+    final requestedUserId = _asInt(body['userId']);
+    final user = requestedUserId > 0
+        ? await _userById(requestedUserId)
+        : await _findUserByEmail(_requiredString(body, 'userEmail'));
     if (user.isEmpty) {
-      throw const AimsApiException('User account not found for this email.');
+      throw AimsApiException(
+        requestedUserId > 0
+            ? 'User account not found.'
+            : 'User account not found for this email.',
+      );
     }
     final userId = _asInt(user['user_id']);
     final session = await _activeSessionForUser(userId);
@@ -1536,12 +1643,6 @@ class AimsApiClient {
     final amount = _asDouble(
       body['amount'],
     ).clamp(0, double.infinity).toDouble();
-    final discountApplied = _asDouble(
-      body['discountApplied'],
-    ).clamp(0, double.infinity).toDouble();
-    final finalAmount = (amount - discountApplied)
-        .clamp(0, double.infinity)
-        .toDouble();
     final paymentMethod = _asString(body['paymentMethod']).isEmpty
         ? 'cash'
         : _asString(body['paymentMethod']);
@@ -1551,6 +1652,19 @@ class AimsApiClient {
     final checkOutAt = _asString(body['checkOutAt']).isEmpty
         ? DateTime.now()
         : _asDateTime(body['checkOutAt']);
+    final autoDiscount = await _checkoutDiscountQuote(
+      user: user,
+      subtotalAmount: amount,
+      checkoutAt: checkOutAt,
+    );
+    final requestedDiscount = _asDouble(body['discountApplied']);
+    final discountApplied =
+        (requestedDiscount > 0 ? requestedDiscount : autoDiscount.totalDiscount)
+            .clamp(0, amount)
+            .toDouble();
+    final finalAmount = (amount - discountApplied)
+        .clamp(0, double.infinity)
+        .toDouble();
 
     await client
         .from('sessions')
@@ -1832,7 +1946,10 @@ class AimsApiClient {
               'plan_name': _requiredString(body, 'type'),
               'duration_label': _requiredString(body, 'duration'),
               'price_label': _requiredString(body, 'price'),
-              'benefits': _requiredString(body, 'benefits'),
+              'benefits': _encodeMembershipBenefits(
+                benefits: _requiredString(body, 'benefits'),
+                discount: _requiredString(body, 'discount'),
+              ),
               'created_by_staff_id': _currentStaffId == 0
                   ? null
                   : _currentStaffId,
@@ -1850,11 +1967,17 @@ class AimsApiClient {
             .insert(<String, dynamic>{
               'promo_name': _requiredString(body, 'name'),
               'promo_type': _requiredString(body, 'type'),
-              'discount_rate': _parseDiscountRate(
+              'discount_rate': _requiredDiscountPercent(
                 _requiredString(body, 'discount'),
               ),
-              'discount_label': _requiredString(body, 'discount'),
-              'start_date': _dateSql(DateTime.now()),
+              'discount_label': _discountLabel(
+                _requiredDiscountPercent(_requiredString(body, 'discount')),
+              ),
+              'start_date': _dateSql(
+                _asString(body['start']).isEmpty
+                    ? DateTime.now()
+                    : _asDateTime(body['start']),
+              ),
               'end_date': _dateSql(
                 _asDateTime(_requiredString(body, 'expiry')),
               ),
@@ -1883,7 +2006,10 @@ class AimsApiClient {
             'plan_name': _requiredString(body, 'type'),
             'duration_label': _requiredString(body, 'duration'),
             'price_label': _requiredString(body, 'price'),
-            'benefits': _requiredString(body, 'benefits'),
+            'benefits': _encodeMembershipBenefits(
+              benefits: _requiredString(body, 'benefits'),
+              discount: _requiredString(body, 'discount'),
+            ),
           })
           .eq('membership_type_id', id);
       final row = _asMap(
@@ -2250,54 +2376,23 @@ class AimsApiClient {
           .limit(500),
     );
     final users = await _userByIdMap();
-    return rows
-        .where((row) => _bookingStartAt(row).isAfter(DateTime.now()))
-        .take(limit)
-        .map((row) {
-          final user =
-              users[_asInt(row['user_id'])] ?? const <String, dynamic>{};
-          final date = _asString(row['booking_date']);
-          return <String, dynamic>{
-            'bookingId': _asInt(row['booking_id']),
-            'customerName': _asString(user['full_name']),
-            'email': _asString(user['email']),
-            'contactDetails': _asString(user['email']).isNotEmpty
-                ? _asString(user['email'])
-                : _asString(user['contact_number']),
-            'startAt': '$date ${_asString(row['start_time'])}',
-            'endAt': '$date ${_asString(row['end_time'])}',
-          };
-        })
-        .toList();
-  }
-
-  Future<void> _autoCheckInStartedReservations() async {
-    final client = await _client();
     final now = DateTime.now();
-    final rows = _rows(
-      await client
-          .from('bookings')
-          .select()
-          .eq('status', 'Pending')
-          .order('booking_date', ascending: true)
-          .order('start_time', ascending: true)
-          .order('booking_id', ascending: true)
-          .limit(500),
-    );
-
-    for (final row in rows) {
-      final startAt = _bookingStartAt(row);
-      if (startAt.isAfter(now)) {
-        continue;
-      }
-
-      try {
-        await _checkInBookingRow(row, checkInAt: startAt);
-      } catch (_) {
-        // Keep dashboards loading even if an old malformed booking cannot be
-        // auto-checked in. The reservation remains pending for manual review.
-      }
-    }
+    return rows.where((row) => _bookingEndAt(row).isAfter(now)).take(limit).map(
+      (row) {
+        final user = users[_asInt(row['user_id'])] ?? const <String, dynamic>{};
+        final date = _asString(row['booking_date']);
+        return <String, dynamic>{
+          'bookingId': _asInt(row['booking_id']),
+          'customerName': _asString(user['full_name']),
+          'email': _asString(user['email']),
+          'contactDetails': _asString(user['email']).isNotEmpty
+              ? _asString(user['email'])
+              : _asString(user['contact_number']),
+          'startAt': '$date ${_asString(row['start_time'])}',
+          'endAt': '$date ${_asString(row['end_time'])}',
+        };
+      },
+    ).toList();
   }
 
   Future<List<Map<String, dynamic>>> _latestTransactions({
@@ -2360,7 +2455,30 @@ class AimsApiClient {
     final users = await _userByIdMap();
     final sessionMeta = await _sessionMetaByIdMap();
     final memberships = await _membershipByUserMap();
-    return sessions.map((session) {
+    final latestSessionByUser = <int, Map<String, dynamic>>{};
+    for (final session in sessions) {
+      final userId = _asInt(session['user_id']);
+      if (userId <= 0) {
+        continue;
+      }
+      final current = latestSessionByUser[userId];
+      if (current == null || _sessionIsNewer(session, current)) {
+        latestSessionByUser[userId] = session;
+      }
+    }
+
+    final uniqueSessions = latestSessionByUser.values.toList()
+      ..sort((a, b) {
+        final checkInCompare = _asDateTime(
+          b['check_in'],
+        ).compareTo(_asDateTime(a['check_in']));
+        if (checkInCompare != 0) {
+          return checkInCompare;
+        }
+        return _asInt(b['session_id']).compareTo(_asInt(a['session_id']));
+      });
+
+    return uniqueSessions.take(8).map((session) {
       final user =
           users[_asInt(session['user_id'])] ?? const <String, dynamic>{};
       final meta =
@@ -2382,6 +2500,18 @@ class AimsApiClient {
         'status': 'Active',
       };
     }).toList();
+  }
+
+  bool _sessionIsNewer(
+    Map<String, dynamic> candidate,
+    Map<String, dynamic> current,
+  ) {
+    final candidateCheckIn = _asDateTime(candidate['check_in']);
+    final currentCheckIn = _asDateTime(current['check_in']);
+    if (candidateCheckIn != currentCheckIn) {
+      return candidateCheckIn.isAfter(currentCheckIn);
+    }
+    return _asInt(candidate['session_id']) > _asInt(current['session_id']);
   }
 
   Future<List<Map<String, dynamic>>> _bookingPayloads(
@@ -2490,33 +2620,16 @@ class AimsApiClient {
     return result;
   }
 
-  Future<int> _resolveOrCreateUser(
+  Future<int> _createBookingUser(
     String customerName,
     String contactDetails,
   ) async {
     final client = await _client();
-    final email = contactDetails.contains('@')
-        ? contactDetails.toLowerCase()
+    final normalizedContact = contactDetails.trim();
+    final email = normalizedContact.contains('@')
+        ? normalizedContact.toLowerCase()
         : '';
-    if (email.isNotEmpty) {
-      final existing = await _findUserByEmail(email);
-      if (existing.isNotEmpty) {
-        return _asInt(existing['user_id']);
-      }
-    }
-    final contact = email.isEmpty ? contactDetails : '';
-    if (contact.isNotEmpty) {
-      final existing = _asMap(
-        await client
-            .from('users')
-            .select()
-            .eq('contact_number', contact)
-            .maybeSingle(),
-      );
-      if (existing.isNotEmpty) {
-        return _asInt(existing['user_id']);
-      }
-    }
+    final contact = email.isEmpty ? normalizedContact : '';
     final row = _asMap(
       await client
           .from('users')
@@ -2624,6 +2737,8 @@ class AimsApiClient {
           .from('users')
           .select()
           .eq('email', email.toLowerCase())
+          .order('user_id', ascending: false)
+          .limit(1)
           .maybeSingle(),
     );
   }
@@ -2698,6 +2813,7 @@ class AimsApiClient {
 
   Future<void> _upsertMembership(int userId, String membershipType) async {
     final client = await _client();
+    final discountRate = await _membershipDiscountPercent(membershipType);
     final existing = _asMap(
       await client
           .from('memberships')
@@ -2710,14 +2826,17 @@ class AimsApiClient {
     if (existing.isNotEmpty) {
       await client
           .from('memberships')
-          .update(<String, dynamic>{'membership_type': membershipType})
+          .update(<String, dynamic>{
+            'membership_type': membershipType,
+            'discount_rate': discountRate,
+          })
           .eq('membership_id', _asInt(existing['membership_id']));
       return;
     }
     await client.from('memberships').insert(<String, dynamic>{
       'user_id': userId,
       'membership_type': membershipType,
-      'discount_rate': null,
+      'discount_rate': discountRate,
       'start_date': null,
       'end_date': null,
     });
@@ -2795,12 +2914,14 @@ class AimsApiClient {
   }
 
   Map<String, dynamic> _membershipPayload(Map<String, dynamic> row) {
+    final rawBenefits = _asString(row['benefits']);
     return <String, dynamic>{
       'membershipTypeId': _asInt(row['membership_type_id']),
       'type': _asString(row['plan_name']),
       'duration': _asString(row['duration_label']),
       'price': _asString(row['price_label']),
-      'benefits': _asString(row['benefits']),
+      'discount': _membershipDiscountLabel(rawBenefits),
+      'benefits': _membershipBenefitsWithoutDiscount(rawBenefits),
     };
   }
 
@@ -2819,13 +2940,273 @@ class AimsApiClient {
     };
   }
 
+  Future<CheckoutDiscountQuote> _checkoutDiscountQuote({
+    required Map<String, dynamic> user,
+    required double subtotalAmount,
+    required DateTime checkoutAt,
+  }) async {
+    final subtotal = subtotalAmount.clamp(0, double.infinity).toDouble();
+    if (subtotal <= 0) {
+      return const CheckoutDiscountQuote(
+        subtotalAmount: 0,
+        membershipDiscount: 0,
+        membershipLabel: '',
+        promoDiscount: 0,
+        promoLabel: '',
+      );
+    }
+
+    final userId = _asInt(user['user_id']);
+    final profile = _asMap(
+      await (await _client())
+          .from('user_profiles')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle(),
+    );
+    final membership = await _latestMembershipForUser(userId);
+    final membershipType = _asString(membership['membership_type']).isNotEmpty
+        ? _asString(membership['membership_type'])
+        : _asString(profile['membership_type']);
+    final membershipPercent = await _membershipDiscountPercent(
+      membershipType,
+      membershipRow: membership,
+    );
+    final membershipDiscount = _discountAmount(subtotal, membershipPercent);
+
+    final promo = await _bestActivePromotionForUser(
+      subtotalAmount: subtotal,
+      checkoutAt: checkoutAt,
+      userType: _asString(profile['user_type']),
+      membershipType: membershipType,
+    );
+
+    final promoDiscount = _discountAmount(subtotal, promo.ratePercent);
+    final cappedPromoDiscount = (membershipDiscount + promoDiscount > subtotal)
+        ? (subtotal - membershipDiscount).clamp(0, subtotal).toDouble()
+        : promoDiscount;
+
+    return CheckoutDiscountQuote(
+      subtotalAmount: subtotal,
+      membershipDiscount: membershipDiscount,
+      membershipLabel: membershipDiscount > 0
+          ? '$membershipType ${_discountLabel(membershipPercent)}'
+          : '',
+      promoDiscount: cappedPromoDiscount,
+      promoLabel: cappedPromoDiscount > 0 ? promo.label : '',
+    );
+  }
+
+  Future<Map<String, dynamic>> _latestMembershipForUser(int userId) async {
+    return _asMap(
+      await (await _client())
+          .from('memberships')
+          .select()
+          .eq('user_id', userId)
+          .order('membership_id', ascending: false)
+          .limit(1)
+          .maybeSingle(),
+    );
+  }
+
+  Future<double> _membershipDiscountPercent(
+    String membershipType, {
+    Map<String, dynamic>? membershipRow,
+  }) async {
+    final membershipRate = _storedDiscountPercent(
+      membershipRow?['discount_rate'],
+    );
+    if (membershipRate > 0) {
+      return membershipRate;
+    }
+
+    final normalizedType = membershipType.trim().toLowerCase();
+    if (normalizedType.isEmpty || normalizedType == 'open time') {
+      return 0;
+    }
+
+    final rows = await _tableRows('membership_types');
+    for (final row in rows) {
+      if (_asString(row['plan_name']).trim().toLowerCase() == normalizedType) {
+        return _membershipDiscountPercentFromBenefits(
+          _asString(row['benefits']),
+        );
+      }
+    }
+    return 0;
+  }
+
+  Future<({double ratePercent, String label})> _bestActivePromotionForUser({
+    required double subtotalAmount,
+    required DateTime checkoutAt,
+    required String userType,
+    required String membershipType,
+  }) async {
+    final today = DateTime(checkoutAt.year, checkoutAt.month, checkoutAt.day);
+    final promotions = await _tableRows('promotions');
+    var bestRate = 0.0;
+    var bestLabel = '';
+
+    for (final promo in promotions) {
+      if (!_promotionIsActiveOn(promo, today) ||
+          !_promotionAppliesToUser(
+            promoType: _asString(promo['promo_type']),
+            userType: userType,
+            membershipType: membershipType,
+          )) {
+        continue;
+      }
+
+      final rate = _storedDiscountPercent(promo['discount_rate']);
+      if (rate <= 0 || _discountAmount(subtotalAmount, rate) <= 0) {
+        continue;
+      }
+      if (rate > bestRate) {
+        bestRate = rate;
+        bestLabel = '${_asString(promo['promo_name'])} ${_discountLabel(rate)}'
+            .trim();
+      }
+    }
+
+    return (ratePercent: bestRate, label: bestLabel);
+  }
+
+  bool _promotionIsActiveOn(Map<String, dynamic> promo, DateTime day) {
+    final startRaw = _asString(promo['start_date']);
+    final endRaw = _asString(promo['end_date']);
+    final start = startRaw.isEmpty ? DateTime(1900) : _asDateTime(startRaw);
+    final end = endRaw.isEmpty ? DateTime(9999) : _asDateTime(endRaw);
+    final normalizedStart = DateTime(start.year, start.month, start.day);
+    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    return !day.isBefore(normalizedStart) && !day.isAfter(normalizedEnd);
+  }
+
+  bool _promotionAppliesToUser({
+    required String promoType,
+    required String userType,
+    required String membershipType,
+  }) {
+    final normalizedPromo = promoType.trim().toLowerCase();
+    final normalizedUser = userType.trim().toLowerCase();
+    final normalizedMembership = membershipType.trim().toLowerCase();
+    if (normalizedPromo.isEmpty ||
+        normalizedPromo.contains('all') ||
+        normalizedPromo.contains('general') ||
+        normalizedPromo.contains('checkout')) {
+      return true;
+    }
+    if (normalizedPromo.contains('student')) {
+      return normalizedUser == 'student';
+    }
+    if (normalizedPromo.contains('professional')) {
+      return normalizedUser == 'professional';
+    }
+    if (normalizedPromo.contains('annual')) {
+      return normalizedMembership == 'annual';
+    }
+    if (normalizedPromo.contains('monthly')) {
+      return normalizedMembership == 'monthly membership';
+    }
+    if (normalizedPromo.contains('loyalty')) {
+      return normalizedMembership == 'loyalty rewards';
+    }
+    if (normalizedPromo.contains('open') || normalizedPromo.contains('walk')) {
+      return normalizedMembership == 'open time';
+    }
+    if (normalizedPromo.contains('member')) {
+      return normalizedMembership.isNotEmpty &&
+          normalizedMembership != 'open time';
+    }
+    return true;
+  }
+
+  double _discountAmount(double amount, double percent) {
+    if (amount <= 0 || percent <= 0) {
+      return 0;
+    }
+    return (amount * (percent / 100)).clamp(0, amount).toDouble();
+  }
+
+  String _encodeMembershipBenefits({
+    required String benefits,
+    required String discount,
+  }) {
+    final cleanBenefits = _membershipBenefitsWithoutDiscount(benefits);
+    final percent = _requiredDiscountPercent(discount, allowZero: true);
+    if (percent <= 0) {
+      return cleanBenefits;
+    }
+    return 'Checkout discount: ${_discountLabel(percent)}\n$cleanBenefits'
+        .trim();
+  }
+
+  String _membershipBenefitsWithoutDiscount(String benefits) {
+    return benefits
+        .split(RegExp(r'\r?\n'))
+        .where(
+          (line) => !line.trim().toLowerCase().startsWith('checkout discount:'),
+        )
+        .join('\n')
+        .trim();
+  }
+
+  String _membershipDiscountLabel(String benefits) {
+    final percent = _membershipDiscountPercentFromBenefits(benefits);
+    return percent > 0 ? _discountLabel(percent) : '0%';
+  }
+
+  double _membershipDiscountPercentFromBenefits(String benefits) {
+    for (final line in benefits.split(RegExp(r'\r?\n'))) {
+      final trimmed = line.trim();
+      if (trimmed.toLowerCase().startsWith('checkout discount:')) {
+        return _parseDiscountRate(trimmed) ?? 0;
+      }
+    }
+    return 0;
+  }
+
+  double _requiredDiscountPercent(String label, {bool allowZero = false}) {
+    final rate = _parseDiscountRate(label);
+    if (rate == null || (!allowZero && rate <= 0)) {
+      throw AimsApiException(
+        allowZero
+            ? 'Discount must be from 0% to 100%.'
+            : 'Discount must be greater than 0% and no more than 100%.',
+      );
+    }
+    return rate;
+  }
+
   double? _parseDiscountRate(String label) {
     final cleaned = label.replaceAll(RegExp(r'[^0-9.]'), '');
     if (cleaned.isEmpty) {
       return null;
     }
     final value = double.tryParse(cleaned);
-    return value == null || value <= 0 ? null : value;
+    if (value == null || value < 0 || value > 100) {
+      return null;
+    }
+    return value;
+  }
+
+  double _storedDiscountPercent(dynamic value) {
+    final raw = _asDouble(value);
+    if (raw <= 0) {
+      return 0;
+    }
+    if (raw <= 1) {
+      return (raw * 100).clamp(0, 100).toDouble();
+    }
+    return raw.clamp(0, 100).toDouble();
+  }
+
+  String _discountLabel(double rate) {
+    final normalized = rate.clamp(0, 100).toDouble();
+    final isWholeNumber = normalized % 1 == 0;
+    final text = isWholeNumber
+        ? normalized.round().toString()
+        : normalized.toStringAsFixed(2);
+    return '$text%';
   }
 
   Future<List<Map<String, dynamic>>> _salesPoints(String range) async {
@@ -2968,6 +3349,73 @@ class AimsApiClient {
   String get _currentStaffRole =>
       _asString(AppSession.user?['role']).trim().toLowerCase();
 
+  Future<StaffAccountRecord> _currentStaffAccountRecord() async {
+    final current = AppSession.user;
+    final staffId = _asInt(current?['staff_id'] ?? current?['staffId']);
+    if (staffId <= 0) {
+      throw const AimsApiException('Please log in first.');
+    }
+
+    final employeeId = _asString(
+      current?['employee_id'] ?? current?['employeeId'],
+    );
+    final fullName = _asString(current?['full_name'] ?? current?['fullName']);
+    final email = _asString(current?['email']);
+    final role = _asString(current?['role']);
+    final status = _asString(current?['status']);
+    if (employeeId.isNotEmpty &&
+        fullName.isNotEmpty &&
+        email.isNotEmpty &&
+        role.isNotEmpty &&
+        status.isNotEmpty) {
+      return StaffAccountRecord(
+        staffId: staffId,
+        employeeId: employeeId,
+        fullName: fullName,
+        email: email,
+        role: _normalizeStaffRole(role),
+        status: _normalizeStaffStatus(status),
+        createdAt: _asDateTime(current?['created_at'] ?? current?['createdAt']),
+      );
+    }
+
+    final accounts = await fetchStaffAccounts();
+    for (final account in accounts) {
+      if (account.staffId == staffId) {
+        return account;
+      }
+    }
+
+    throw const AimsApiException('Current staff account was not found.');
+  }
+
+  void _syncCurrentStaffSession(StaffAccountRecord account) {
+    if (account.staffId <= 0) {
+      return;
+    }
+    if (account.staffId != _currentStaffId) {
+      return;
+    }
+    final token = AppSession.token;
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    AppSession.saveAuth(
+      token: token,
+      user: <String, dynamic>{
+        ...?AppSession.user,
+        'staff_id': account.staffId,
+        'employee_id': account.employeeId,
+        'full_name': account.fullName,
+        'email': account.email,
+        'role': account.role,
+        'status': account.status,
+        'created_at': account.createdAt.toIso8601String(),
+      },
+    );
+  }
+
   String _requiredString(Map<String, dynamic> body, String field) {
     final value = _asString(body[field]);
     if (value.isEmpty) {
@@ -3095,9 +3543,9 @@ class AimsApiClient {
         '${value.second.toString().padLeft(2, '0')}';
   }
 
-  DateTime _bookingStartAt(Map<String, dynamic> booking) {
+  DateTime _bookingEndAt(Map<String, dynamic> booking) {
     return _asDateTime(
-      '${_asString(booking['booking_date'])} ${_asString(booking['start_time'])}',
+      '${_asString(booking['booking_date'])} ${_asString(booking['end_time'])}',
     );
   }
 
@@ -3300,6 +3748,7 @@ class AimsApiClient {
       type: _asString(map['type']),
       duration: _asString(map['duration']),
       price: _asString(map['price']),
+      discount: _asString(map['discount']),
       benefits: _asString(map['benefits']),
     );
   }

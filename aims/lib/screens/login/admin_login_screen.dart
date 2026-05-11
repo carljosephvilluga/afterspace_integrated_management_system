@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aims/services/aims_api_client.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/common/custom_text_field.dart'; // reusable text field widget
 import 'package:aims/widgets/common/custom_button.dart'; // reusable button widget
 import 'package:aims/widgets/utils/validators.dart'; // for input validation
@@ -106,12 +107,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Please contact your administrator to reset your password.",
-                                    ),
-                                  ),
+                                showTopNotification(
+                                  context,
+                                  message:
+                                      'Please contact your administrator to reset your password.',
                                 );
                               },
                               child: const Text(
@@ -148,8 +147,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                   );
                                 } on AimsApiException catch (error) {
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(error.message)),
+                                  showTopNotification(
+                                    context,
+                                    message: error.message,
+                                    isError: true,
                                   );
                                 }
                               }

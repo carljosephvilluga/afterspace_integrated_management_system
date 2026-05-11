@@ -5,6 +5,8 @@ class ReceiptDialog extends StatelessWidget {
   final String bookingId;
   final String customerName;
   final String spaceUsed;
+  final double subtotalAmount;
+  final double discountApplied;
   final double totalAmount;
 
   const ReceiptDialog({
@@ -12,6 +14,8 @@ class ReceiptDialog extends StatelessWidget {
     required this.bookingId,
     required this.customerName,
     required this.spaceUsed,
+    required this.subtotalAmount,
+    this.discountApplied = 0,
     required this.totalAmount,
   });
 
@@ -80,6 +84,15 @@ class ReceiptDialog extends StatelessWidget {
               _buildDetailRow('Booking ID', bookingId),
               _buildDetailRow('Customer', customerName),
               _buildDetailRow('Space', spaceUsed),
+              _buildDetailRow(
+                'Subtotal',
+                '₱${subtotalAmount.toStringAsFixed(2)}',
+              ),
+              if (discountApplied > 0)
+                _buildDetailRow(
+                  'Discount',
+                  '-₱${discountApplied.toStringAsFixed(2)}',
+                ),
 
               const SizedBox(height: 20),
               _buildDashedLine(),

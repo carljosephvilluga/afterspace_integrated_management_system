@@ -1,4 +1,5 @@
 import 'package:aims/widgets/common/custom_button.dart';
+import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_input_field.dart';
 import 'package:flutter/material.dart';
 
@@ -7,12 +8,14 @@ class AddMembershipDialogResult {
     required this.type,
     required this.duration,
     required this.price,
+    required this.discount,
     required this.benefits,
   });
 
   final String type;
   final String duration;
   final String price;
+  final String discount;
   final String benefits;
 }
 
@@ -33,6 +36,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
   final TextEditingController _durationValueController =
       TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _discountController = TextEditingController();
   final TextEditingController _benefitsController = TextEditingController();
 
   final List<String> _durationUnits = const [
@@ -49,6 +53,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
     _nameController.dispose();
     _durationValueController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _benefitsController.dispose();
     super.dispose();
   }
@@ -64,7 +69,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.85)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x26000000),
@@ -86,7 +91,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _panelBlue.withOpacity(0.35),
+                      color: _panelBlue.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Column(
@@ -149,30 +154,41 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
                           final durationValue = _durationValueController.text
                               .trim();
                           final price = _priceController.text.trim();
+                          final discount = _discountController.text.trim();
                           final benefits = _benefitsController.text.trim();
 
                           if (type.isEmpty ||
                               durationValue.isEmpty ||
                               price.isEmpty ||
+                              discount.isEmpty ||
                               benefits.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please complete membership name, duration, price, and benefits.',
-                                ),
-                              ),
+                            showTopNotification(
+                              context,
+                              message:
+                                  'Please complete membership name, duration, price, discount, and benefits.',
+                              isError: true,
                             );
                             return;
                           }
 
                           final parsedDuration = int.tryParse(durationValue);
                           if (parsedDuration == null || parsedDuration <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Duration must be a positive number.',
-                                ),
-                              ),
+                            showTopNotification(
+                              context,
+                              message: 'Duration must be a positive number.',
+                              isError: true,
+                            );
+                            return;
+                          }
+
+                          final parsedDiscount = _parsePercent(discount);
+                          if (parsedDiscount == null ||
+                              parsedDiscount < 0 ||
+                              parsedDiscount > 100) {
+                            showTopNotification(
+                              context,
+                              message: 'Discount must be from 0% to 100%.',
+                              isError: true,
                             );
                             return;
                           }
@@ -184,6 +200,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
                               duration:
                                   '$parsedDuration $_selectedDurationUnit',
                               price: price,
+                              discount: _formatPercent(parsedDiscount),
                               benefits: benefits,
                             ),
                           );
@@ -231,7 +248,7 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
               ),
               SizedBox(height: 4),
               Text(
-                'Set a plan name, duration, price, and benefits.',
+                'Set a plan name, duration, price, checkout discount, and benefits.',
                 style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],
@@ -264,6 +281,12 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
             controller: _priceController,
             hintText: 'P 0.00',
           ),
+          const SizedBox(height: 14),
+          MembershipProgramInputField(
+            label: 'Checkout Discount (%)',
+            controller: _discountController,
+            hintText: '0',
+          ),
         ],
       );
     }
@@ -286,6 +309,15 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
             label: 'Price',
             controller: _priceController,
             hintText: 'P 0.00',
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          flex: 2,
+          child: MembershipProgramInputField(
+            label: 'Checkout Discount (%)',
+            controller: _discountController,
+            hintText: '0',
           ),
         ),
       ],
@@ -393,5 +425,15 @@ class _AddMembershipDialogState extends State<AddMembershipDialog> {
         ),
       ],
     );
+  }
+
+  String _formatPercent(double value) {
+    return value % 1 == 0
+        ? '${value.round()}%'
+        : '${value.toStringAsFixed(2)}%';
+  }
+
+  double? _parsePercent(String value) {
+    return double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
   }
 }

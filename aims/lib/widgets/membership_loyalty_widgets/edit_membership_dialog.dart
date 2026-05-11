@@ -7,12 +7,14 @@ class MembershipDialogResult {
     required this.type,
     required this.duration,
     required this.price,
+    required this.discount,
     required this.benefits,
   });
 
   final String type;
   final String duration;
   final String price;
+  final String discount;
   final String benefits;
 }
 
@@ -22,12 +24,14 @@ class EditMembershipDialog extends StatefulWidget {
     required this.initialType,
     required this.initialDuration,
     required this.initialPrice,
+    required this.initialDiscount,
     required this.initialBenefits,
   });
 
   final String initialType;
   final String initialDuration;
   final String initialPrice;
+  final String initialDiscount;
   final String initialBenefits;
 
   @override
@@ -43,6 +47,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
   late final TextEditingController _typeController;
   late final TextEditingController _durationController;
   late final TextEditingController _priceController;
+  late final TextEditingController _discountController;
   late final TextEditingController _benefitsController;
 
   @override
@@ -51,6 +56,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
     _typeController = TextEditingController(text: widget.initialType);
     _durationController = TextEditingController(text: widget.initialDuration);
     _priceController = TextEditingController(text: widget.initialPrice);
+    _discountController = TextEditingController(text: widget.initialDiscount);
     _benefitsController = TextEditingController(text: widget.initialBenefits);
   }
 
@@ -59,6 +65,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
     _typeController.dispose();
     _durationController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _benefitsController.dispose();
     super.dispose();
   }
@@ -74,7 +81,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.85)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x26000000),
@@ -96,7 +103,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _panelBlue.withOpacity(0.35),
+                      color: _panelBlue.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Column(
@@ -118,6 +125,12 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
                             label: 'Price',
                             controller: _priceController,
                             hintText: 'PHP 0.00',
+                          ),
+                          const SizedBox(height: 14),
+                          MembershipProgramInputField(
+                            label: 'Checkout Discount (%)',
+                            controller: _discountController,
+                            hintText: '0',
                           ),
                           const SizedBox(height: 14),
                           MembershipProgramInputField(
@@ -161,6 +174,14 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
                               ),
                               const SizedBox(width: 14),
                               Expanded(
+                                child: MembershipProgramInputField(
+                                  label: 'Checkout Discount (%)',
+                                  controller: _discountController,
+                                  hintText: '0',
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
                                 flex: 2,
                                 child: MembershipProgramInputField(
                                   label: 'Benefits',
@@ -200,12 +221,21 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
                         width: 170,
                         height: 42,
                         onPressed: () async {
+                          final parsedDiscount = _parsePercent(
+                            _discountController.text.trim(),
+                          );
+                          if (parsedDiscount == null ||
+                              parsedDiscount < 0 ||
+                              parsedDiscount > 100) {
+                            return;
+                          }
                           Navigator.pop(
                             context,
                             MembershipDialogResult(
                               type: _typeController.text.trim(),
                               duration: _durationController.text.trim(),
                               price: _priceController.text.trim(),
+                              discount: _formatPercent(parsedDiscount),
                               benefits: _benefitsController.text.trim(),
                             ),
                           );
@@ -254,10 +284,7 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
               SizedBox(height: 4),
               Text(
                 'Update the membership details and save your changes.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _textMuted,
-                ),
+                style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],
           ),
@@ -272,5 +299,15 @@ class _EditMembershipDialogState extends State<EditMembershipDialog> {
         ),
       ],
     );
+  }
+
+  String _formatPercent(double value) {
+    return value % 1 == 0
+        ? '${value.round()}%'
+        : '${value.toStringAsFixed(2)}%';
+  }
+
+  double? _parsePercent(String value) {
+    return double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), ''));
   }
 }

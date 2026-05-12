@@ -8,6 +8,7 @@ class MembershipProgramActionButton extends StatelessWidget {
     required this.textColor,
     this.borderColor,
     this.icon,
+    this.minWidth = 220,
     this.onPressed,
   });
 
@@ -16,30 +17,25 @@ class MembershipProgramActionButton extends StatelessWidget {
   final Color textColor;
   final Color? borderColor;
   final IconData? icon;
+  final double minWidth;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 190,
-      height: 50,
+    return ConstrainedBox(
+      constraints: BoxConstraints(minWidth: minWidth, minHeight: 50),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
           elevation: 0,
-          side: BorderSide(
-            color: borderColor ?? const Color(0x2A23323A),
-          ),
+          side: BorderSide(color: borderColor ?? const Color(0x2A23323A)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 18),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -49,7 +45,7 @@ class MembershipProgramActionButton extends StatelessWidget {
               Icon(icon, size: 18),
               const SizedBox(width: 8),
             ],
-            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+            Text(label, softWrap: false),
           ],
         ),
       ),

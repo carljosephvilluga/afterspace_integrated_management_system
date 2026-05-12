@@ -31,7 +31,9 @@ class CheckIn extends StatefulWidget {
     required this.membershipType,
     required this.timeIn, // 2. Added to constructor
     required this.onConfirm,
-    this.onEditUser, required Null Function() onViewHistory, required String lastVisit,
+    this.onEditUser,
+    required Null Function() onViewHistory,
+    required String lastVisit,
   });
 
   @override
@@ -39,7 +41,7 @@ class CheckIn extends StatefulWidget {
 }
 
 class _CheckInState extends State<CheckIn> {
-  String _selectedSpace = 'Ordinary Space';
+  String _selectedSpace = 'Open Space';
 
   String _formatTime(DateTime dt) {
     final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
@@ -250,8 +252,8 @@ class _CheckInState extends State<CheckIn> {
                               ),
                               items: const [
                                 DropdownMenuItem(
-                                  value: 'Ordinary Space',
-                                  child: Text('Ordinary Space'),
+                                  value: 'Open Space',
+                                  child: Text('Open Space'),
                                 ),
                                 DropdownMenuItem(
                                   value: 'Board Room',

@@ -682,12 +682,11 @@ class _MembershipLoyaltyProgramScreenState
                     icon: Icons.meeting_room_outlined,
                   ),
                   _buildRateCard(
-                    title: 'Ordinary Space',
+                    title: 'Open Space',
                     value: SpacePricingStore.formatCurrency(
                       pricing.ordinarySpaceHourlyRate,
                     ),
-                    description:
-                        'Hourly charge for regular seats and open spaces.',
+                    description: 'Hourly charge for open space seats.',
                     icon: Icons.event_seat_outlined,
                   ),
                 ],

@@ -270,7 +270,7 @@ Stores hourly pricing for coworking-space usage.
 
 - `pricing_id` - Primary key
 - `board_room_hourly_rate` - Hourly rate for the board room
-- `ordinary_space_hourly_rate` - Hourly rate for open/ordinary space
+- `ordinary_space_hourly_rate` - Hourly rate for open space
 - `updated_by_staff_id` - Foreign key referencing `staff_accounts.staff_id`
 
 #### 13. MEETING_SCHEDULES

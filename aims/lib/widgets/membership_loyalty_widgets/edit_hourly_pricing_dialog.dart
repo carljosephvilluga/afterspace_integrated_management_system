@@ -111,7 +111,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
                               ),
                               const SizedBox(height: 14),
                               MembershipProgramInputField(
-                                label: 'Ordinary Space Hourly Charge',
+                                label: 'Open Space Hourly Charge',
                                 controller: _ordinarySpaceController,
                                 hintText: '0.00',
                               ),
@@ -132,7 +132,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
                             const SizedBox(width: 14),
                             Expanded(
                               child: MembershipProgramInputField(
-                                label: 'Ordinary Space Hourly Charge',
+                                label: 'Open Space Hourly Charge',
                                 controller: _ordinarySpaceController,
                                 hintText: '0.00',
                               ),
@@ -238,7 +238,7 @@ class _EditHourlyPricingDialogState extends State<EditHourlyPricingDialog> {
               ),
               SizedBox(height: 4),
               Text(
-                'Set the manager-approved rates for boardrooms and ordinary spaces.',
+                'Set the manager-approved rates for boardrooms and open spaces.',
                 style: TextStyle(fontSize: 13, color: _textMuted),
               ),
             ],

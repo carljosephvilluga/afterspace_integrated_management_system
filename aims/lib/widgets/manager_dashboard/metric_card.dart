@@ -1,3 +1,4 @@
+// Purpose: Provides the reusable manager dashboard metric card.
 import 'package:flutter/material.dart';
 
 class ManagerMetricCard extends StatelessWidget {

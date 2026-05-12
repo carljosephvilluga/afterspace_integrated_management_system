@@ -1,3 +1,4 @@
+// Purpose: Collects check-out details before completing a customer visit.
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/utils/space_pricing.dart';
 import 'package:flutter/material.dart';

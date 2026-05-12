@@ -1,3 +1,4 @@
+// Purpose: Provides the reusable staff dashboard panel container.
 import 'package:flutter/material.dart';
 
 class StaffDashboardPanel extends StatelessWidget {

@@ -1,3 +1,6 @@
+// Purpose: Shared top navigation bar with logout, account, and meeting notification actions.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/services/app_session.dart';
@@ -461,69 +464,84 @@ class Header extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        StatefulBuilder(
-                          builder: (accountContext, setAccountState) {
-                            return PopupMenuButton<_AccountAction>(
-                              tooltip: 'Account options',
-                              offset: const Offset(0, 44),
-                              color: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              onSelected: (action) async {
-                                switch (action) {
-                                  case _AccountAction.changeName:
-                                    await _showChangeNameDialog(context);
-                                  case _AccountAction.changePassword:
-                                    await _showChangePasswordDialog(context);
-                                }
-                                if (accountContext.mounted) {
-                                  setAccountState(() {});
-                                }
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const _MeetingNotificationButton(),
+                            const SizedBox(width: 10),
+                            StatefulBuilder(
+                              builder: (accountContext, setAccountState) {
+                                return PopupMenuButton<_AccountAction>(
+                                  tooltip: 'Account options',
+                                  offset: const Offset(0, 44),
+                                  color: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  onSelected: (action) async {
+                                    switch (action) {
+                                      case _AccountAction.changeName:
+                                        await _showChangeNameDialog(context);
+                                      case _AccountAction.changePassword:
+                                        await _showChangePasswordDialog(
+                                          context,
+                                        );
+                                    }
+                                    if (accountContext.mounted) {
+                                      setAccountState(() {});
+                                    }
+                                  },
+                                  itemBuilder: (context) => const [
+                                    PopupMenuItem(
+                                      value: _AccountAction.changeName,
+                                      child: _AccountMenuItem(
+                                        icon: Icons.person_outline_rounded,
+                                        label: 'Change name',
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: _AccountAction.changePassword,
+                                      child: _AccountMenuItem(
+                                        icon: Icons.lock_outline_rounded,
+                                        label: 'Change password',
+                                      ),
+                                    ),
+                                  ],
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 120,
+                                        ),
+                                        child: Text(
+                                          _currentFirstName(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Colors.white
+                                            .withValues(alpha: 0.95),
+                                        child: Icon(
+                                          getAvatarIcon(),
+                                          size: 20,
+                                          color: _headerBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
-                                  value: _AccountAction.changeName,
-                                  child: _AccountMenuItem(
-                                    icon: Icons.person_outline_rounded,
-                                    label: 'Change name',
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: _AccountAction.changePassword,
-                                  child: _AccountMenuItem(
-                                    icon: Icons.lock_outline_rounded,
-                                    label: 'Change password',
-                                  ),
-                                ),
-                              ],
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _currentFirstName(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: 0.95,
-                                    ),
-                                    child: Icon(
-                                      getAvatarIcon(),
-                                      size: 20,
-                                      color: _headerBlue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -535,6 +553,370 @@ class Header extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _MeetingNotificationButton extends StatefulWidget {
+  const _MeetingNotificationButton();
+
+  @override
+  State<_MeetingNotificationButton> createState() =>
+      _MeetingNotificationButtonState();
+}
+
+class _MeetingNotificationButtonState
+    extends State<_MeetingNotificationButton> {
+  static const Color _textPrimary = Color(0xFF23323A);
+  static const Color _textMuted = Color(0xFF6F7E87);
+  static const Color _badgeColor = Color(0xFFD7B59E);
+  static const Duration _refreshInterval = Duration(seconds: 20);
+
+  Timer? _refreshTimer;
+  bool _isLoading = true;
+  String? _error;
+  List<MeetingScheduleRecord> _upcomingMeetings = const [];
+
+  int get _notificationCount => _upcomingMeetings.length;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUpcomingMeetings();
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) {
+      if (!mounted) {
+        return;
+      }
+      _loadUpcomingMeetings(showLoader: false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadUpcomingMeetings({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
+    final today = DateTime.now();
+    final from = DateTime(today.year, today.month, today.day);
+    final to = from.add(const Duration(days: 30));
+
+    try {
+      // Reuse the admin calendar schedule API so the bell always reflects the
+      // same meeting records shown in the dashboard calendar.
+      final schedules = await AimsApiClient.instance.fetchMeetingSchedules(
+        from: from,
+        to: to,
+      );
+      final now = DateTime.now();
+      final upcoming =
+          schedules.where((schedule) => schedule.endAt.isAfter(now)).toList()
+            ..sort((a, b) => a.startAt.compareTo(b.startAt));
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _upcomingMeetings = upcoming;
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  Future<void> _showNotificationsPanel() async {
+    await _loadUpcomingMeetings(showLoader: false);
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.12),
+      builder: (dialogContext) {
+        final screenSize = MediaQuery.sizeOf(dialogContext);
+
+        return Dialog(
+          elevation: 0,
+          insetPadding: const EdgeInsets.fromLTRB(16, 82, 22, 16),
+          alignment: Alignment.topRight,
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 390,
+              maxHeight: screenSize.height * 0.68,
+            ),
+            child: Material(
+              color: const Color(0xFFF4F8FA),
+              borderRadius: BorderRadius.circular(8),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPanelHeader(dialogContext),
+                    const SizedBox(height: 12),
+                    Flexible(child: _buildPanelBody()),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPanelHeader(BuildContext dialogContext) {
+    final count = _notificationCount;
+    final title = count == 0
+        ? 'Meeting Notifications'
+        : count == 1
+        ? '1 Upcoming Meeting'
+        : '$count Upcoming Meetings';
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: _textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Refresh',
+          onPressed: () {
+            Navigator.of(dialogContext).pop();
+            _loadUpcomingMeetings();
+          },
+          icon: const Icon(Icons.refresh_rounded, size: 20),
+          color: Header._headerBlue,
+        ),
+        IconButton(
+          tooltip: 'Close',
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          icon: const Icon(Icons.close_rounded, size: 20),
+          color: _textMuted,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPanelBody() {
+    if (_isLoading && _upcomingMeetings.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 22),
+        child: Center(
+          child: Text(
+            'Checking meeting schedules...',
+            style: TextStyle(color: _textMuted, fontSize: 12),
+          ),
+        ),
+      );
+    }
+
+    if (_error != null && _upcomingMeetings.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Text(
+          'Unable to load meeting notifications.',
+          style: TextStyle(
+            color: Colors.red.shade700,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    if (_upcomingMeetings.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 22),
+        child: Center(
+          child: Text(
+            'No upcoming meetings yet.',
+            style: TextStyle(color: _textMuted, fontSize: 12),
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: _upcomingMeetings.length,
+      separatorBuilder: (context, index) => const Divider(height: 16),
+      itemBuilder: (context, index) {
+        final meeting = _upcomingMeetings[index];
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Header._headerBlue.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.event_available_outlined,
+                color: Header._headerBlue,
+                size: 19,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    meeting.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_formatScheduleDate(meeting.startAt)}  ${_formatTime(meeting.startAt)} - ${_formatTime(meeting.endAt)}',
+                    style: const TextStyle(
+                      color: _textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (meeting.notes.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      meeting.notes,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _textMuted, fontSize: 11),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = _notificationCount;
+
+    return Tooltip(
+      message: 'Meeting notifications',
+      child: InkWell(
+        onTap: _showNotificationsPanel,
+        borderRadius: BorderRadius.circular(999),
+        child: SizedBox(
+          width: 34,
+          height: 34,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                count > 0
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_none_rounded,
+                size: 22,
+                color: Colors.white,
+              ),
+              if (count > 0)
+                Positioned(
+                  top: 4,
+                  right: 3,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 15),
+                    height: 15,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _badgeColor,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Header._headerBlue, width: 1),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      count > 9 ? '9+' : count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatScheduleDate(DateTime value) {
+    final today = DateTime.now();
+    final currentDay = DateTime(today.year, today.month, today.day);
+    final meetingDay = DateTime(value.year, value.month, value.day);
+
+    if (meetingDay == currentDay) {
+      return 'Today';
+    }
+    if (meetingDay == currentDay.add(const Duration(days: 1))) {
+      return 'Tomorrow';
+    }
+
+    return '${_monthShort(value.month)} ${value.day}';
+  }
+
+  String _formatTime(DateTime value) {
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final suffix = value.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $suffix';
+  }
+
+  String _monthShort(int month) {
+    return const [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][month - 1];
   }
 }
 

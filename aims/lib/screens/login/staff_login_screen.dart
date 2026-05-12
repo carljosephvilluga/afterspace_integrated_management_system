@@ -1,3 +1,4 @@
+// Purpose: Handles staff login and navigation after authentication.
 import 'package:flutter/material.dart';
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/common/top_notification.dart';

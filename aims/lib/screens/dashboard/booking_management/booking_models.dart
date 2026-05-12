@@ -1,3 +1,4 @@
+// Purpose: Defines booking data models, constants, and availability helper functions.
 import 'package:flutter/material.dart';
 
 enum BookingSpaceType { boardRoom, openSpace }
@@ -276,6 +277,8 @@ bool reservationsOverlap(
   DateTime startB,
   DateTime endB,
 ) {
+  // Treat touching end/start times as available, but any shared time as a
+  // conflict.
   return startA.isBefore(endB) && endA.isAfter(startB);
 }
 
@@ -358,6 +361,8 @@ String? availabilityErrorForDraft(
   List<BookingReservation> reservations,
   ReservationDraft draft,
 ) {
+  // Return the first validation message so forms and tooltips can share the
+  // same booking rules.
   if (draft.customerName.trim().isEmpty ||
       draft.contactDetails.trim().isEmpty) {
     return 'Enter the first name, last name, and contact details.';

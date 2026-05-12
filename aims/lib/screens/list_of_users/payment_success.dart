@@ -1,3 +1,4 @@
+// Purpose: Shows a success dialog after a payment is completed.
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 

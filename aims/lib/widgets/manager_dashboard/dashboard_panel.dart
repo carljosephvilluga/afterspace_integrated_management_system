@@ -1,3 +1,4 @@
+// Purpose: Provides the reusable manager dashboard panel container.
 import 'package:flutter/material.dart';
 
 class ManagerDashboardPanel extends StatelessWidget {

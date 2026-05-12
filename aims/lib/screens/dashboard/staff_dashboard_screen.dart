@@ -1,3 +1,4 @@
+// Purpose: Displays the staff dashboard with live customers, reservations, and activity.
 import 'dart:async';
 
 import 'package:aims/widgets/common/header.dart';

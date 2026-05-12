@@ -1,3 +1,4 @@
+// Purpose: Shared side navigation menu for admin, manager, and staff screens.
 import 'package:aims/widgets/common/header.dart';
 import 'package:flutter/material.dart';
 

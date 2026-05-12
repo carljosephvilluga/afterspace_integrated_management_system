@@ -1,3 +1,4 @@
+// Purpose: Renders the customer report bar chart on the admin dashboard.
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 

@@ -1,3 +1,4 @@
+// Purpose: Collects updated hourly pricing for workspace types.
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:aims/widgets/common/top_notification.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/membership_program_input_field.dart';

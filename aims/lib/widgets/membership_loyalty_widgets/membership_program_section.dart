@@ -1,3 +1,4 @@
+// Purpose: Provides a reusable section container for membership management content.
 import 'package:flutter/material.dart';
 
 class MembershipProgramSection extends StatelessWidget {

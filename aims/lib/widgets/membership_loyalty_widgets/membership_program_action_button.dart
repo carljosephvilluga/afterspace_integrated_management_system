@@ -1,3 +1,4 @@
+// Purpose: Provides a reusable action button for membership management controls.
 import 'package:flutter/material.dart';
 
 class MembershipProgramActionButton extends StatelessWidget {

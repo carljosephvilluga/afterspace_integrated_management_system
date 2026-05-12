@@ -1,3 +1,4 @@
+// Purpose: Defines a reusable styled text field used by shared forms.
 import 'package:flutter/material.dart';
 
 //Reusable text field

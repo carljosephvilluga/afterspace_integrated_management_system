@@ -1,3 +1,4 @@
+// Purpose: Renders the admin calendar and meeting schedule tools.
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,8 @@ class _CalendarChartState extends State<CalendarChart> {
   DateTime _normalizeDay(DateTime day) =>
       DateTime(day.year, day.month, day.day);
 
+  // Group schedules by calendar day so the calendar can show markers and the
+  // side panel can list the selected day's meetings.
   Map<DateTime, List<MeetingScheduleRecord>> get _meetingSchedulesByDay {
     final grouped = <DateTime, List<MeetingScheduleRecord>>{};
     for (final schedule in _schedules) {

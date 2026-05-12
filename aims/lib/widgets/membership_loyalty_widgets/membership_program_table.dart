@@ -1,3 +1,4 @@
+// Purpose: Provides a reusable table layout for membership and promotion data.
 import 'package:flutter/material.dart';
 
 class MembershipProgramTable extends StatelessWidget {

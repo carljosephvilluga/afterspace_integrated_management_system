@@ -1,3 +1,4 @@
+// Purpose: Builds and exports sales report PDFs from dashboard report data.
 import 'dart:math' as math;
 
 import 'package:aims/services/aims_api_client.dart';

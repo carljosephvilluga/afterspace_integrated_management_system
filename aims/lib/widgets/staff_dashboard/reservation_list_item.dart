@@ -1,3 +1,4 @@
+// Purpose: Displays one reservation item on the staff dashboard.
 import 'package:flutter/material.dart';
 
 class StaffReservationListItem extends StatelessWidget {
@@ -27,10 +28,7 @@ class StaffReservationListItem extends StatelessWidget {
           backgroundColor: const Color(0xFFD9C0AD),
           child: Text(
             name.substring(0, 1),
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(width: 10),
@@ -47,13 +45,7 @@ class StaffReservationListItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: mutedColor,
-                ),
-              ),
+              Text(email, style: TextStyle(fontSize: 10, color: mutedColor)),
             ],
           ),
         ),
@@ -69,13 +61,7 @@ class StaffReservationListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              duration,
-              style: TextStyle(
-                fontSize: 10,
-                color: mutedColor,
-              ),
-            ),
+            Text(duration, style: TextStyle(fontSize: 10, color: mutedColor)),
           ],
         ),
       ],

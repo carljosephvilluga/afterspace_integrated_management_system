@@ -1,3 +1,4 @@
+// Purpose: Presents a reusable confirmation dialog before logging out.
 import 'package:flutter/material.dart';
 
 class ConfirmLogoutDialog extends StatelessWidget {

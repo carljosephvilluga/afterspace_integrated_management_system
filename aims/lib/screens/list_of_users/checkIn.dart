@@ -1,3 +1,4 @@
+// Purpose: Collects check-in details before starting a customer visit.
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 

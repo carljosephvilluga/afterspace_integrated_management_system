@@ -1,3 +1,4 @@
+// Purpose: Displays the compact staff calendar card.
 import 'package:flutter/material.dart';
 
 class StaffCalendarCard extends StatefulWidget {

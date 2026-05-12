@@ -1,3 +1,4 @@
+// Purpose: Stores the current login token and staff account details in memory.
 class AppSession {
   AppSession._();
 

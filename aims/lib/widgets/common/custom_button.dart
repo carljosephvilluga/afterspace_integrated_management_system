@@ -1,3 +1,4 @@
+// Purpose: Defines a reusable styled button used by shared forms.
 import 'package:flutter/material.dart';
 
 //Reusable Button

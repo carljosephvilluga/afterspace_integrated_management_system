@@ -1,3 +1,4 @@
+// Purpose: Displays and filters existing booking reservations.
 import 'package:aims/screens/dashboard/booking_management/booking_models.dart';
 import 'package:flutter/material.dart';
 

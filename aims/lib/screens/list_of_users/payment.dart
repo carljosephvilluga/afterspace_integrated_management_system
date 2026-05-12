@@ -1,3 +1,4 @@
+// Purpose: Calculates and confirms payment details for a completed visit.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:aims/widgets/common/custom_button.dart';

@@ -1,3 +1,4 @@
+// Purpose: Presents a reusable confirmation dialog before deleting records.
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 

@@ -1,3 +1,4 @@
+// Purpose: Displays the receipt details for a completed transaction.
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_button.dart';
 

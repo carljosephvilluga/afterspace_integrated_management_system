@@ -1,3 +1,4 @@
+// Purpose: Central client for Supabase-backed API operations used across AIMS.
 import 'dart:convert';
 
 import 'package:aims/services/app_session.dart';
@@ -1206,6 +1207,9 @@ class AimsApiClient {
       if (withAuth && !AppSession.isAuthenticated) {
         throw const AimsApiException('Please log in first.');
       }
+
+      // The app talks directly to Supabase, but this route switch keeps the
+      // rest of the UI working with API-style methods instead of table calls.
       final uri = Uri.parse('supabase://aims$path');
       final route = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
       final requestBody = body ?? const <String, dynamic>{};
@@ -2197,6 +2201,9 @@ class AimsApiClient {
   ) async {
     final client = await _client();
     dynamic query = client.from('meeting_schedules').select();
+
+    // Use an overlapping date range so meetings that cross midnight still
+    // appear on both relevant calendar and notification views.
     final from = _asString(queryParameters['from']);
     final to = _asString(queryParameters['to']);
     if (from.isNotEmpty) {
@@ -2517,6 +2524,8 @@ class AimsApiClient {
   Future<List<Map<String, dynamic>>> _bookingPayloads(
     List<Map<String, dynamic>> bookings,
   ) async {
+    // Load related users and booking metadata once, then join them in memory to
+    // avoid repeated Supabase queries for every booking row.
     final users = await _userByIdMap();
     final metas = _byIntKey(await _tableRows('booking_meta'), 'booking_id');
     return bookings

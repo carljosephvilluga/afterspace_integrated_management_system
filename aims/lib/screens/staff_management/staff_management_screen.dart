@@ -1,3 +1,4 @@
+// Purpose: Manages staff account records for administrators.
 import 'package:aims/services/aims_api_client.dart';
 import 'package:aims/widgets/common/top_notification.dart';
 import 'package:flutter/material.dart';

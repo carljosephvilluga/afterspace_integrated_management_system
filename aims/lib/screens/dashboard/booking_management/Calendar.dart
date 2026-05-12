@@ -1,3 +1,4 @@
+// Purpose: Shows reservation dates and availability in a booking calendar view.
 import 'package:aims/screens/dashboard/booking_management/booking_models.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';

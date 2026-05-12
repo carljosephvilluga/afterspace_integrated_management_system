@@ -1,3 +1,4 @@
+// Purpose: Provides a reusable input field for membership management dialogs.
 import 'package:flutter/material.dart';
 
 class MembershipProgramInputField extends StatelessWidget {
@@ -70,7 +71,10 @@ class MembershipProgramInputField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF80AEC1), width: 1.2),
+              borderSide: const BorderSide(
+                color: Color(0xFF80AEC1),
+                width: 1.2,
+              ),
             ),
           ),
         ),

@@ -1,3 +1,4 @@
+// Purpose: Manages customer records, check-in/check-out actions, and visit history.
 import 'dart:math' as math;
 
 import 'package:aims/widgets/common/custom_button.dart';

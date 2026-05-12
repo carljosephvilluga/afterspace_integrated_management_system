@@ -1,3 +1,4 @@
+// Purpose: Shows reusable floating notification messages across the app.
 import 'dart:async';
 
 import 'package:flutter/material.dart';

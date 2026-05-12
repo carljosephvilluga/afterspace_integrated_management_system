@@ -1,3 +1,4 @@
+// Purpose: Starts the Flutter app and registers the main application routes.
 import 'package:flutter/material.dart';
 
 import 'screens/dashboard/admin_dashboard_screen.dart';

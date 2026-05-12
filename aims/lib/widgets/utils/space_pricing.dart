@@ -1,3 +1,4 @@
+// Purpose: Keeps workspace hourly pricing synchronized with backend settings.
 import 'dart:math' as math;
 
 import 'package:aims/services/aims_api_client.dart';

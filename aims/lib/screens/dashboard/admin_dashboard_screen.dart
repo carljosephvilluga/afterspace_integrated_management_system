@@ -1,3 +1,4 @@
+// Purpose: Displays the admin dashboard, reports, calendar, and staff management entry point.
 import 'dart:async';
 
 import 'package:aims/widgets/admin_dashboard/calendar_chart.dart';

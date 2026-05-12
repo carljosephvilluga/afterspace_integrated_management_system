@@ -1,3 +1,4 @@
+// Purpose: Lets users choose the role-specific login flow.
 import 'package:flutter/material.dart';
 
 import 'admin_login_screen.dart';
@@ -302,7 +303,7 @@ class _AdminGraphic extends StatelessWidget {
         borderRadius: BorderRadius.circular(14), // match card corners
         child: Image.asset(
           'assets/images/admin_bg.png',
-          fit: BoxFit.cover,   // fills and crops to cover
+          fit: BoxFit.cover, // fills and crops to cover
         ),
       ),
     );
@@ -319,7 +320,7 @@ class _ManagerGraphic extends StatelessWidget {
         borderRadius: BorderRadius.circular(14), // match card corners
         child: Image.asset(
           'assets/images/manager_bg.png',
-          fit: BoxFit.cover,   // fills and crops to cover
+          fit: BoxFit.cover, // fills and crops to cover
         ),
       ),
     );
@@ -336,7 +337,7 @@ class _StaffGraphic extends StatelessWidget {
         borderRadius: BorderRadius.circular(14), // match card corners
         child: Image.asset(
           'assets/images/staff_bg.png',
-          fit: BoxFit.cover,   // fills and crops to cover
+          fit: BoxFit.cover, // fills and crops to cover
         ),
       ),
     );

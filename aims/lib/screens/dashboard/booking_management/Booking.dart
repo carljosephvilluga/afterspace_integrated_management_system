@@ -1,3 +1,4 @@
+// Purpose: Provides the booking form used to create customer reservations.
 import 'package:aims/screens/dashboard/booking_management/booking_models.dart';
 import 'package:flutter/material.dart';
 

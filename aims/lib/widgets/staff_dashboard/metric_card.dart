@@ -1,3 +1,4 @@
+// Purpose: Provides the reusable staff dashboard metric card.
 import 'package:flutter/material.dart';
 
 class StaffMetricCard extends StatelessWidget {

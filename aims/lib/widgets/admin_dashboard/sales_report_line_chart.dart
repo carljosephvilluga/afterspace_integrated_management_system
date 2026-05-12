@@ -1,3 +1,4 @@
+// Purpose: Renders the interactive sales report line chart on the admin dashboard.
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 

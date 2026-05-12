@@ -1,3 +1,4 @@
+// Purpose: Provides the booking management screen with availability, calendar, and booking lists.
 import 'dart:async';
 
 import 'package:aims/screens/dashboard/booking_management/Booking.dart';
@@ -441,6 +442,8 @@ class _StaffBookingManagementScreenState
     }
 
     try {
+      // Keep the calendar and list views backed by the latest live Supabase
+      // reservation data.
       final records = await AimsApiClient.instance.fetchBookings(limit: 500);
       final mapped = records.map(_toReservation).toList()
         ..sort((a, b) => a.start.compareTo(b.start));
@@ -607,6 +610,8 @@ class _StaffBookingManagementScreenState
       return;
     }
 
+    // Defer the prompt until after the current frame so it does not interrupt
+    // layout while the reservation list is rebuilding.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _isShowingStartedReservationPrompt) {
         return;

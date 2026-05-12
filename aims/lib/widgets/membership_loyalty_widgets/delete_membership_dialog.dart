@@ -1,11 +1,9 @@
+// Purpose: Confirms membership deletion from the membership management screen.
 import 'package:aims/widgets/common/custom_button.dart';
 import 'package:flutter/material.dart';
 
 class DeleteMembershipDialog extends StatelessWidget {
-  const DeleteMembershipDialog({
-    super.key,
-    required this.membershipType,
-  });
+  const DeleteMembershipDialog({super.key, required this.membershipType});
 
   final String membershipType;
 

@@ -1,3 +1,4 @@
+// Purpose: Displays the manager dashboard with live reservations and transactions.
 import 'dart:async';
 
 import 'package:aims/widgets/admin_dashboard/sales_report_line_chart.dart';

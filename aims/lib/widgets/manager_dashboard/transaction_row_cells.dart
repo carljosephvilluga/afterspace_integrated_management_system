@@ -1,3 +1,4 @@
+// Purpose: Displays transaction table cells on the manager dashboard.
 import 'package:flutter/material.dart';
 
 class TransactionStatusCell extends StatelessWidget {

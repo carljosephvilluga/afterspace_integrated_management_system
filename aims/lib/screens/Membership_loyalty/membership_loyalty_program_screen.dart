@@ -1,3 +1,4 @@
+// Purpose: Manages membership plans, promotions, loyalty rewards, and hourly pricing.
 import 'package:aims/widgets/common/header.dart';
 import 'package:aims/widgets/membership_loyalty_widgets/add_membership_dialog.dart';
 import 'package:aims/widgets/common/sidebar.dart';

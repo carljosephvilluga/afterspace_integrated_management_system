@@ -1,3 +1,4 @@
+// Purpose: Displays one reservation item on the manager dashboard.
 import 'package:flutter/material.dart';
 
 class ReservationListItem extends StatelessWidget {

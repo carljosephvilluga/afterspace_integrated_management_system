@@ -1,3 +1,4 @@
+// Purpose: Provides an older standalone customer creation form.
 import 'package:flutter/material.dart';
 import 'package:aims/widgets/common/custom_text_field.dart';
 import 'package:aims/widgets/common/custom_button.dart';

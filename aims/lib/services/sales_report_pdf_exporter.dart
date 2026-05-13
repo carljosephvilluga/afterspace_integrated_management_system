@@ -211,15 +211,17 @@ class SalesReportPdfExporter {
     final peakValue = peakIndex >= 0 ? series.areaValues[peakIndex] : 0.0;
 
     final rowCount = math.min(series.labels.length, series.areaValues.length);
-    final lineCount = series.lineValues.length;
 
     final rows = List<List<String>>.generate(rowCount, (index) {
       final label = series.labels[index];
+      final cash = AimsApiClient.formatCurrency(
+        _valueAt(series.cashValues, index) ?? 0,
+      );
+      final onlinePayment = AimsApiClient.formatCurrency(
+        _valueAt(series.onlinePaymentValues, index) ?? 0,
+      );
       final gross = AimsApiClient.formatCurrency(series.areaValues[index]);
-      final trend = index < lineCount
-          ? AimsApiClient.formatCurrency(series.lineValues[index])
-          : '-';
-      return [label, gross, trend];
+      return [label, cash, onlinePayment, gross];
     });
 
     return [
@@ -235,7 +237,7 @@ class SalesReportPdfExporter {
       ),
       pw.SizedBox(height: 8),
       pw.TableHelper.fromTextArray(
-        headers: const ['Period', 'Gross Sales', 'Trend Line'],
+        headers: const ['Period', 'Cash', 'Online Payment', 'Gross Sales'],
         data: rows,
         cellStyle: const pw.TextStyle(fontSize: 9),
         headerStyle: pw.TextStyle(

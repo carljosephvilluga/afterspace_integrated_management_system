@@ -325,6 +325,8 @@ class SalesReportSeries {
     required this.labels,
     required this.tooltipTitles,
     required this.tooltipValues,
+    required this.cashValues,
+    required this.onlinePaymentValues,
     required this.areaValues,
     required this.lineValues,
     required this.highlightX,
@@ -334,6 +336,8 @@ class SalesReportSeries {
   final List<String> labels;
   final List<String> tooltipTitles;
   final List<String> tooltipValues;
+  final List<double> cashValues;
+  final List<double> onlinePaymentValues;
   final List<double> areaValues;
   final List<double> lineValues;
   final double highlightX;
@@ -1054,6 +1058,12 @@ class AimsApiClient {
     final tooltipValues = _asList(
       data['tooltipValues'],
     ).map((item) => _asString(item)).toList();
+    final cashValues = _asList(
+      data['cashValues'],
+    ).map((item) => _asDouble(item)).toList();
+    final onlinePaymentValues = _asList(
+      data['onlinePaymentValues'],
+    ).map((item) => _asDouble(item)).toList();
     final areaValues = _asList(
       data['areaValues'],
     ).map((item) => _asDouble(item)).toList();
@@ -1065,6 +1075,8 @@ class AimsApiClient {
       labels: labels,
       tooltipTitles: tooltipTitles,
       tooltipValues: tooltipValues,
+      cashValues: cashValues,
+      onlinePaymentValues: onlinePaymentValues,
       areaValues: areaValues,
       lineValues: lineValues,
       highlightX: _asDouble(data['highlightX']),
@@ -2079,8 +2091,18 @@ class AimsApiClient {
       );
     }
     final points = await _salesPoints(range);
+    final cashValues = points
+        .map((point) => _asDouble(point['cashRevenue']))
+        .toList();
+    final onlinePaymentValues = points
+        .map((point) => _asDouble(point['onlinePaymentRevenue']))
+        .toList();
     final revenues = points
-        .map((point) => _asDouble(point['revenue']))
+        .map(
+          (point) =>
+              _asDouble(point['cashRevenue']) +
+              _asDouble(point['onlinePaymentRevenue']),
+        )
         .toList();
     final transactions = points
         .map((point) => _asInt(point['transactions']))
@@ -2109,6 +2131,8 @@ class AimsApiClient {
       'tooltipValues': points
           .map((point) => '₱${_asDouble(point['revenue']).toStringAsFixed(2)}')
           .toList(),
+      'cashValues': cashValues,
+      'onlinePaymentValues': onlinePaymentValues,
       'areaValues': revenues,
       'lineValues': lineValues,
       'highlightX': highlightIndex,
@@ -3283,13 +3307,32 @@ class AimsApiClient {
     DateTime end,
   ) async {
     final rows = await _transactionsBetween(start, end);
+    var cashRevenue = 0.0;
+    var onlinePaymentRevenue = 0.0;
+    for (final row in rows) {
+      final amount = _asDouble(row['final_amount']);
+      if (_isCashPaymentMethod(row['payment_method'])) {
+        cashRevenue += amount;
+      } else if (_isOnlinePaymentMethod(row['payment_method'])) {
+        onlinePaymentRevenue += amount;
+      }
+    }
     return <String, dynamic>{
-      'revenue': rows.fold<double>(
-        0,
-        (sum, row) => sum + _asDouble(row['final_amount']),
-      ),
+      'cashRevenue': cashRevenue,
+      'onlinePaymentRevenue': onlinePaymentRevenue,
+      'revenue': cashRevenue + onlinePaymentRevenue,
       'transactions': rows.length,
     };
+  }
+
+  bool _isCashPaymentMethod(dynamic value) {
+    final method = _asString(value).trim().toLowerCase();
+    return method == 'cash';
+  }
+
+  bool _isOnlinePaymentMethod(dynamic value) {
+    final method = _asString(value).trim().toLowerCase();
+    return method == 'online_payment';
   }
 
   Future<List<Map<String, dynamic>>> _transactionsBetween(
